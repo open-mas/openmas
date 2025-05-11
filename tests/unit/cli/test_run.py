@@ -4,6 +4,7 @@ import asyncio
 import os
 import sys
 from pathlib import Path
+from typing import Dict, List
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -228,7 +229,7 @@ def test_running_project_with_different_environment_vars(mock_project_root):
     original_sys_path = sys.path.copy()
 
     # Try with different environment configurations
-    test_envs = [
+    test_envs: List[Dict[str, str]] = [
         {"OPENMAS_ENV": "dev"},  # Standard environment name
         {"VIRTUAL_ENV": "/path/to/venv"},  # venv-style environment
         {"CONDA_PREFIX": "/path/to/conda"},  # Conda-style environment
@@ -240,7 +241,7 @@ def test_running_project_with_different_environment_vars(mock_project_root):
         # Reset environment for each test
         os.environ.clear()
         os.environ.update(original_env)  # restore basic environment
-        os.environ.update(env)  # type: ignore # add test-specific vars
+        os.environ.update(env)  # add test-specific vars
 
         # Create mock agent class with required __name__ attribute
         mock_agent_class = MagicMock(spec=BaseAgent)
@@ -302,7 +303,9 @@ def test_running_project_with_different_environment_vars(mock_project_root):
             env_name = next(iter(env.keys()), None)
             if env_name == "OPENMAS_ENV":
                 assert "OPENMAS_ENV" in os.environ
-                assert os.environ["OPENMAS_ENV"] == env["OPENMAS_ENV"]
+                env_value = env.get("OPENMAS_ENV")  # type-safe way to access dict
+                if env_value is not None:
+                    assert os.environ["OPENMAS_ENV"] == env_value
 
     # Restore original environment and sys.path
     os.environ.clear()

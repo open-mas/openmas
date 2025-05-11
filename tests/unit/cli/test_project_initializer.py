@@ -1,6 +1,7 @@
 """Tests for the ProjectInitializer class."""
 
 from pathlib import Path
+from typing import Callable, Dict, Union
 from unittest.mock import MagicMock, PropertyMock, call, mock_open, patch
 
 import pytest
@@ -16,20 +17,23 @@ def test_prepare_file_actions_default():
     initializer = ProjectInitializer(project_path, display_name)
 
     # Execute
-    actions = initializer._prepare_file_actions()
+    actions: Dict[Path, Union[str, Callable[[], str]]] = initializer._prepare_file_actions()
+
+    # Convert keys to set of strings for comparison
+    action_paths = {str(k) for k in actions}
 
     # Verify
-    # Check that essential files are included
-    assert project_path / "README.md" in actions
-    assert project_path / "requirements.txt" in actions
-    assert project_path / ".gitignore" in actions
-    assert project_path / "openmas_project.yml" in actions
+    # Check that essential files are included using string paths
+    assert str(project_path / "README.md") in action_paths  # type: ignore
+    assert str(project_path / "requirements.txt") in action_paths  # type: ignore
+    assert str(project_path / ".gitignore") in action_paths  # type: ignore
+    assert str(project_path / "openmas_project.yml") in action_paths  # type: ignore
 
     # Check that __init__.py files exist for Python package directories
-    assert project_path / "agents" / "__init__.py" in actions
-    assert project_path / "shared" / "__init__.py" in actions
-    assert project_path / "extensions" / "__init__.py" in actions
-    assert project_path / "tests" / "__init__.py" in actions
+    assert str(project_path / "agents" / "__init__.py") in action_paths  # type: ignore
+    assert str(project_path / "shared" / "__init__.py") in action_paths  # type: ignore
+    assert str(project_path / "extensions" / "__init__.py") in action_paths  # type: ignore
+    assert str(project_path / "tests" / "__init__.py") in action_paths  # type: ignore
 
     # Verify content of README.md
     assert actions[project_path / "README.md"] == "# Test Project\n\nA OpenMAS project.\n"
@@ -38,7 +42,7 @@ def test_prepare_file_actions_default():
     assert "openmas>=0.2.0" in actions[project_path / "requirements.txt"]
 
     # Verify that there are no template-specific files
-    assert not any(str(path).endswith("mcp_server/agent.py") for path in actions.keys())
+    assert not any("mcp_server/agent.py" in str(path) for path in actions)
 
 
 def test_prepare_file_actions_with_poetry():
@@ -49,12 +53,16 @@ def test_prepare_file_actions_with_poetry():
     initializer = ProjectInitializer(project_path, display_name, poetry=True)
 
     # Execute
-    actions = initializer._prepare_file_actions()
+    actions: Dict[Path, Union[str, Callable[[], str]]] = initializer._prepare_file_actions()
+
+    # Convert keys to set of strings for comparison
+    action_paths = {str(k) for k in actions}
+    file_names = {k.name for k in actions}
 
     # Verify
     # Check that pyproject.toml is included
-    assert project_path / "pyproject.toml" in actions
-    assert "requirements.txt" not in [p.name for p in actions.keys()]
+    assert str(project_path / "pyproject.toml") in action_paths  # type: ignore
+    assert "requirements.txt" not in file_names
 
     # Verify content of pyproject.toml
     pyproject_content = actions[project_path / "pyproject.toml"]
@@ -72,13 +80,16 @@ def test_prepare_file_actions_with_mcp_template():
     initializer = ProjectInitializer(project_path, display_name, template="mcp-server")
 
     # Execute
-    actions = initializer._prepare_file_actions()
+    actions: Dict[Path, Union[str, Callable[[], str]]] = initializer._prepare_file_actions()
+
+    # Convert keys to set of strings for comparison
+    action_paths = {str(k) for k in actions}
 
     # Verify
     # Check that MCP-specific files are included
-    assert project_path / "agents" / "mcp_server" / "__init__.py" in actions
-    assert project_path / "agents" / "mcp_server" / "agent.py" in actions
-    assert project_path / "agents" / "mcp_server" / "openmas.deploy.yaml" in actions
+    assert str(project_path / "agents" / "mcp_server" / "__init__.py") in action_paths  # type: ignore
+    assert str(project_path / "agents" / "mcp_server" / "agent.py") in action_paths  # type: ignore
+    assert str(project_path / "agents" / "mcp_server" / "openmas.deploy.yaml") in action_paths  # type: ignore
 
     # Verify content of agent.py
     agent_content = actions[project_path / "agents" / "mcp_server" / "agent.py"]
@@ -114,17 +125,20 @@ def test_prepare_file_actions_with_unknown_template():
     initializer = ProjectInitializer(project_path, display_name, template="unknown-template")
 
     # Execute
-    actions = initializer._prepare_file_actions()
+    actions: Dict[Path, Union[str, Callable[[], str]]] = initializer._prepare_file_actions()
+
+    # Convert keys to set of strings for comparison
+    action_paths = {str(k) for k in actions}
 
     # Verify - should be same as default, no special template files
-    assert project_path / "README.md" in actions
-    assert project_path / "requirements.txt" in actions
-    assert project_path / ".gitignore" in actions
-    assert project_path / "openmas_project.yml" in actions
+    assert str(project_path / "README.md") in action_paths  # type: ignore
+    assert str(project_path / "requirements.txt") in action_paths  # type: ignore
+    assert str(project_path / ".gitignore") in action_paths  # type: ignore
+    assert str(project_path / "openmas_project.yml") in action_paths  # type: ignore
 
     # Should not have any template-specific files
-    assert not any(str(path).endswith("unknown-template") for path in actions.keys())
-    assert not any(str(path).endswith("mcp_server/agent.py") for path in actions.keys())
+    assert not any("unknown-template" in str(path) for path in actions)
+    assert not any("mcp_server/agent.py" in str(path) for path in actions)
 
 
 @pytest.fixture

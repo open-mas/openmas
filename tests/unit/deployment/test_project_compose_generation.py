@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+from typing import List
 from unittest.mock import MagicMock, mock_open, patch
 
 from openmas.cli.deploy import _generate_compose_from_project_impl
@@ -80,7 +81,7 @@ class TestGenerateComposeFromProject:
         # Set up mocks for the refactored class
         mock_components = [agent1_metadata, agent2_metadata, agent3_metadata]
         mock_renamed = {"different-name": "agent3"}
-        mock_warnings = []
+        mock_warnings: List[str] = []
         mock_compose_dict = {"version": "3", "services": {}}
 
         # Configure the mock for the generate_compose_dict_from_project method

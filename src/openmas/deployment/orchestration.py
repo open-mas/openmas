@@ -320,6 +320,7 @@ class ComposeOrchestrator:
                                 name=env_name,
                                 value=env_value,
                                 description=f"URL for the {dep_name} service",
+                                secret=False,
                             )
                         )
 
