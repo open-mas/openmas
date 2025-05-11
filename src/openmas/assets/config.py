@@ -2,7 +2,7 @@
 
 from enum import Enum
 from pathlib import Path
-from typing import Literal, Optional
+from typing import List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -64,6 +64,16 @@ class AssetSourceConfig(BaseModel):
     filename: Optional[str] = None
     revision: Optional[str] = None
     path: Optional[Path] = None
+    allow_patterns: Optional[Union[str, List[str]]] = Field(
+        None,
+        description="Glob pattern(s) to include only specific files when downloading a repository. "
+        "Used for sharded models from Hugging Face Hub.",
+    )
+    ignore_patterns: Optional[Union[str, List[str]]] = Field(
+        None,
+        description="Glob pattern(s) to exclude specific files when downloading a repository. "
+        "Used for sharded models from Hugging Face Hub.",
+    )
     authentication: Optional[AssetAuthentication] = Field(
         None, description="Authentication details required to download this asset."
     )
@@ -71,6 +81,26 @@ class AssetSourceConfig(BaseModel):
     progress_report_interval_mb: float = Field(
         default=10.0, gt=0, description="Report progress approximately every X MB downloaded."
     )
+
+    @field_validator("allow_patterns")
+    @classmethod
+    def validate_allow_patterns(cls, v: Optional[Union[str, List[str]]]) -> Optional[List[str]]:
+        """Convert string pattern to list of patterns."""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return [v]
+        return v
+
+    @field_validator("ignore_patterns")
+    @classmethod
+    def validate_ignore_patterns(cls, v: Optional[Union[str, List[str]]]) -> Optional[List[str]]:
+        """Convert string pattern to list of patterns."""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return [v]
+        return v
 
     @model_validator(mode="after")
     def validate_source_fields(self) -> "AssetSourceConfig":

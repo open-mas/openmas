@@ -46,40 +46,85 @@ openmas assets download <asset_name> [--force]
 
 Downloads a specific asset to the cache.
 
-**Arguments and Options:**
+**Purpose:**
+The `download` command fetches assets specified in your `openmas_project.yml` configuration from their defined sources and stores them in the OpenMAS asset cache. This command ensures that models, templates, and other resources are available for your agents to use.
 
-| Argument/Option | Description |
-|-----------------|-------------|
-| `asset_name` | Name of the asset to download |
-| `--force`, `-f` | Force re-download even if the asset exists in cache |
+**Arguments:**
+- `asset_name` (Required): The unique name of the asset as specified in the `assets` list in your `openmas_project.yml`.
+
+**Options:**
+- `--force`, `-f`: Boolean flag. If set, the asset will be re-downloaded even if it already exists in the cache and appears verified.
+
+**Prerequisites for Specific Asset Types:**
+- **Hugging Face Assets (type: 'hf'):** Requires the `huggingface_hub` Python library. If not installed, the command will detect this and instruct you to install it with:
+  ```bash
+  pip install huggingface_hub
+  ```
+
+- **HTTP Assets (type: 'http'):** No additional dependencies required.
+
+- **Local Assets (type: 'local'):** No download occurs; the command simply verifies the file exists at the specified path.
+
+**Running the Command:**
+The command should be run from within an OpenMAS project directory (or a subdirectory), where `openmas_project.yml` can be found. This ensures the command has access to your asset definitions.
+
+**Environment Setup:**
+- Ensure `openmas` and any necessary underlying libraries (like `huggingface_hub` for 'hf' assets) are installed in your active Python environment.
+- If using Poetry for your project, run as `poetry run openmas assets download ...`.
+- If using a virtual environment, activate it first.
+
+**Asset Caching:**
+Downloaded assets are stored in the OpenMAS asset cache:
+- Default location: `~/.openmas/assets/`
+- This can be overridden with the `OPENMAS_ASSETS_DIR` environment variable
+- Assets are organized by type, name, and version: `~/.openmas/assets/<asset_type>/<asset_name>/<asset_version>/`
 
 **Examples:**
 
-Download an asset if not already cached:
+Download a model from Hugging Face:
 ```bash
-openmas assets download llama3-8b
+openmas assets download llama-tokenizer
 ```
 
-Force re-download even if cached:
-```bash
-openmas assets download llama3-8b --force
 ```
-
-Output:
-```
-Downloading asset "llama3-8b" (version 1.0)...
-Source: Hugging Face Hub (meta-llama/Llama-3-8B)
+Downloading asset "llama-tokenizer" (version 1.0)...
+Source: Hugging Face Hub (meta-llama/Llama-3-8B/tokenizer.model)
 Progress: ████████████████████████████████ 100%
 Verifying checksum... OK
-Asset downloaded to: /home/user/.openmas/assets/model/llama3-8b/1.0/model.safetensors
+Asset downloaded to: /home/user/.openmas/assets/tokenizer/llama-tokenizer/1.0/tokenizer.model
 ```
 
-The command will:
-1. Check if the asset exists in the project configuration
-2. Determine the appropriate downloader based on the source type
-3. Download the asset to the cache (or skip if already cached and `--force` is not used)
-4. Verify the checksum (if provided)
-5. Unpack the asset (if configured)
+Force re-download of an asset that already exists in cache:
+```bash
+openmas assets download prompt-templates --force
+```
+
+```
+Downloading asset "prompt-templates" (version latest)...
+Source: HTTP (https://example.com/templates.zip)
+Progress: ████████████████████████████████ 100%
+Unpacking archive... OK
+Verifying checksum... OK
+Asset downloaded to: /home/user/.openmas/assets/template/prompt-templates/latest/
+```
+
+Download a sharded model (multiple files) from Hugging Face:
+```bash
+openmas assets download llama-3-8b
+```
+
+```
+Downloading asset "llama-3-8b" (version 1.0)...
+Source: Hugging Face Hub Repository (meta-llama/Llama-3-8B)
+Progress managed by Hugging Face Hub...
+Verifying integrity... OK
+Asset downloaded to: /home/user/.openmas/assets/model/llama-3-8b/1.0/
+```
+
+If using Poetry:
+```bash
+poetry run openmas assets download llama-3-8b
+```
 
 ### Verify Asset
 
@@ -192,7 +237,7 @@ In addition, asset authentication can use environment variables like:
 
 | Environment Variable | Description |
 |----------------------|-------------|
-| `HUGGING_FACE_HUB_TOKEN` | Default token for Hugging Face Hub authentication |
+| `HUGGINGFACE_TOKEN` | Default token for Hugging Face Hub authentication |
 | Custom variables | Any custom variable referenced in `authentication.*.token_env_var` |
 
 ## Using .env for Authentication
@@ -201,7 +246,7 @@ When using the asset commands, OpenMAS automatically loads environment variables
 
 ```
 # .env file
-HUGGING_FACE_HUB_TOKEN=hf_abcdefghijklmnopqrstuvwxyz
+HUGGINGFACE_TOKEN=hf_abcdefghijklmnopqrstuvwxyz
 MY_CUSTOM_API_KEY=api_123456789abcdef
 ```
 

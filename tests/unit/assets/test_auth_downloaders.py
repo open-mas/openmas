@@ -286,16 +286,16 @@ async def test_hf_downloader_with_strict_authentication():
                     with pytest.raises(AssetAuthenticationError) as exc_info:
                         await downloader.download(source_config, MagicMock(), strict_authentication=True)
 
-                    # Verify the error message and parameters
-                    assert (
-                        "Hugging Face authentication token environment variable 'NONEXISTENT_TOKEN' not found or empty"
-                        in str(exc_info.value)
-                    )
+                    # Verify the error message and parameters - updated to match the new error message format
+                    assert "configured to use the environment variable 'NONEXISTENT_TOKEN'" in str(exc_info.value)
+                    assert "not set or is empty" in str(exc_info.value)
+
+                    # Verify the error metadata
                     assert exc_info.value.source_type == "hf"
-                    assert exc_info.value.source_info == "user/model/model.bin"
+                    assert "user/model" in str(exc_info.value.source_info)
                     assert exc_info.value.token_env_var == "NONEXISTENT_TOKEN"
 
-                    # Verify that _download was never called
+                    # Verify that _download was not called
                     mock_download.assert_not_called()
 
 

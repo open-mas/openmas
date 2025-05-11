@@ -480,7 +480,8 @@ class TestHfDownloader:
         with patch("openmas.assets.downloaders.HF_AVAILABLE", True):
             mock_hf = MagicMock()
             with patch("openmas.assets.downloaders.HF_HUB_DOWNLOAD", mock_hf):
-                yield mock_hf
+                with patch("openmas.assets.downloaders.HF_SNAPSHOT_DOWNLOAD", MagicMock()) as mock_snapshot:
+                    yield {"hf_hub_download": mock_hf, "snapshot_download": mock_snapshot}
 
     @pytest.fixture
     def mock_huggingface_unavailable(self) -> None:
@@ -536,8 +537,8 @@ class TestHfDownloader:
             await downloader.download(mock_config, Path("/tmp/model.bin"))
 
     @pytest.mark.asyncio
-    async def test_download_success(self, mock_huggingface_available) -> None:
-        """Test successful download with mocked huggingface_hub."""
+    async def test_download_success_single_file(self, mock_huggingface_available) -> None:
+        """Test successful single file download with mocked huggingface_hub."""
         source_config = AssetSourceConfig(type="hf", repo_id="user/model", filename="model.bin")
         target_path = Path("/tmp/test_file.txt")
 
@@ -556,6 +557,112 @@ class TestHfDownloader:
             assert call_args[2] == "main"  # revision
             assert call_args[3] is None  # token
             assert call_args[4] == target_path  # target_path
+
+    @pytest.mark.asyncio
+    async def test_download_success_sharded_model(self, mock_huggingface_available) -> None:
+        """Test successful sharded model download with mocked huggingface_hub."""
+        source_config = AssetSourceConfig(
+            type="hf", repo_id="user/sharded-model", revision="main", allow_patterns=["*.bin", "*.json"]
+        )
+        target_path = Path("/tmp/sharded-model")
+
+        # Mock the _download_snapshot method to avoid actual file operations
+        mock_download_result = target_path
+
+        with patch.object(HfDownloader, "_download_snapshot", return_value=mock_download_result) as mock_download:
+            downloader = HfDownloader()
+            await downloader.download(source_config, target_path)
+
+            # Check that _download_snapshot was called with the right arguments
+            mock_download.assert_called_once()
+            call_args = mock_download.call_args
+            assert call_args[1]["repo_id"] == "user/sharded-model"  # repo_id
+            assert call_args[1]["revision"] == "main"  # revision
+            assert call_args[1]["token"] is None  # token
+            assert call_args[1]["allow_patterns"] == ["*.bin", "*.json"]  # allow_patterns
+            assert call_args[1]["target_path"] == target_path  # target_path
+
+    @pytest.mark.asyncio
+    async def test_download_success_sharded_model_with_ignore_patterns(self, mock_huggingface_available) -> None:
+        """Test successful sharded model download with ignore patterns."""
+        source_config = AssetSourceConfig(
+            type="hf", repo_id="user/sharded-model", revision="main", ignore_patterns=["*.md", "examples/*"]
+        )
+        target_path = Path("/tmp/sharded-model")
+
+        # Mock the _download_snapshot method to avoid actual file operations
+        mock_download_result = target_path
+
+        with patch.object(HfDownloader, "_download_snapshot", return_value=mock_download_result) as mock_download:
+            downloader = HfDownloader()
+            await downloader.download(source_config, target_path)
+
+            # Check that _download_snapshot was called with the right arguments
+            mock_download.assert_called_once()
+            call_args = mock_download.call_args
+            assert call_args[1]["repo_id"] == "user/sharded-model"  # repo_id
+            assert call_args[1]["revision"] == "main"  # revision
+            assert call_args[1]["token"] is None  # token
+            assert call_args[1]["ignore_patterns"] == ["*.md", "examples/*"]  # ignore_patterns
+            assert call_args[1]["target_path"] == target_path  # target_path
+
+    @pytest.mark.asyncio
+    async def test_download_sharded_model_error(self, mock_huggingface_available) -> None:
+        """Test error handling for sharded model download."""
+        source_config = AssetSourceConfig(type="hf", repo_id="user/sharded-model", revision="main")
+        target_path = Path("/tmp/sharded-model")
+
+        # Create a mock for _download_snapshot that raises an exception
+        error_msg = "HF snapshot download error"
+
+        with patch.object(HfDownloader, "_download_snapshot", side_effect=Exception(error_msg)) as mock_download:
+            downloader = HfDownloader()
+            with pytest.raises(AssetDownloadError) as exc_info:
+                await downloader.download(source_config, target_path)
+
+            # Check that the error was properly propagated
+            assert "Error downloading from Hugging Face Hub" in str(exc_info.value)
+            assert error_msg in str(exc_info.value)
+
+            # Verify _download_snapshot was called
+            mock_download.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_download_snapshot_success(self, mock_huggingface_available) -> None:
+        """Test successful snapshot download."""
+        repo_id = "user/sharded-model"
+        revision = "main"
+        token = "test_token"
+        target_path = Path("/tmp/sharded-model")
+        allow_patterns = ["*.bin", "*.json"]
+        ignore_patterns = ["*.md"]
+
+        mock_snapshot = mock_huggingface_available["snapshot_download"]
+        mock_snapshot.return_value = str(target_path)
+
+        downloader = HfDownloader(token=token)
+        result = downloader._download_snapshot(
+            repo_id=repo_id,
+            revision=revision,
+            token=token,
+            target_path=target_path,
+            allow_patterns=allow_patterns,
+            ignore_patterns=ignore_patterns,
+        )
+
+        # Verify snapshot_download was called with correct parameters
+        mock_snapshot.assert_called_once()
+        call_args = mock_snapshot.call_args[1]
+        assert call_args["repo_id"] == repo_id
+        assert call_args["revision"] == revision
+        assert call_args["token"] == token
+        assert call_args["allow_patterns"] == allow_patterns
+        assert call_args["ignore_patterns"] == ignore_patterns
+        assert call_args["local_dir"] == target_path
+        assert call_args["local_dir_use_symlinks"] is False
+
+        # Verify returned path
+        assert result == target_path
 
     @pytest.mark.asyncio
     async def test_download_error(self, mock_huggingface_available) -> None:
@@ -669,7 +776,7 @@ class TestHfDownloader:
         # The fixture patches 'openmas.assets.downloaders.HF_HUB_DOWNLOAD'
         # We need to control its side_effect here to check env var
         env_var_at_call_time = None
-        original_hf_hub_download_mock = mock_huggingface_available  # This is the mock from the fixture
+        original_hf_hub_download_mock = mock_huggingface_available["hf_hub_download"]
 
         def check_env_var_side_effect(*args: Any, **kwargs: Any) -> str:
             nonlocal env_var_at_call_time
@@ -766,7 +873,7 @@ class TestHfDownloader:
             current_os_environ_setup["HF_HUB_DISABLE_PROGRESS_BARS"] = initial_env_value
 
         # Ensure the mock for HF_HUB_DOWNLOAD (from mock_huggingface_available fixture) raises an error
-        hf_mock = mock_huggingface_available
+        hf_mock = mock_huggingface_available["hf_hub_download"]
         hf_mock.side_effect = error_to_raise
         hf_mock.reset_mock()  # Reset from previous test if any
 
@@ -803,6 +910,60 @@ class TestHfDownloader:
                     "Downloading asset '(progress display managed by Hugging Face Hub)" in rec.message
                     for rec in caplog.records
                 )
+
+    @pytest.mark.asyncio
+    async def test_authentication_warning_env_var_not_set(
+        self, mock_huggingface_available: dict, tmp_path: Path, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test specific warning for HF authentication when env var is configured but not set."""
+        # Setup
+        source_config = AssetSourceConfig(
+            type="hf",
+            repo_id="user/model",
+            filename="model.bin",
+            authentication={
+                "strategy": "env_token",
+                "hf": {"token_env_var": "NONEXISTENT_HF_TOKEN"},
+            },
+        )
+        target_path = tmp_path / "model.bin"
+        downloader = HfDownloader()
+
+        # Ensure the env var is not set
+        with patch.dict(os.environ, {}, clear=True):
+            # Mock _download to avoid actual download attempts
+            mock_download = AsyncMock(return_value=target_path)
+            with patch.object(downloader, "_download", mock_download):
+                # Set up logging capture
+                caplog.clear()
+                caplog.set_level(logging.WARNING)
+
+                # Run the download
+                await downloader.download(source_config, target_path)
+
+                # Verify the specific warning message
+                warning_messages = [r.message for r in caplog.records if r.levelname == "WARNING"]
+                assert any("environment variable 'NONEXISTENT_HF_TOKEN'" in msg for msg in warning_messages)
+                assert any("not set or is empty" in msg for msg in warning_messages)
+                assert any("Please set this environment variable" in msg for msg in warning_messages)
+
+    def test_general_auth_warning_from_get_downloader(
+        self, mock_huggingface_available: dict, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        """Test general HF authentication warning from get_downloader_for_source."""
+        # Create config without authentication
+        source_config = AssetSourceConfig(type="hf", repo_id="user/model")
+
+        # Clear any existing log records
+        caplog.clear()
+        caplog.set_level(logging.WARNING)
+
+        # Call get_downloader_for_source
+        get_downloader_for_source(source_config)
+
+        # Verify the warning message
+        warning_messages = [r.message for r in caplog.records if r.levelname == "WARNING"]
+        assert any("No authentication provided for Hugging Face Hub source" in msg for msg in warning_messages)
 
 
 class TestLocalFileHandler:

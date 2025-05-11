@@ -342,3 +342,215 @@ The asset downloader will automatically use the appropriate token from your envi
   - Development: Use default or local directory
   - Docker: Mount a volume for the cache to persist between container restarts
   - Production: Consider a shared network volume for clusters
+
+# Hugging Face Asset Management in OpenMAS
+
+OpenMAS provides robust support for downloading and managing assets from the Hugging Face Hub, including both single files and entire model repositories (sharded models).
+
+## Prerequisites
+
+To use Hugging Face Hub assets, you need to install the `huggingface_hub` package:
+
+```bash
+pip install huggingface_hub
+```
+
+Or if you're using Poetry:
+
+```bash
+poetry add huggingface_hub
+```
+
+## Configuring Hugging Face Assets
+
+### Single File Download
+
+For downloading a specific file from a Hugging Face repository:
+
+```yaml
+# In openmas_project.yml
+assets:
+  - name: llama-tokenizer
+    version: "1.0"
+    asset_type: "tokenizer"
+    source:
+      type: "hf"
+      repo_id: "meta-llama/Llama-3-8B"
+      filename: "tokenizer.model"  # Specify the filename to download a single file
+      revision: "main"  # Optional, defaults to "main"
+```
+
+### Sharded Model Download (Entire Repository)
+
+For downloading an entire repository or multiple files based on patterns:
+
+```yaml
+# In openmas_project.yml
+assets:
+  - name: llama-3-8b
+    version: "1.0"
+    asset_type: "model"
+    source:
+      type: "hf"
+      repo_id: "meta-llama/Llama-3-8B"
+      # No filename means download the whole repository
+      # Optional: Filter which files to download
+      allow_patterns: ["*.safetensors", "*.json", "*.model"]
+      # Optional: Exclude certain files
+      ignore_patterns: ["*.md", "examples/*"]
+```
+
+The `allow_patterns` and `ignore_patterns` fields accept either a single string or a list of glob patterns.
+
+## Authentication
+
+For accessing private repositories, you can configure authentication:
+
+```yaml
+# In openmas_project.yml
+assets:
+  - name: private-model
+    version: "1.0"
+    asset_type: "model"
+    source:
+      type: "hf"
+      repo_id: "my-org/private-model"
+      # For a single file:
+      filename: "model.bin"
+      # Or for a sharded model:
+      # allow_patterns: ["*.bin", "*.json"]
+      authentication:
+        strategy: "env_token"
+        hf:
+          token_env_var: "HUGGINGFACE_TOKEN"  # Name of the environment variable holding your HF token
+```
+
+You can set the environment variable in various ways:
+
+1. In your shell:
+   ```bash
+   export HUGGINGFACE_TOKEN=hf_your_token_here
+   ```
+
+2. In a `.env` file (OpenMAS automatically loads this):
+   ```
+   HUGGINGFACE_TOKEN=hf_your_token_here
+   ```
+
+3. Programmatically:
+   ```python
+   import os
+   os.environ["HUGGINGFACE_TOKEN"] = "hf_your_token_here"
+   ```
+
+To get a Hugging Face token, visit your [Hugging Face account settings](https://huggingface.co/settings/tokens).
+
+## Downloading Assets
+
+You can download assets using the CLI:
+
+```bash
+# Download a single file asset
+openmas assets download llama-tokenizer
+
+# Download a sharded model
+openmas assets download llama-3-8b
+```
+
+Or programmatically:
+
+```python
+import asyncio
+from openmas.assets import AssetManager
+from openmas.cli.utils import load_project_config
+
+async def download_asset():
+    project_config = load_project_config()
+    asset_manager = AssetManager(project_config)
+
+    # Download and get path to the asset
+    asset_path = await asset_manager.get_asset_path("llama-3-8b", force_download=False)
+    print(f"Asset downloaded to: {asset_path}")
+
+# Run the async function
+asyncio.run(download_asset())
+```
+
+## Best Practices
+
+1. **Cache Management**: Assets are cached at `~/.openmas/assets/` by default. You can customize this location with the `OPENMAS_ASSETS_DIR` environment variable.
+
+2. **Checksums**: For production use, include checksums to verify asset integrity:
+   ```yaml
+   assets:
+     - name: llama-3-8b
+       # ...
+       checksum: "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+   ```
+
+3. **Version Control**: Always specify asset versions to ensure reproducibility.
+
+4. **Download Patterns**: For sharded models with many files:
+   - Use `allow_patterns` to include only necessary files (saves bandwidth and disk space)
+   - Common patterns: `["*.safetensors", "*.json", "*.model", "config.json"]`
+
+5. **Progress Reporting**: Control progress display with:
+   ```yaml
+   source:
+     type: "hf"
+     # ...
+     progress_report: true  # Enable/disable progress reporting
+     progress_report_interval_mb: 10.0  # Report progress every 10MB
+   ```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Missing Dependencies**:
+   ```
+   Error: Missing dependency 'huggingface_hub'
+   ```
+   Install the package: `pip install huggingface_hub`
+
+2. **Authentication Errors**:
+   ```
+   Authentication error accessing Hugging Face Hub resource
+   ```
+   Check that your token is valid and correctly set in the environment variable.
+
+3. **Not Found Errors**:
+   ```
+   Resource not found on Hugging Face Hub
+   ```
+   Verify the `repo_id`, `filename`, and `revision` are correct.
+
+### Manually Downloading Models
+
+If automatic downloading isn't working, you can download models manually and configure them as local assets:
+
+```bash
+# Download using git-lfs
+git lfs install
+git clone https://huggingface.co/meta-llama/Llama-3-8B /path/to/models/llama-3-8b
+```
+
+Then configure in `openmas_project.yml`:
+```yaml
+assets:
+  - name: llama-3-8b
+    version: "1.0"
+    asset_type: "model"
+    source:
+      type: "local"
+      path: "/path/to/models/llama-3-8b"
+```
+
+## API Reference
+
+For more details, see the OpenMAS API reference for:
+
+- `AssetSourceConfig` - Configuration for asset sources
+- `AssetConfig` - Full asset configuration
+- `AssetManager` - For programmatic asset management
+- `HfDownloader` - The Hugging Face Hub downloader implementation

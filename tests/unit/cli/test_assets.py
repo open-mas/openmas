@@ -467,3 +467,55 @@ def test_download_command_missing_dependency_error(
     assert "Error: Missing dependency" in result.output
     assert missing_module in result.output
     assert "install" in result.output.lower()
+
+
+@patch("openmas.cli.assets.load_project_config")
+@patch("openmas.cli.assets.AssetManager")
+@patch("openmas.cli.assets.importlib_util.find_spec", return_value=None)
+def test_download_hf_asset_missing_dependency(
+    mock_find_spec, mock_asset_manager_cls, mock_load_config, cli_runner, mock_project_config
+):
+    """Test the download command when huggingface_hub is missing for a Hugging Face asset."""
+    # Setup mocks
+    mock_load_config.return_value = mock_project_config
+
+    # Run the command for asset2 which is type "hf"
+    result = cli_runner.invoke(assets_app, ["download", "asset2"])
+
+    # Verify the result
+    assert result.exit_code == 1
+    assert "Error: Missing dependency 'huggingface_hub'" in result.stdout
+    assert "Downloading assets from Hugging Face requires the huggingface_hub package" in result.stdout
+    assert "pip install huggingface_hub" in result.stdout
+
+    # Verify the dependency check was made
+    mock_find_spec.assert_called_once_with("huggingface_hub")
+
+    # Verify AssetManager.get_asset_path was not called
+    mock_asset_manager_cls.return_value.get_asset_path.assert_not_called()
+
+
+@patch("openmas.cli.assets.load_project_config")
+@patch("openmas.cli.assets.AssetManager")
+@patch("openmas.cli.assets.importlib_util.find_spec", return_value=MagicMock())
+def test_download_hf_asset_with_dependency_installed(
+    mock_find_spec, mock_asset_manager_cls, mock_load_config, cli_runner, mock_project_config, mock_asset_manager
+):
+    """Test the download command when huggingface_hub is installed for a Hugging Face asset."""
+    # Setup mocks
+    mock_load_config.return_value = mock_project_config
+    mock_asset_manager_cls.return_value = mock_asset_manager
+    mock_asset_manager.get_asset_path.return_value = Path("/cache/path/asset2")
+
+    # Run the command for asset2 which is type "hf"
+    result = cli_runner.invoke(assets_app, ["download", "asset2"])
+
+    # Verify the result
+    assert result.exit_code == 0
+    assert "Successfully downloaded asset" in result.stdout
+
+    # Verify the dependency check was made
+    mock_find_spec.assert_called_once_with("huggingface_hub")
+
+    # Verify AssetManager.get_asset_path was called
+    mock_asset_manager.get_asset_path.assert_called_once_with("asset2", force_download=False)

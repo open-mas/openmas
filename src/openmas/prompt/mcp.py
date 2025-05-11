@@ -13,6 +13,7 @@ from openmas.prompt.base import PromptManager
 logger = get_logger(__name__)
 
 # Check if MCP is available
+HAS_MCP = False
 try:
     from mcp.server.fastmcp import Context
 
@@ -21,9 +22,6 @@ try:
 
     HAS_MCP = True
 except ImportError:
-    logger.warning("MCP is not installed. McpPromptManager will have limited functionality.")
-    HAS_MCP = False
-
     # Define placeholder classes to avoid type errors
     class PromptConfiguration:  # type: ignore
         """Placeholder for MCP PromptConfiguration."""
@@ -67,7 +65,10 @@ class McpPromptManager:
             List of registered prompt names
         """
         if not HAS_MCP:
-            logger.warning("MCP is not installed. Cannot register prompts with server.")
+            logger.warning(
+                "MCP is not installed but was requested for prompt registration. "
+                "Install the MCP package with: pip install mcp"
+            )
             return []
 
         # Check if the server supports registering prompts
@@ -123,7 +124,10 @@ class McpPromptManager:
             An async function that can be used as an MCP prompt handler
         """
         if not HAS_MCP:
-            logger.warning("MCP is not installed. Cannot create prompt handler.")
+            logger.warning(
+                "MCP is not installed but was requested for prompt handling. "
+                "Install the MCP package with: pip install mcp"
+            )
             return None
 
         async def prompt_handler(context: Any) -> str:

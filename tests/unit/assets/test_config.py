@@ -43,6 +43,49 @@ class TestAssetSourceConfig:
             AssetSourceConfig(type="hf")
         assert "repo_id is required for Hugging Face source type" in str(exc_info.value)
 
+    def test_hf_source_with_allow_patterns(self) -> None:
+        """Test creating a valid Hugging Face source config with allow_patterns for sharded models."""
+        source = AssetSourceConfig(type="hf", repo_id="openai/whisper-tiny", allow_patterns=["*.bin", "*.json"])
+        assert source.type == "hf"
+        assert source.repo_id == "openai/whisper-tiny"
+        assert source.filename is None
+        assert source.allow_patterns == ["*.bin", "*.json"]
+        assert source.ignore_patterns is None
+
+    def test_hf_source_with_ignore_patterns(self) -> None:
+        """Test creating a valid Hugging Face source config with ignore_patterns."""
+        source = AssetSourceConfig(type="hf", repo_id="openai/whisper-tiny", ignore_patterns=["*.md", "examples/*"])
+        assert source.type == "hf"
+        assert source.repo_id == "openai/whisper-tiny"
+        assert source.filename is None
+        assert source.ignore_patterns == ["*.md", "examples/*"]
+        assert source.allow_patterns is None
+
+    def test_hf_source_with_allow_and_ignore_patterns(self) -> None:
+        """Test creating a valid Hugging Face source config with both allow and ignore patterns."""
+        source = AssetSourceConfig(
+            type="hf", repo_id="openai/whisper-tiny", allow_patterns=["*.bin", "*.json"], ignore_patterns=["*.md"]
+        )
+        assert source.type == "hf"
+        assert source.repo_id == "openai/whisper-tiny"
+        assert source.filename is None
+        assert source.allow_patterns == ["*.bin", "*.json"]
+        assert source.ignore_patterns == ["*.md"]
+
+    def test_hf_source_with_string_allow_pattern(self) -> None:
+        """Test creating a HF source with allow_patterns as a single string."""
+        source = AssetSourceConfig(type="hf", repo_id="openai/whisper-tiny", allow_patterns="*.bin")
+        assert source.type == "hf"
+        assert source.repo_id == "openai/whisper-tiny"
+        assert source.allow_patterns == ["*.bin"]  # Should be converted to a list
+
+    def test_hf_source_with_string_ignore_pattern(self) -> None:
+        """Test creating a HF source with ignore_patterns as a single string."""
+        source = AssetSourceConfig(type="hf", repo_id="openai/whisper-tiny", ignore_patterns="*.md")
+        assert source.type == "hf"
+        assert source.repo_id == "openai/whisper-tiny"
+        assert source.ignore_patterns == ["*.md"]  # Should be converted to a list
+
     def test_local_source_valid(self) -> None:
         """Test creating a valid local source configuration."""
         source = AssetSourceConfig(type="local", path=Path("/path/to/model.bin"))

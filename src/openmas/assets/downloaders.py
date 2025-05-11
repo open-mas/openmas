@@ -5,7 +5,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, List, Optional, Type
 
 import httpx
 
@@ -26,10 +26,12 @@ except ImportError:
 
 # Try to import huggingface_hub, but make it optional
 HF_HUB_DOWNLOAD = None
+HF_SNAPSHOT_DOWNLOAD = None
 try:
-    from huggingface_hub import hf_hub_download  # type: ignore
+    from huggingface_hub import hf_hub_download, snapshot_download  # type: ignore
 
     HF_HUB_DOWNLOAD = hf_hub_download
+    HF_SNAPSHOT_DOWNLOAD = snapshot_download
     HF_AVAILABLE = True
 except ImportError:
     HF_AVAILABLE = False
@@ -247,8 +249,10 @@ class HfDownloader(BaseDownloader):
         if not HF_AVAILABLE:
             raise ImportError(
                 "Hugging Face Hub is not installed. "
-                "Please install the huggingface_hub package with: "
-                "pip install huggingface_hub"
+                "Please install the huggingface_hub package with one of the following commands:\n"
+                "- pip install huggingface_hub\n"
+                "- poetry add huggingface_hub\n"
+                "- conda install -c conda-forge huggingface_hub"
             )
         self.token = token
 
@@ -273,8 +277,10 @@ class HfDownloader(BaseDownloader):
         if HF_HUB_DOWNLOAD is None:
             raise ImportError(
                 "Hugging Face Hub is not installed. "
-                "Please install the huggingface_hub package with: "
-                "pip install huggingface_hub"
+                "Please install the huggingface_hub package with one of the following commands:\n"
+                "- pip install huggingface_hub\n"
+                "- poetry add huggingface_hub\n"
+                "- conda install -c conda-forge huggingface_hub"
             )
 
         # Ensure the parent directory exists
@@ -304,6 +310,72 @@ class HfDownloader(BaseDownloader):
                 shutil.move(downloaded_path, target_path)
 
             return target_path
+
+        finally:
+            # Clean up temporary cache directory
+            if cache_dir.exists():
+                try:
+                    shutil.rmtree(cache_dir)
+                except Exception as e:
+                    # Just log the error but don't fail the download
+                    logger.warning(f"Failed to clean up temporary cache directory: {e}")
+
+    def _download_snapshot(
+        self,
+        repo_id: str,
+        revision: str,
+        token: Optional[str],
+        target_path: Path,
+        allow_patterns: Optional[List[str]] = None,
+        ignore_patterns: Optional[List[str]] = None,
+    ) -> Path:
+        """Download an entire repository or specific files based on patterns.
+
+        Args:
+            repo_id: Hugging Face Hub repository ID
+            revision: Repository revision/branch to use
+            token: Authentication token for the Hugging Face Hub
+            target_path: Path where the repository should be downloaded
+            allow_patterns: List of glob patterns to include
+            ignore_patterns: List of glob patterns to exclude
+
+        Returns:
+            Path: Path to the downloaded repository directory
+
+        Raises:
+            Any exceptions from the underlying snapshot_download will be propagated
+        """
+        if HF_SNAPSHOT_DOWNLOAD is None:
+            raise ImportError(
+                "Hugging Face Hub is not installed. "
+                "Please install the huggingface_hub package with one of the following commands:\n"
+                "- pip install huggingface_hub\n"
+                "- poetry add huggingface_hub\n"
+                "- conda install -c conda-forge huggingface_hub"
+            )
+
+        # Ensure the parent directory exists
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Create a temporary cache directory
+        cache_dir = target_path.parent / ".hf-cache"
+        cache_dir.mkdir(exist_ok=True)
+
+        try:
+            # Download repository snapshot to target path
+            downloaded_path = HF_SNAPSHOT_DOWNLOAD(
+                repo_id=repo_id,
+                revision=revision,
+                token=token,
+                cache_dir=cache_dir,
+                local_dir=target_path,
+                local_dir_use_symlinks=False,
+                allow_patterns=allow_patterns if allow_patterns is None else list(allow_patterns),
+                ignore_patterns=ignore_patterns if ignore_patterns is None else list(ignore_patterns),
+                repo_type=None,  # default, let huggingface_hub determine
+            )
+
+            return Path(downloaded_path)
 
         finally:
             # Clean up temporary cache directory
@@ -350,16 +422,20 @@ class HfDownloader(BaseDownloader):
                 token = env_token
                 logger.debug(f"Using token from environment variable '{token_env_var}'")
             else:
+                # If token_env_var is specified but not set in the environment, log a specific warning
                 error_msg = (
-                    f"Hugging Face authentication token environment variable '{token_env_var}' not found or empty."
+                    f"Hugging Face authentication is configured to use the environment variable "
+                    f"'{token_env_var}', but this variable is not set or is empty. "
+                    f"Download may fail for private models. Please set this environment variable "
+                    f"with your Hugging Face token."
                 )
-                logger.warning(f"{error_msg} " "Download may fail if authentication is required.")
+                logger.warning(error_msg)
                 # Check if strict authentication is required and fail early
                 if kwargs.get("strict_authentication", False):
                     raise AssetAuthenticationError(
                         error_msg,
                         source_type="hf",
-                        source_info=f"{repo_id}/{filename}",
+                        source_info=f"{repo_id}/{filename or ''}",
                         token_env_var=token_env_var,
                     )
 
@@ -381,14 +457,40 @@ class HfDownloader(BaseDownloader):
                 # Ensure HF Hub progress bars are enabled if user wants progress reporting
                 if "HF_HUB_DISABLE_PROGRESS_BARS" in os.environ:
                     del os.environ["HF_HUB_DISABLE_PROGRESS_BARS"]
-                logger.info(f"Downloading asset '{repo_id}/{filename}' (progress display managed by Hugging Face Hub)")
+                logger.info(
+                    f"Downloading asset '{repo_id}/{filename or ''}' (progress display managed by Hugging Face Hub)"
+                )
 
-            # Use an executor to run synchronous hf_hub_download in a separate thread
+            # Use an executor to run synchronous huggingface_hub download in a separate thread
             loop = asyncio.get_running_loop()
             try:
-                downloaded_path = await loop.run_in_executor(
-                    None, lambda: self._download(repo_id, filename, revision, token, target_path)
-                )
+                # Determine whether to use single file download or snapshot download
+                if filename:
+                    # Single file download
+                    downloaded_path = await loop.run_in_executor(
+                        None, lambda: self._download(repo_id, filename, revision, token, target_path)
+                    )
+                else:
+                    # Repository snapshot download
+                    downloaded_path = await loop.run_in_executor(
+                        None,
+                        lambda: self._download_snapshot(
+                            repo_id=repo_id,
+                            revision=revision,
+                            token=token,
+                            target_path=target_path,
+                            allow_patterns=(
+                                source_config.allow_patterns
+                                if source_config.allow_patterns is None
+                                else list(source_config.allow_patterns)
+                            ),
+                            ignore_patterns=(
+                                source_config.ignore_patterns
+                                if source_config.ignore_patterns is None
+                                else list(source_config.ignore_patterns)
+                            ),
+                        ),
+                    )
                 logger.info(f"Successfully downloaded asset from Hugging Face Hub to {downloaded_path}")
                 return
             except Exception as e:
@@ -405,20 +507,20 @@ class HfDownloader(BaseDownloader):
                     raise AssetAuthenticationError(
                         f"Authentication error accessing Hugging Face Hub resource: {error_msg}. {auth_context}",
                         source_type="hf",
-                        source_info=f"{repo_id}/{filename}",
+                        source_info=f"{repo_id}/{filename or ''}",
                         token_env_var=token_env_var,
                     )
                 elif "404" in error_msg or "not found" in error_msg.lower():
                     raise AssetDownloadError(
                         f"Resource not found on Hugging Face Hub: {error_msg}",
                         source_type="hf",
-                        source_info=f"{repo_id}/{filename}",
+                        source_info=f"{repo_id}/{filename or ''}",
                     )
                 else:
                     raise AssetDownloadError(
                         f"Error downloading from Hugging Face Hub: {error_msg}",
                         source_type="hf",
-                        source_info=f"{repo_id}/{filename}",
+                        source_info=f"{repo_id}/{filename or ''}",
                     )
         finally:
             # Restore original HF Hub progress setting
@@ -511,12 +613,15 @@ def get_downloader_for_source(source_config: AssetSourceConfig) -> BaseDownloade
         raise AssetConfigurationError(f"Unknown source type: {source_config.type}")
 
     # Log a warning if authentication might be needed but not provided
-    if source_config.type == "hf" and not source_config.authentication:
-        logger.warning(
-            "No authentication provided for Hugging Face Hub source. "
-            "This may fail if the repository requires authentication. "
-            "Consider adding authentication details to the asset configuration."
-        )
+    if source_config.type == "hf":
+        if not source_config.authentication:
+            logger.warning(
+                "No authentication provided for Hugging Face Hub source. "
+                "This may fail if the repository requires authentication. "
+                "Consider adding authentication details to the asset configuration."
+            )
+        # We don't check for environment variables here to avoid duplicating warnings
+        # The token check is done in the HfDownloader.download method
     elif source_config.type == "http" and not source_config.authentication:
         logger.debug(
             "No authentication provided for HTTP source. "
@@ -528,6 +633,10 @@ def get_downloader_for_source(source_config: AssetSourceConfig) -> BaseDownloade
     except ImportError as e:
         if source_config.type == "hf":
             raise AssetConfigurationError(
-                "Hugging Face Hub is not installed. Please install it with: " "pip install huggingface_hub"
+                "Hugging Face Hub is not installed. "
+                "Please install it with one of the following commands:\n"
+                "- pip install huggingface_hub\n"
+                "- poetry add huggingface_hub\n"
+                "- conda install -c conda-forge huggingface_hub"
             ) from e
         raise

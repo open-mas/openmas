@@ -3,6 +3,7 @@
 import asyncio
 import shutil
 import sys
+from importlib import util as importlib_util
 from pathlib import Path  # noqa: F401
 from typing import Optional
 
@@ -104,14 +105,31 @@ def download_asset(
 
         # Find the asset configuration
         asset_found = False
+        source_type = None
         for asset in project_config.assets:
             if asset.name == asset_name:
                 asset_found = True
+                source_type = asset.source.type
                 break
 
         if not asset_found:
             console.print(f"[bold red]Asset '{asset_name}' not found in project configuration[/bold red]")
             sys.exit(1)
+
+        # Check if we need to download from Hugging Face and if the huggingface_hub library is installed
+        if source_type == "hf":
+            if not importlib_util.find_spec("huggingface_hub"):
+                console.print("[bold red]Error: Missing dependency 'huggingface_hub'[/bold red]")
+                console.print(
+                    "\n[yellow]Downloading assets from Hugging Face requires the huggingface_hub package.[/yellow]"
+                )
+                console.print("Install this dependency using your preferred package manager:")
+                console.print("[green]  pip install huggingface_hub[/green]")
+                console.print("[green]  # or with Poetry:[/green]")
+                console.print("[green]  poetry add huggingface_hub[/green]")
+                console.print("[green]  # or with Conda:[/green]")
+                console.print("[green]  conda install -c conda-forge huggingface_hub[/green]")
+                sys.exit(1)
 
         # Show progress during download
         with Progress(
@@ -138,26 +156,15 @@ def download_asset(
                 console.print(
                     "\n[yellow]This operation requires additional dependencies that are not installed.[/yellow]"
                 )
-                console.print("To install the missing dependency, run one of the following:")
+                console.print("Install this dependency using your preferred package manager:")
                 console.print(f"[green]  pip install {missing_module}[/green]")
-                console.print("[green]  # or with your preferred package manager:[/green]")
+                console.print("[green]  # or with Poetry:[/green]")
                 console.print(f"[green]  poetry add {missing_module}[/green]")
-                console.print(f"[green]  conda install {missing_module}[/green]")
+                console.print("[green]  # or with Conda:[/green]")
+                console.print(f"[green]  conda install -c conda-forge {missing_module}[/green]")
                 sys.exit(1)
-
-    except ModuleNotFoundError as e:
-        # Handle missing dependencies at the top level
-        missing_module = str(e).split("'")[1] if "'" in str(e) else str(e)
-        console.print(f"[bold red]Error: Missing dependency '{missing_module}'[/bold red]")
-        console.print("\n[yellow]This operation requires additional dependencies that are not installed.[/yellow]")
-        console.print("To install the missing dependency, run one of the following:")
-        console.print(f"[green]  pip install {missing_module}[/green]")
-        console.print("[green]  # or with your preferred package manager:[/green]")
-        console.print(f"[green]  poetry add {missing_module}[/green]")
-        console.print(f"[green]  conda install {missing_module}[/green]")
-        sys.exit(1)
     except Exception as e:
-        console.print(f"[bold red]Error downloading asset: {str(e)}[/bold red]")
+        console.print(f"[bold red]Error: {str(e)}[/bold red]")
         sys.exit(1)
 
 
@@ -271,7 +278,7 @@ def clear_cache(
                 console.print("[yellow]Operation cancelled[/yellow]")
                 sys.exit(0)
 
-            # Clear only the contents, not the directory itself
+            # Create a temporary cache directory
             # Also preserve the .locks directory
             locks_dir = asset_manager.locks_dir
             cache_dir = asset_manager.cache_dir

@@ -63,6 +63,15 @@ class TestMcpPromptManager:
         )
         return Prompt(metadata=metadata, content=content, id="test-id")
 
+    @pytest.fixture
+    def mock_prompt(self):
+        """Create a mock prompt."""
+        return Prompt(
+            id="test-prompt-id",
+            content=PromptContent(system="This is a system prompt"),
+            metadata=PromptMetadata(name="test-prompt", description="Test prompt"),
+        )
+
     @pytest.mark.asyncio
     async def test_register_prompt_with_server(self, mcp_prompt_manager, prompt_manager, mock_server, sample_prompt):
         """Test registering a prompt with an MCP server."""
@@ -373,3 +382,67 @@ class TestMcpPromptManager:
             # Create the handler
             handler = await manager.create_prompt_handler("test_prompt")
             assert handler is None
+
+    def test_initialization_no_warnings(self, prompt_manager, caplog):
+        """Test that initializing McpPromptManager does not produce warnings."""
+        caplog.clear()
+        McpPromptManager(prompt_manager)
+        # Verify no warnings were logged during initialization
+        assert not any(record.levelname == "WARNING" for record in caplog.records)
+
+    @pytest.mark.asyncio
+    @patch("openmas.prompt.mcp.HAS_MCP", False)
+    async def test_register_prompts_with_server_no_mcp_warning(self, mcp_prompt_manager, mock_server, caplog):
+        """Test that register_all_prompts_with_server logs a warning when MCP is not installed."""
+        caplog.clear()
+        result = await mcp_prompt_manager.register_all_prompts_with_server(mock_server)
+
+        # Verify the warning was logged
+        assert any("MCP is not installed" in record.message for record in caplog.records)
+        assert not result  # Should return empty list
+
+    @pytest.mark.asyncio
+    @patch("openmas.prompt.mcp.HAS_MCP", True)
+    async def test_register_prompts_with_server_no_warning_when_mcp_available(
+        self, mcp_prompt_manager, mock_server, prompt_manager, mock_prompt, caplog
+    ):
+        """Test that register_all_prompts_with_server doesn't log a warning when MCP is installed."""
+        prompt_manager.list_prompts.return_value = [mock_prompt.metadata]
+        prompt_manager.get_prompt_by_name.return_value = mock_prompt
+
+        # Mock the PromptConfiguration class
+        prompt_config_mock = MagicMock()
+
+        with patch("openmas.prompt.mcp.PromptConfiguration", return_value=prompt_config_mock):
+            caplog.clear()
+            await mcp_prompt_manager.register_all_prompts_with_server(mock_server)
+
+            # Verify no "MCP is not installed" warning was logged
+            assert not any("MCP is not installed" in record.message for record in caplog.records)
+            mock_server.register_prompt.assert_called_once_with(prompt_config_mock)
+
+    @pytest.mark.asyncio
+    @patch("openmas.prompt.mcp.HAS_MCP", False)
+    async def test_create_prompt_handler_no_mcp_warning(self, mcp_prompt_manager, caplog):
+        """Test that create_prompt_handler logs a warning when MCP is not installed."""
+        caplog.clear()
+        result = await mcp_prompt_manager.create_prompt_handler("test-prompt")
+
+        # Verify the warning was logged
+        assert any("MCP is not installed" in record.message for record in caplog.records)
+        assert result is None  # Should return None when MCP is not available
+
+    @pytest.mark.asyncio
+    @patch("openmas.prompt.mcp.HAS_MCP", True)
+    async def test_create_prompt_handler_no_warning_when_mcp_available(
+        self, mcp_prompt_manager, prompt_manager, mock_prompt, caplog
+    ):
+        """Test that create_prompt_handler doesn't log a warning when MCP is installed."""
+        prompt_manager.get_prompt_by_name.return_value = mock_prompt
+
+        caplog.clear()
+        result = await mcp_prompt_manager.create_prompt_handler("test-prompt")
+
+        # Verify no "MCP is not installed" warning was logged
+        assert not any("MCP is not installed" in record.message for record in caplog.records)
+        assert result is not None  # Should return a handler function
