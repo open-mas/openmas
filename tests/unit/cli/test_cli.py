@@ -261,7 +261,7 @@ def test_run_command_with_project_dir(
 
     # Verify that the project-dir parameter is respected
     mock_cli_find_root.assert_called_with(temp_project_dir)
-    mock_import.assert_any_call("agents.agent1")
+    mock_import.assert_any_call("agents.agent1.agent")
 
 
 @patch("openmas.config._find_project_root")

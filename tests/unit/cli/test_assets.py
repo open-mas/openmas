@@ -437,3 +437,33 @@ def test_download_command_with_force(
     assert result.exit_code == 0
     assert "Successfully downloaded asset" in result.stdout
     mock_asset_manager.get_asset_path.assert_called_once_with("asset1", force_download=True)
+
+
+@patch("openmas.cli.assets.load_project_config")
+@patch("openmas.cli.assets.AssetManager")
+def test_download_command_missing_dependency_error(
+    mock_asset_manager_cls, mock_load_config, cli_runner, mock_project_config, mock_asset_manager
+):
+    """Test the download command when there's a dependency error."""
+    # Setup mocks
+    mock_load_config.return_value = mock_project_config
+    mock_asset_manager_cls.return_value = mock_asset_manager
+
+    # Simulate a dependency-related error message
+    missing_module = "some_dependency"
+    error_msg = f"No module named '{missing_module}'"
+    mock_asset_manager.get_asset_path.side_effect = ModuleNotFoundError(error_msg)
+
+    # Run the command
+    result = cli_runner.invoke(assets_app, ["download", "asset1"])
+
+    # Print output for debugging
+    print("\nError output from command:")
+    print(result.output)
+    print(f"Exit code: {result.exit_code}")
+
+    # Verify the result provides a helpful error message
+    assert result.exit_code != 0
+    assert "Error: Missing dependency" in result.output
+    assert missing_module in result.output
+    assert "install" in result.output.lower()

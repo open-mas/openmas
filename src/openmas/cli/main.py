@@ -55,7 +55,8 @@ except Exception as e:
 @click.argument("project_name", type=str)
 @click.option("--template", "-t", type=str, default=None, help="Template to use for project initialization")
 @click.option("--name", type=str, default=None, help="Project name when initializing in current directory")
-def init(project_name: str, template: Optional[str], name: Optional[str]) -> None:
+@click.option("--poetry", is_flag=True, help="Initialize project with Poetry support")
+def init(project_name: str, template: Optional[str], name: Optional[str], poetry: bool = False) -> None:
     """Initialize a new OpenMAS project with standard directory structure.
 
     PROJECT_NAME is the name of the project to create or "." for current directory.
@@ -94,7 +95,7 @@ def init(project_name: str, template: Optional[str], name: Optional[str]) -> Non
             if subdir not in ["config", "packages"]:
                 init_file = subdir_path / "__init__.py"
                 with open(init_file, "w") as f:
-                    f.write(f'"""OpenMAS {subdir} package."""\n')
+                    f.write('"""OpenMAS {} package."""\n'.format(subdir))
     except (PermissionError, OSError) as e:
         click.echo(f"❌ Error creating project structure: {str(e)}")
         sys.exit(1)
@@ -105,14 +106,44 @@ def init(project_name: str, template: Optional[str], name: Optional[str]) -> Non
         with open(project_path / "README.md", "w") as f:
             f.write(f"# {display_name}\n\nA OpenMAS project.\n")
 
-        # Create requirements.txt
-        with open(project_path / "requirements.txt", "w") as f:
-            f.write("openmas>=0.1.0\n")
+        # Create dependency files based on the chosen option
+        if poetry:
+            # Create pyproject.toml for Poetry
+            with open(project_path / "pyproject.toml", "w") as f:
+                f.write(
+                    f"""[tool.poetry]
+name = "{display_name.lower().replace(' ', '-')}"
+version = "0.1.0"
+description = "An OpenMAS project"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+# This is an application, not a library
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+openmas = ">=0.2.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0"
+black = "^23.0.0"
+mypy = "^1.0.0"
+flake8 = "^6.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+"""
+                )
+        else:
+            # Create requirements.txt
+            with open(project_path / "requirements.txt", "w") as f:
+                f.write("openmas>=0.2.0\n")
 
         # Create .gitignore if it doesn't exist
         gitignore_path = project_path / ".gitignore"
         if not gitignore_path.exists():
-            with open(gitignore_path, "w") as f:
+            with open(gitignore_path, "w") as f:  # noqa: F541
                 f.write("__pycache__/\n*.py[cod]\n*$py.class\n.env\n.venv\nenv/\nvenv/\nENV/\nenv.bak/\nvenv.bak/\n")
                 f.write(".pytest_cache/\n.coverage\nhtmlcov/\n.tox/\n.mypy_cache/\n")
                 f.write("# OpenMAS specific\npackages/\n")
@@ -248,14 +279,14 @@ class Agent(BaseAgent):
         self.logger.info("Sample agent running...")
 
         # Example periodic task
-        for i in range(5):
-            self.logger.info(f"Sample agent tick {i}...")
-            await asyncio.sleep(1)
-
-        self.logger.info("Sample agent completed.")
+        counter = 0
+        while True:
+            self.logger.info(f"Sample agent heartbeat: {counter}")
+            counter += 1
+            await asyncio.sleep(5)  # Sleep for 5 seconds between heartbeats
 
     async def shutdown(self) -> None:
-        '''Clean up when the agent stops.'''
+        '''Shutdown the agent.'''
         self.logger.info("Sample agent shutting down...")
 """
                 )
@@ -266,76 +297,47 @@ class Agent(BaseAgent):
             click.echo(f"❌ Error creating sample agent: {str(e)}")
             sys.exit(1)
 
-    # Add dependencies schema comment
-    dependencies_comment = """# Dependencies configuration (for external packages)
-# Examples:
-# dependencies:
-#   # - package: <org_or_user>/<package_name>  # Example: From official repo (Not implemented yet)
-#   #   version: <version_spec>
-#   # - git: <git_url>                         # Example: From Git repo (Implemented)
-#   #   revision: <branch_tag_or_commit>       # Optional
-#   # - local: <relative_path_to_package>      # Example: From local path (Not implemented yet)
-"""
-
-    # Write the project configuration file with comments
+    # Write the project configuration to openmas_project.yml
     try:
         with open(project_path / "openmas_project.yml", "w") as f:
             yaml.dump(project_config, f, default_flow_style=False, sort_keys=False)
-            f.write("\n" + dependencies_comment)
     except (PermissionError, OSError) as e:
         click.echo(f"❌ Error writing project configuration: {str(e)}")
         sys.exit(1)
 
-    # Success message with styling
-    try:
-        from rich.console import Console
-        from rich.panel import Panel
-        from rich.text import Text
+    # Print successful creation message with next steps
+    click.echo(f"✅ Successfully created new OpenMAS project: {display_name}")
+    click.echo("")
+    click.echo("Project structure created:")
+    click.echo(f"  {project_path}/")
+    click.echo("  ├── agents/         # Agent implementations")
+    click.echo("  ├── config/         # Configuration files")
+    click.echo("  ├── extensions/     # Custom extensions")
+    click.echo("  ├── packages/       # Local dependencies")
+    click.echo("  ├── shared/         # Shared code between agents")
+    click.echo("  ├── tests/          # Test files")
+    if poetry:
+        click.echo("  ├── pyproject.toml  # Poetry configuration")
+    else:
+        click.echo("  ├── requirements.txt  # Python dependencies")
+    click.echo("  └── openmas_project.yml  # OpenMAS project configuration")
 
-        rich_console = Console()
-
-        # Create a styled success message
-        success_text = Text()
-        success_text.append("✅ ", style="bold green")
-
-        if project_path == Path("."):
-            success_text.append(f"OpenMAS project '{display_name}' created successfully!\n\n", style="bold")
-            success_text.append("Project structure initialized in current directory")
-        else:
-            success_text.append(f"OpenMAS project '{project_path}' created successfully!\n\n", style="bold")
-            success_text.append(f"Project structure initialized in '{project_path}'")
-
-        if template:
-            success_text.append(f"\n\nTemplate: {template}", style="bold blue")
-
-        # Add next steps
-        next_steps = Text("\n\nNext steps:", style="bold yellow")
-        if project_path != Path("."):
-            next_steps.append(f"\n  cd {project_name}")
-        next_steps.append("\n  poetry install openmas")
-        next_steps.append("\n  # Start developing your agents!")
-
-        success_text.append(next_steps)
-
-        # Display the styled message in a panel
-        rich_console.print(Panel(success_text, title="Project Creation Complete", border_style="green"))
-    except ImportError:
-        # Fallback to plain text if rich is not available
-        if project_path == Path("."):
-            click.echo(f"✅ Created OpenMAS project '{display_name}'")
-            click.echo("Project structure initialized in current directory")
-        else:
-            click.echo(f"✅ Created OpenMAS project '{project_path}'")
-            click.echo(f"Project structure initialized in '{project_path}'")
-
-        if template:
-            click.echo(f"Used template: {template}")
-
-        click.echo("\nNext steps:")
-        if project_path != Path("."):
-            click.echo(f"  cd {project_name}")
-        click.echo("  poetry install openmas")
-        click.echo("  # Start developing your agents!")
+    # Print next steps based on the dependency management approach
+    click.echo("")
+    click.echo("Next steps:")
+    if poetry:
+        click.echo("1. Install dependencies:")
+        click.echo("   $ cd " + str(project_path) + " && poetry install")
+        click.echo("2. Run your agent:")
+        click.echo("   $ poetry run openmas run sample_agent")
+    else:
+        click.echo("1. Create a virtual environment:")
+        click.echo("   $ cd " + str(project_path) + " && python -m venv .venv")
+        click.echo("   $ source .venv/bin/activate  # On Windows: .venv\\Scripts\\activate")
+        click.echo("2. Install dependencies:")
+        click.echo("   $ pip install -r requirements.txt")
+        click.echo("3. Run your agent:")
+        click.echo("   $ openmas run sample_agent")
 
 
 @cli.command()

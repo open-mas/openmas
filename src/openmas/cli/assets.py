@@ -131,7 +131,31 @@ def download_asset(
             except AssetError as e:
                 console.print(f"[bold red]Error downloading asset '{asset_name}': {str(e)}[/bold red]")
                 sys.exit(1)
+            except ModuleNotFoundError as e:
+                # Provide a more helpful error message for missing dependencies
+                missing_module = str(e).split("'")[1] if "'" in str(e) else str(e)
+                console.print(f"[bold red]Error: Missing dependency '{missing_module}'[/bold red]")
+                console.print(
+                    "\n[yellow]This operation requires additional dependencies that are not installed.[/yellow]"
+                )
+                console.print("To install the missing dependency, run one of the following:")
+                console.print(f"[green]  pip install {missing_module}[/green]")
+                console.print("[green]  # or with your preferred package manager:[/green]")
+                console.print(f"[green]  poetry add {missing_module}[/green]")
+                console.print(f"[green]  conda install {missing_module}[/green]")
+                sys.exit(1)
 
+    except ModuleNotFoundError as e:
+        # Handle missing dependencies at the top level
+        missing_module = str(e).split("'")[1] if "'" in str(e) else str(e)
+        console.print(f"[bold red]Error: Missing dependency '{missing_module}'[/bold red]")
+        console.print("\n[yellow]This operation requires additional dependencies that are not installed.[/yellow]")
+        console.print("To install the missing dependency, run one of the following:")
+        console.print(f"[green]  pip install {missing_module}[/green]")
+        console.print("[green]  # or with your preferred package manager:[/green]")
+        console.print(f"[green]  poetry add {missing_module}[/green]")
+        console.print(f"[green]  conda install {missing_module}[/green]")
+        sys.exit(1)
     except Exception as e:
         console.print(f"[bold red]Error downloading asset: {str(e)}[/bold red]")
         sys.exit(1)

@@ -5,7 +5,7 @@ import importlib.util
 import os
 import sys
 from typing import List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
 import yaml
@@ -292,3 +292,103 @@ class TestAgent(BaseAgent):
         # This test is unstable due to mocking issues with signal handlers
         # Better to skip than have flaky tests
         pytest.skip("Skipping this test due to signal handler mocking inconsistency")
+
+
+class TestInitCommand:
+    """Tests for the init command implementation."""
+
+    @pytest.fixture
+    def cli_runner(self):
+        """Create a Click CLI runner."""
+        return CliRunner()
+
+    def test_init_command_creates_basic_project(self, cli_runner):
+        """Test that the init command creates a basic project with requirements.txt by default."""
+        # Mock all file operations
+        with (
+            patch("pathlib.Path.mkdir") as mock_mkdir,
+            patch("pathlib.Path.exists", return_value=False),
+            patch("builtins.open", mock_open()),
+            patch("yaml.dump"),
+        ):
+            # Run the init command
+            result = cli_runner.invoke(cli, ["init", "test_project"])
+
+            # Check the command succeeded
+            assert result.exit_code == 0
+
+            # Check success message
+            assert "✅ Successfully created new OpenMAS project" in result.output
+
+            # Verify the right next steps are shown
+            assert "pip install -r requirements.txt" in result.output
+
+            # Verify directories were created
+            mock_mkdir.assert_called()
+
+    def test_init_command_with_poetry_flag(self, cli_runner):
+        """Test that the init command with --poetry flag creates a project with pyproject.toml."""
+        # Mock all file operations
+        with (
+            patch("pathlib.Path.mkdir") as mock_mkdir,
+            patch("pathlib.Path.exists", return_value=False),
+            patch("builtins.open", mock_open()),
+            patch("yaml.dump"),
+        ):
+            # Run the init command with poetry flag
+            result = cli_runner.invoke(cli, ["init", "test_project", "--poetry"])
+
+            # Check the command succeeded
+            assert result.exit_code == 0
+
+            # Check success message
+            assert "✅ Successfully created new OpenMAS project" in result.output
+
+            # Verify Poetry instructions are shown
+            assert "poetry install" in result.output
+
+            # Verify directories were created
+            mock_mkdir.assert_called()
+
+    def test_init_command_current_directory(self, cli_runner):
+        """Test initializing an OpenMAS project in the current directory."""
+        # Mock all file operations
+        with (
+            patch("pathlib.Path.mkdir") as mock_mkdir,
+            patch("pathlib.Path.exists", return_value=False),
+            patch("builtins.open", mock_open()),
+            patch("yaml.dump"),
+        ):
+            # Run the init command specifying current directory
+            result = cli_runner.invoke(cli, ["init", ".", "--name", "test_project"])
+
+            # Check the command succeeded
+            assert result.exit_code == 0
+
+            # Check success message
+            assert "✅ Successfully created new OpenMAS project" in result.output
+
+            # Verify directories were created
+            mock_mkdir.assert_called()
+
+    def test_init_command_current_directory_with_poetry(self, cli_runner):
+        """Test initializing a Poetry OpenMAS project in the current directory."""
+        # Mock all file operations
+        with (
+            patch("pathlib.Path.mkdir") as mock_mkdir,
+            patch("pathlib.Path.exists", return_value=False),
+            patch("builtins.open", mock_open()),
+            patch("yaml.dump"),
+        ):
+            # Run the init command specifying current directory with poetry flag
+            result = cli_runner.invoke(cli, ["init", ".", "--name", "test_project", "--poetry"])
+
+            # Check the command succeeded
+            assert result.exit_code == 0
+
+            # Check success message and Poetry-specific instructions
+            assert "✅ Successfully created new OpenMAS project" in result.output
+            assert "poetry install" in result.output
+
+            # Verify directories were created
+            mock_mkdir.assert_called()

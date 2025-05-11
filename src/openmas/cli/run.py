@@ -17,7 +17,6 @@ import typer
 import yaml
 
 from openmas.agent.base import BaseAgent
-from openmas.assets.manager import AssetManager
 from openmas.config import AgentConfigEntry, ConfigLoader, ProjectConfig, _find_project_root, logger
 from openmas.exceptions import ConfigurationError, LifecycleError
 
@@ -58,6 +57,8 @@ def add_package_paths_to_sys_path(packages_dir: str | Path) -> None:
             # Otherwise add the package root
             if str(package_path) not in sys.path:
                 sys.path.insert(0, str(package_path))
+
+    logger.debug(f"Updated sys.path with package paths from {packages_dir}")
 
 
 def _find_agent_class(agent_module: types.ModuleType, expected_class_name: Optional[str] = None) -> Type[BaseAgent]:
@@ -232,106 +233,84 @@ def run_project(agent_name: str, project_dir: Optional[Path] = None, env: Option
     # Add packages to sys.path
     packages_dir = project_root / "packages"
     if packages_dir.exists():
-        for package_dir in packages_dir.iterdir():
-            if package_dir.is_dir():
-                # Add primary paths for import - prioritizing src/ directory if it exists
-                src_dir = package_dir / "src"
-                if src_dir.exists() and src_dir.is_dir():
-                    if str(src_dir) not in sys_path_additions:
-                        sys_path_additions.append(str(src_dir))
-                elif str(package_dir) not in sys_path_additions:
-                    sys_path_additions.append(str(package_dir))
+        # Use our utility function to add packages
+        add_package_paths_to_sys_path(packages_dir)
 
     # Update sys.path - add in reverse order so that higher priority paths appear first
     for path_str in reversed(sys_path_additions):
         if path_str not in sys.path:
             sys.path.insert(0, path_str)
 
-    click.echo("Python import paths:")
-    for idx, path_str in enumerate(sys_path_additions):
-        click.echo(f"  {idx + 1}. {path_str}")
+    click.echo("Python import paths:")  # noqa: F541
+    for i, path_str in enumerate(sys.path[:5]):
+        click.echo(f"  {i + 1}. {path_str}")
+    if len(sys.path) > 5:
+        click.echo(f"  ... and {len(sys.path) - 5} more paths")
 
-    # Discover local communicators and extensions BEFORE importing agent module
-    # This ensures communicators are properly registered before agent code runs
+    # Try to locate the agent module
+    agent_module_name = f"{module_path}.agent"
+
     try:
-        from openmas.communication import discover_communicator_extensions, discover_local_communicators
-
-        click.echo("Discovering local communicators...")
-        discover_local_communicators([str(path) for path in extension_paths if path.exists()])
-
-        # Also discover package entry point communicators
-        discover_communicator_extensions()
+        # Import the agent module
+        agent_module = importlib.import_module(agent_module_name)
+    except ModuleNotFoundError as e:
+        # Check if it's openmas itself that can't be found
+        if "openmas" in str(e):
+            click.echo(f"❌ Critical error: Could not import OpenMAS modules: {e}")
+            click.echo("Make sure you have OpenMAS installed in your current Python environment:")
+            click.echo("  pip install openmas")
+            click.echo("  # or with your preferred package manager:")
+            click.echo("  poetry add openmas")
+            click.echo("  conda install openmas")
+            sys.path = original_sys_path
+            raise typer.Exit(code=1)
+        elif agent_module_name in str(e):
+            # Agent module not found
+            click.echo(f"❌ Could not find agent module '{agent_module_name}': {e}")
+            click.echo(f"Make sure the agent path '{module_path}' exists and contains an 'agent.py' file.")
+            sys.path = original_sys_path
+            raise typer.Exit(code=1)
+        else:
+            # Some other dependency
+            click.echo(f"❌ Missing dependency when importing '{agent_module_name}': {e}")
+            missing_module = str(e).split("'")[1] if "'" in str(e) else str(e)
+            click.echo("Please install the required dependency:")
+            click.echo(f"  pip install {missing_module}")
+            click.echo("  # or with your preferred package manager:")
+            click.echo(f"  poetry add {missing_module}")
+            click.echo(f"  conda install {missing_module}")
+            sys.path = original_sys_path
+            raise typer.Exit(code=1)
     except ImportError as e:
-        click.echo(f"❌ Error loading communication modules: {e}")
+        click.echo(f"❌ Error importing agent module '{agent_module_name}': {e}")
+        click.echo("Check your agent implementation for errors.")
+        traceback.print_exc()
+        sys.path = original_sys_path
         raise typer.Exit(code=1)
 
-    # Set environment variables
-    os.environ["AGENT_NAME"] = agent_name
-
-    # Use project_root in the environment so agent can load its configuration
-    os.environ["OPENMAS_PROJECT_ROOT"] = str(project_root)
-
-    # If OPENMAS_ENV is not set, default to 'local'
-    if "OPENMAS_ENV" not in os.environ:
-        os.environ["OPENMAS_ENV"] = "local"
-
-    click.echo(f"Using environment: {os.environ.get('OPENMAS_ENV', 'local')}")
-
-    # Try to import the agent module
-    agent_module = None
-    import_exceptions = []
+    # Find the appropriate agent class in the module
+    class_name = agent_config_entry.class_name if hasattr(agent_config_entry, "class_name") else None
 
     try:
-        # Try direct module import first
-        click.echo(f"Trying to import module: {module_path}")
-        agent_module = importlib.import_module(module_path)
-
-        # Check if this is a package rather than a module - if so, try to import module.agent
-        if hasattr(agent_module, "__path__") and not hasattr(agent_module, "SimpleAgent"):
-            click.echo(f"Detected package, trying to import: {module_path}.agent")
-            try:
-                agent_module = importlib.import_module(f"{module_path}.agent")
-            except ImportError:
-                click.echo("Could not import .agent submodule")
-    except ImportError as e:
-        import_exceptions.append(f"Direct module import: {str(e)}")
-
-        # Try agent.py in the module directory
-        try:
-            agent_file = agent_dir_path / "agent.py"
-            if agent_file.exists():
-                click.echo(f"Trying to import from file: {agent_file}")
-                spec = importlib.util.spec_from_file_location("agent_module", agent_file)
-                if spec is not None and spec.loader is not None:
-                    agent_module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(agent_module)
-        except ImportError as e:
-            import_exceptions.append(f"File import: {str(e)}")
-
-    # If all import methods failed
-    if agent_module is None:
-        error_details = "\n".join(import_exceptions)
-        click.echo(f"❌ Failed to import agent module. Tried:\n{error_details}")
-        click.echo("Check that all dependencies are installed and the agent code is valid.")
-        raise typer.Exit(code=1)
-
-    # Find the agent class using the helper function
-    expected_class_name = agent_config_entry.class_ if agent_config_entry else None
-
-    try:
-        agent_class = _find_agent_class(agent_module, expected_class_name)
+        agent_class = _find_agent_class(agent_module, class_name)
     except ConfigurationError as e:
-        logger.error(f"❌ Error finding agent class: {e}")
+        click.echo(f"❌ Error finding agent class: {e}")
+        sys.path = original_sys_path
         raise typer.Exit(code=1)
 
-    logger.info(f"Using agent class: {agent_class.__name__}")
+    # Set up asset manager
+    asset_manager = None
+    if hasattr(project_config, "assets") and project_config.assets:
+        try:
+            from openmas.assets.manager import AssetManager
+
+            asset_manager = AssetManager(project_config)
+        except ImportError as e:
+            click.echo(f"⚠️ Warning: Could not initialize asset manager: {e}")
+            click.echo("Asset functionality will not be available.")
 
     # Initialize the agent with error handling
     try:
-        # Initialize asset manager
-        click.echo("Initializing asset manager...")
-        asset_manager = AssetManager(project_config)
-
         # Initialize agent with configuration and asset manager
         click.echo(f"Starting agent '{agent_name}' ({agent_class.__name__})")
         agent = agent_class(name=agent_name, asset_manager=asset_manager)
