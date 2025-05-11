@@ -1,11 +1,7 @@
 """Test that the CLI doesn't make assumptions about specific Python environments."""
 
-import os
 import sys
-from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from openmas.agent.base import BaseAgent
 from openmas.cli.run import run_project

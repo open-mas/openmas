@@ -2,7 +2,7 @@
 
 import asyncio
 import signal
-from unittest.mock import AsyncMock, MagicMock, call, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -150,7 +150,7 @@ class TestAgentExecutor:
         # Set up patches
         with (
             patch.object(executor, "_display_multiagent_guidance") as mock_display,
-            patch("click.echo") as mock_echo,
+            patch("click.echo"),  # We don't need to track this mock
             patch("asyncio.wait") as mock_wait,
             patch("asyncio.create_task") as mock_create_task,
         ):

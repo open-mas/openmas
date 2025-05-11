@@ -2,13 +2,10 @@
 
 import tempfile
 from pathlib import Path
-from typing import Dict, List, Tuple
-from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
 
-from openmas.deployment.metadata import DeploymentMetadata
 from openmas.deployment.orchestration import ComposeOrchestrator
 
 

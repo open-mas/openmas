@@ -2,12 +2,10 @@
 
 import importlib
 import types
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openmas.agent.base import BaseAgent
 from openmas.cli.agent_loader import AgentLoader
 from openmas.exceptions import ConfigurationError
 

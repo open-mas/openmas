@@ -4,8 +4,7 @@ import importlib
 import importlib.util
 import os
 import sys
-from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -15,7 +14,6 @@ from click.testing import CliRunner
 from openmas.agent.base import BaseAgent
 from openmas.assets.manager import AssetManager
 from openmas.cli.main import cli
-from openmas.config import ProjectConfig
 from openmas.exceptions import ConfigurationError
 
 # --- Create a Mock Agent Class at module level ---

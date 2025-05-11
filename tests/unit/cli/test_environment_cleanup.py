@@ -1,6 +1,5 @@
 """Test the environment cleanup behavior in the run_project function."""
 
-import importlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 

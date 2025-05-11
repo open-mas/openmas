@@ -1,4 +1,4 @@
-"""Tests for the OpenMAS CLI run command with focus on asyncio event loop consistency."""
+"""Tests for the run command."""
 
 import asyncio
 import os
@@ -10,7 +10,6 @@ import pytest
 import typer
 import yaml
 
-import openmas.cli.run
 from openmas.agent.base import BaseAgent
 from openmas.cli.run import run_project
 from openmas.cli.utils import add_package_paths_to_sys_path

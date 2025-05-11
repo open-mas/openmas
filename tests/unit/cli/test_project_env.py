@@ -1,11 +1,8 @@
 """Tests for the ProjectEnvironment class."""
 
 import os
-import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
-
-import pytest
 
 from openmas.cli.project_env import ProjectEnvironment
 from openmas.config import AgentConfigEntry, ProjectConfig

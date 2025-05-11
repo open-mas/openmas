@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, mock_open, patch
 import pytest
 from click.testing import CliRunner
 
-from openmas.cli.main import cli, init
+from openmas.cli.main import cli
 from openmas.cli.project_initializer import ProjectInitializer
 from openmas.exceptions import ConfigurationError
 
@@ -20,7 +20,7 @@ def test_init_new_project(temp_dir):
     """Test initializing a new OpenMAS project."""
     # Mock file operations
     with (
-        patch("pathlib.Path.mkdir") as mock_mkdir,
+        patch("pathlib.Path.mkdir"),  # We don't need to track this mock
         patch("pathlib.Path.exists", return_value=False),
         patch("builtins.open", mock_open()),
         patch("yaml.dump"),
@@ -42,7 +42,7 @@ def test_init_current_directory_with_name(temp_dir):
     """Test initializing an OpenMAS project in the current directory."""
     # Mock file operations
     with (
-        patch("pathlib.Path.mkdir") as mock_mkdir,
+        patch("pathlib.Path.mkdir"),  # We don't need to track this mock
         patch("pathlib.Path.exists", return_value=False),
         patch("builtins.open", mock_open()),
         patch("yaml.dump"),
@@ -64,7 +64,7 @@ def test_init_with_template(temp_dir):
     """Test initializing a project with a specific template."""
     # Mock file operations
     with (
-        patch("pathlib.Path.mkdir") as mock_mkdir,
+        patch("pathlib.Path.mkdir"),  # We don't need to track this mock
         patch("pathlib.Path.exists", return_value=False),
         patch("builtins.open", mock_open()),
         patch("yaml.dump"),
@@ -86,7 +86,7 @@ def test_init_with_poetry_flag(temp_dir):
     """Test initializing a project with Poetry support."""
     # Mock file operations
     with (
-        patch("pathlib.Path.mkdir") as mock_mkdir,
+        patch("pathlib.Path.mkdir"),  # We don't need to track this mock
         patch("pathlib.Path.exists", return_value=False),
         patch("builtins.open", mock_open()),
         patch("yaml.dump"),
@@ -204,7 +204,7 @@ def test_init_integration_with_project_initializer():
 
     with patch("openmas.cli.main.ProjectInitializer", return_value=mock_initializer) as mock_pi_class:
         runner = CliRunner()
-        result = runner.invoke(cli, ["init", "test_project", "--template", "mcp-server", "--poetry"])
+        runner.invoke(cli, ["init", "test_project", "--template", "mcp-server", "--poetry"])
 
         # Verify ProjectInitializer was created with correct args
         mock_pi_class.assert_called_once()

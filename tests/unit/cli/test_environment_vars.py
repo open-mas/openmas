@@ -4,10 +4,8 @@ import os
 from unittest.mock import MagicMock, patch
 
 import pytest
-from click.exceptions import Exit
 
 from openmas.config import AgentConfigEntry, ProjectConfig
-from openmas.exceptions import ConfigurationError
 
 
 @pytest.fixture
@@ -34,12 +32,11 @@ def test_running_project_with_different_environment_vars(mock_project_config):
             patch("openmas.cli.run.find_project_root", return_value="."),
             patch("openmas.cli.run.AgentLoader") as mock_agent_loader,
             patch("openmas.cli.run.ProjectEnvironment") as mock_proj_env,
-            patch("openmas.cli.run.AgentExecutor") as mock_executor,
+            patch("openmas.cli.run.AgentExecutor"),  # We don't need to store this mock
             patch("openmas.cli.run.load_agent_class"),
             patch("openmas.cli.run.initialize_agent"),
             patch("openmas.cli.run.validate_agent_in_config", return_value=mock_project_config.agents["test_agent"]),
         ):
-
             # Configure mocks
             mock_agent = MagicMock()
             mock_agent_class = MagicMock(return_value=mock_agent)

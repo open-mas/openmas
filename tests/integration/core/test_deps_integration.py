@@ -149,7 +149,7 @@ def test_deps_integration(test_project, monkeypatch, git_setup):
     # Mock all subprocess calls and file operations
     with (
         patch("subprocess.run") as mock_run,
-        patch("os.chdir") as mock_chdir,
+        patch("os.chdir"),  # We don't need to store this mock
         patch("os.getcwd", return_value=str(test_project)),
         patch("os.path.exists", side_effect=custom_exists),
         patch("os.path.isdir", return_value=True),
@@ -214,7 +214,7 @@ def test_deps_integration_update(test_project, monkeypatch, git_setup):
     # Mock all subprocess calls and file operations
     with (
         patch("subprocess.run") as mock_run,
-        patch("os.chdir") as mock_chdir,
+        patch("os.chdir"),  # We don't need to store this mock
         patch("os.getcwd", return_value=str(test_project)),
     ):
         # Configure mock to return successful result

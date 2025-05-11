@@ -4,7 +4,7 @@ import os
 import subprocess
 import sys
 import tempfile
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import typer
@@ -179,11 +179,13 @@ def _test_cli_run_command_with_mocks(sample_project):
                 assert mock_loop.run.called, "Loop.run should be called"
 
                 # Check that appropriate messages were echoed
-                echo_calls = [call[0][0] for call in mock_echo.call_args_list]
+                echo_calls = [call_item[0][0] for call_item in mock_echo.call_args_list]
                 assert any(
-                    "Using environment: test" in str(call) for call in echo_calls
+                    "Using environment: test" in str(call_item) for call_item in echo_calls
                 ), "Environment not set correctly"
-                assert any("simple_agent" in str(call) for call in echo_calls), "Agent name not found in output"
+                assert any(
+                    "simple_agent" in str(call_item) for call_item in echo_calls
+                ), "Agent name not found in output"
             except Exception as e:
                 if isinstance(e, AssertionError):
                     raise
@@ -258,9 +260,11 @@ def _test_run_missing_agent_with_mocks(sample_project):
             pass
 
         # Check appropriate error messages
-        echo_calls = [call[0][0] for call in mock_echo.call_args_list]
-        assert any("nonexistent_agent" in str(call) for call in echo_calls), "Agent name not found in error messages"
-        assert any("not found" in str(call) for call in echo_calls), "Error message not found"
+        echo_calls = [call_item[0][0] for call_item in mock_echo.call_args_list]
+        assert any(
+            "nonexistent_agent" in str(call_item) for call_item in echo_calls
+        ), "Agent name not found in error messages"
+        assert any("not found" in str(call_item) for call_item in echo_calls), "Error message not found"
 
 
 def _test_run_missing_agent_with_subprocess(sample_project):
@@ -306,7 +310,6 @@ def test_cli_run_invalid_config_integration(sample_project):
 def _test_invalid_config_with_mocks(sample_project):
     """Test invalid config case using mocks for CI environments."""
     from openmas.cli.run import run_project
-    from openmas.config import load_project_config
 
     # Create a backup of the original config
     original_config = None
@@ -329,9 +332,9 @@ def _test_invalid_config_with_mocks(sample_project):
                     pass
 
                 # Check error messages
-                echo_calls = [call[0][0] for call in mock_echo.call_args_list]
+                echo_calls = [call_item[0][0] for call_item in mock_echo.call_args_list]
                 assert any(
-                    "configuration" in str(call).lower() for call in echo_calls
+                    "configuration" in str(call_item).lower() for call_item in echo_calls
                 ), "Error about configuration not found"
     finally:
         # Restore the original project configuration

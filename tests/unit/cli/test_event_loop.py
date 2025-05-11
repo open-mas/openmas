@@ -15,8 +15,7 @@ def cleanup_event_loop():
     yield
     # Create a new event loop for subsequent tests
     try:
-        loop = asyncio.get_event_loop()
-        loop.close()
+        asyncio.get_event_loop().close()
     except Exception:
         pass
     asyncio.set_event_loop(asyncio.new_event_loop())
@@ -42,7 +41,7 @@ class TestEventLoopManager:
         manager = EventLoopManager()
 
         # Create a loop first
-        loop = manager.create_loop()
+        manager.create_loop()
 
         # Add a signal handler
         mock_callback = MagicMock()
