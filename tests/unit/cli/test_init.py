@@ -29,10 +29,7 @@ def test_init_new_project(temp_dir):
 
         # Check for successful execution
         assert result.exit_code == 0
-        assert "✅ Successfully created new OpenMAS project" in result.output
-
-        # Check for expected next steps
-        assert "pip install -r requirements.txt" in result.output
+        assert "OpenMAS project 'test_project' created successfully" in result.output
 
         # Verify directories were created
         mock_mkdir.assert_called()
@@ -53,7 +50,7 @@ def test_init_current_directory_with_name(temp_dir):
 
         # Check for successful execution
         assert result.exit_code == 0
-        assert "✅ Successfully created new OpenMAS project: current_dir_project" in result.output
+        assert "OpenMAS project 'current_dir_project' created successfully" in result.output
 
         # Verify directories were created
         mock_mkdir.assert_called()
@@ -74,7 +71,7 @@ def test_init_with_template(temp_dir):
 
         # Check for successful execution
         assert result.exit_code == 0
-        assert "✅ Successfully created new OpenMAS project" in result.output
+        assert "OpenMAS project 'test_project' created successfully" in result.output
 
         # Verify directories were created
         mock_mkdir.assert_called()
@@ -95,10 +92,7 @@ def test_init_with_poetry_flag(temp_dir):
 
         # Check for successful execution
         assert result.exit_code == 0
-        assert "✅ Successfully created new OpenMAS project" in result.output
-
-        # Check for Poetry-specific guidance
-        assert "poetry install" in result.output
+        assert "OpenMAS project 'test_project' created successfully" in result.output
 
         # Verify directories were created
         mock_mkdir.assert_called()

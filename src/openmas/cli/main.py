@@ -243,15 +243,18 @@ dependencies: []
 """
                     )
 
-                # Update project config with the agent
+                # Add the agent to the project config
                 project_config["agents"]["mcp_server"] = "agents/mcp_server"
+            else:
+                click.echo(f"❌ Unknown template: {template}")
+                sys.exit(1)
         except (PermissionError, OSError) as e:
             click.echo(f"❌ Error creating template files: {str(e)}")
             sys.exit(1)
-    else:
-        # Create a basic sample agent when no template is specified
+
+    # Create a sample agent if not using a template
+    if not template:
         try:
-            # Setup a basic sample agent
             agent_dir = project_path / "agents" / "sample_agent"
             agent_dir.mkdir(parents=True, exist_ok=project_path == Path("."))
 
@@ -259,85 +262,49 @@ dependencies: []
             with open(agent_dir / "__init__.py", "w") as f:
                 f.write('"""Sample agent package."""\n')
 
-            # Create agent.py file
+            # Create agent.py file with a basic agent implementation
             with open(agent_dir / "agent.py", "w") as f:
                 f.write(
-                    """'''Sample Agent.'''
+                    """'''Sample agent implementation.'''
 
 import asyncio
 from openmas.agent import BaseAgent
 
-class Agent(BaseAgent):
+class SampleAgent(BaseAgent):
     '''Sample agent implementation.'''
 
     async def setup(self) -> None:
         '''Set up the agent.'''
-        self.logger.info("Sample agent initializing...")
+        self.logger.info("Agent setup complete")
 
     async def run(self) -> None:
         '''Run the agent.'''
-        self.logger.info("Sample agent running...")
-
-        # Example periodic task
-        counter = 0
+        self.logger.info("Agent running")
         while True:
-            self.logger.info(f"Sample agent heartbeat: {counter}")
-            counter += 1
-            await asyncio.sleep(5)  # Sleep for 5 seconds between heartbeats
+            await asyncio.sleep(1)
 
     async def shutdown(self) -> None:
-        '''Shutdown the agent.'''
-        self.logger.info("Sample agent shutting down...")
+        '''Shut down the agent.'''
+        self.logger.info("Agent shutdown complete")
 """
                 )
 
-            # Update project config with the agent
+            # Add the agent to the project config
             project_config["agents"]["sample_agent"] = "agents/sample_agent"
         except (PermissionError, OSError) as e:
             click.echo(f"❌ Error creating sample agent: {str(e)}")
             sys.exit(1)
 
-    # Write the project configuration to openmas_project.yml
+    # Save the project configuration
     try:
         with open(project_path / "openmas_project.yml", "w") as f:
             yaml.dump(project_config, f, default_flow_style=False, sort_keys=False)
     except (PermissionError, OSError) as e:
-        click.echo(f"❌ Error writing project configuration: {str(e)}")
+        click.echo(f"❌ Error saving project configuration: {str(e)}")
         sys.exit(1)
 
-    # Print successful creation message with next steps
-    click.echo(f"✅ Successfully created new OpenMAS project: {display_name}")
-    click.echo("")
-    click.echo("Project structure created:")
-    click.echo(f"  {project_path}/")
-    click.echo("  ├── agents/         # Agent implementations")
-    click.echo("  ├── config/         # Configuration files")
-    click.echo("  ├── extensions/     # Custom extensions")
-    click.echo("  ├── packages/       # Local dependencies")
-    click.echo("  ├── shared/         # Shared code between agents")
-    click.echo("  ├── tests/          # Test files")
-    if poetry:
-        click.echo("  ├── pyproject.toml  # Poetry configuration")
-    else:
-        click.echo("  ├── requirements.txt  # Python dependencies")
-    click.echo("  └── openmas_project.yml  # OpenMAS project configuration")
-
-    # Print next steps based on the dependency management approach
-    click.echo("")
-    click.echo("Next steps:")
-    if poetry:
-        click.echo("1. Install dependencies:")
-        click.echo("   $ cd " + str(project_path) + " && poetry install")
-        click.echo("2. Run your agent:")
-        click.echo("   $ poetry run openmas run sample_agent")
-    else:
-        click.echo("1. Create a virtual environment:")
-        click.echo("   $ cd " + str(project_path) + " && python -m venv .venv")
-        click.echo("   $ source .venv/bin/activate  # On Windows: .venv\\Scripts\\activate")
-        click.echo("2. Install dependencies:")
-        click.echo("   $ pip install -r requirements.txt")
-        click.echo("3. Run your agent:")
-        click.echo("   $ openmas run sample_agent")
+    # Success message
+    click.echo(f"OpenMAS project '{display_name}' created successfully")
 
 
 @cli.command()

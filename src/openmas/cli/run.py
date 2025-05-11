@@ -105,15 +105,24 @@ def _find_agent_class(agent_module: types.ModuleType, expected_class_name: Optio
             logger.error(f"Found classes: {found_classes}")
             raise ConfigurationError(f"Specified agent class '{expected_class_name}' not found.")
     else:
-        # Otherwise, find the first class inheriting from BaseAgent
-        logger.info("Looking for first BaseAgent subclass in module...")
+        # First look specifically for a class named "Agent" (common case in our examples)
+        logger.info("Looking for class named 'Agent' or first BaseAgent subclass in module...")
         for name, obj in inspect.getmembers(agent_module):
             if inspect.isclass(obj):
                 found_classes.append(name)
-                if issubclass(obj, BaseAgent) and obj is not BaseAgent:
+                if name == "Agent" and issubclass(obj, BaseAgent) and obj is not BaseAgent:
+                    agent_class = obj
+                    logger.info("Found agent class named 'Agent'")
+                    break
+
+        # If we didn't find a class explicitly named "Agent", find the first BaseAgent subclass
+        if agent_class is None:
+            for name, obj in inspect.getmembers(agent_module):
+                if inspect.isclass(obj) and issubclass(obj, BaseAgent) and obj is not BaseAgent:
                     agent_class = obj
                     logger.info(f"Found agent class: {name}")
                     break  # Use the first one found
+
         if agent_class is None:
             logger.error("❌ No BaseAgent subclass found in agent module")
             logger.error(
@@ -190,6 +199,17 @@ def run_project(agent_name: str, project_dir: Optional[Path] = None, env: Option
     try:
         # Load agent-specific configuration using the agent name as the prefix
         config_loader = ConfigLoader()
+
+        # Load environment configuration
+        env_config = {}
+        if env:
+            env_config_path = project_root / "config" / f"{env}.yml"
+            if env_config_path.exists():
+                logger.debug(f"Loading environment configuration from {env_config_path}")
+                env_config = config_loader.load_yaml_file(env_config_path)
+            else:
+                logger.debug(f"Environment config file not found: {env_config_path}")
+
         # For now, just create a basic AgentConfig
         # Keeping this variable definition commented out to avoid linting errors until we use it
         # agent_config = AgentConfig(name=agent_name)
@@ -199,6 +219,22 @@ def run_project(agent_name: str, project_dir: Optional[Path] = None, env: Option
 
     # Get agent module path
     module_path = agent_config_entry.module
+
+    # Handle path-based module paths
+    # Convert path-based format (e.g., "agents/my_agent") to module format (e.g., "agents.my_agent")
+    if "/" in module_path or "\\" in module_path:
+        # This is a path-based module path
+        # Normalize to use forward slashes
+        module_path = module_path.replace("\\", "/")
+
+        # Convert path to dot notation for module imports
+        module_path = module_path.replace("/", ".")
+
+        # Strip .py if present
+        if module_path.endswith(".py"):
+            module_path = module_path[:-3]
+
+        logger.debug(f"Converted path-based module '{agent_config_entry.module}' to '{module_path}'")
 
     # Get shared and extension paths
     shared_paths = [project_root / path for path in project_config.shared_paths]
@@ -214,10 +250,16 @@ def run_project(agent_name: str, project_dir: Optional[Path] = None, env: Option
     sys_path_additions.append(str(project_root))
 
     # Determine agent directory from module path
-    module_parts = module_path.split(".")
-    agent_dir_path = project_root
-    for part in module_parts:
-        agent_dir_path = agent_dir_path / part
+    if "/" in agent_config_entry.module or "\\" in agent_config_entry.module:
+        # For path-based entries, use the path directly
+        agent_path = agent_config_entry.module.replace("\\", "/")
+        agent_dir_path = project_root / agent_path
+    else:
+        # For module-based entries, convert dots to path separators
+        module_parts = module_path.split(".")
+        agent_dir_path = project_root
+        for part in module_parts:
+            agent_dir_path = agent_dir_path / part
 
     # Add the agent's parent directory
     sys_path_additions.append(str(agent_dir_path.parent))
@@ -265,11 +307,49 @@ def run_project(agent_name: str, project_dir: Optional[Path] = None, env: Option
             sys.path = original_sys_path
             raise typer.Exit(code=1)
         elif agent_module_name in str(e):
-            # Agent module not found
-            click.echo(f"❌ Could not find agent module '{agent_module_name}': {e}")
-            click.echo(f"Make sure the agent path '{module_path}' exists and contains an 'agent.py' file.")
-            sys.path = original_sys_path
-            raise typer.Exit(code=1)
+            # Agent module not found - try alternative approach using file-based import
+            logger.debug(f"Could not import {agent_module_name} as a module, trying direct file import")
+
+            # If importing the module failed, try next approach
+            # Try to load by path directly
+            if "/" in agent_config_entry.module or "\\" in agent_config_entry.module:
+                # This is a path-based format, so we need to construct the file path
+                agent_path = agent_config_entry.module.replace("\\", "/")
+                agent_file = project_root / agent_path / "agent.py"
+                logger.debug(f"Attempting to load module directly from path: {agent_file}")
+            else:
+                # For module-based format
+                agent_path = module_path.replace(".", "/")
+                agent_file = project_root / f"{agent_path}/agent.py"
+                logger.debug(f"Attempting to load module directly from path: {agent_file}")
+
+            if not os.path.exists(agent_file):
+                click.echo(f"❌ Agent file not found: {agent_file}")
+                click.echo(f"Make sure your agent directory '{agent_path}' contains an agent.py file")
+                sys.path = original_sys_path
+                raise typer.Exit(code=1)
+
+            try:
+                # Create a unique module name to avoid conflicts
+                agent_module_name = f"{agent_name}_agent_module"
+
+                spec = importlib.util.spec_from_file_location(agent_module_name, agent_file)
+                if spec is None or spec.loader is None:
+                    click.echo(f"❌ Error loading agent file: Invalid spec from {agent_file}")
+                    sys.path = original_sys_path
+                    raise typer.Exit(code=1)
+
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[agent_module_name] = module
+                spec.loader.exec_module(module)
+                logger.info(f"Successfully loaded agent module from {agent_file}")
+                agent_module = module
+            except Exception as e2:
+                click.echo(f"❌ Error importing agent from file {agent_file}: {e2}")
+                click.echo(f"Original import error: {str(e)}")
+                traceback.print_exc()
+                sys.path = original_sys_path
+                raise typer.Exit(code=1)
         else:
             # Some other dependency
             click.echo(f"❌ Missing dependency when importing '{agent_module_name}': {e}")
@@ -289,13 +369,16 @@ def run_project(agent_name: str, project_dir: Optional[Path] = None, env: Option
         raise typer.Exit(code=1)
 
     # Find the appropriate agent class in the module
-    class_name = agent_config_entry.class_name if hasattr(agent_config_entry, "class_name") else None
+    class_name = None
+    if hasattr(agent_config_entry, "class_"):
+        class_name = agent_config_entry.class_
+    elif hasattr(agent_config_entry, "class_name"):
+        class_name = agent_config_entry.class_name
 
     try:
         agent_class = _find_agent_class(agent_module, class_name)
     except ConfigurationError as e:
-        click.echo(f"❌ Error finding agent class: {e}")
-        sys.path = original_sys_path
+        click.echo(f"Error finding agent class: {e}")
         raise typer.Exit(code=1)
 
     # Set up asset manager
@@ -311,9 +394,16 @@ def run_project(agent_name: str, project_dir: Optional[Path] = None, env: Option
 
     # Initialize the agent with error handling
     try:
+        # Create agent config with the required name field
+        agent_config = {
+            "name": agent_name,
+            **project_config.default_config,  # Include default config from project
+            **env_config,  # Override with environment-specific config
+        }
+
         # Initialize agent with configuration and asset manager
         click.echo(f"Starting agent '{agent_name}' ({agent_class.__name__})")
-        agent = agent_class(name=agent_name, asset_manager=asset_manager)
+        agent = agent_class(name=agent_name, config=agent_config, asset_manager=asset_manager)
     except (ImportError, AttributeError, TypeError, ConfigurationError) as e:
         click.echo(f"❌ Error initializing agent '{agent_name}': {e}")
         click.echo("This may be due to configuration issues or missing dependencies.")

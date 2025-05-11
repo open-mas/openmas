@@ -318,10 +318,7 @@ class TestInitCommand:
             assert result.exit_code == 0
 
             # Check success message
-            assert "✅ Successfully created new OpenMAS project" in result.output
-
-            # Verify the right next steps are shown
-            assert "pip install -r requirements.txt" in result.output
+            assert "OpenMAS project 'test_project' created successfully" in result.output
 
             # Verify directories were created
             mock_mkdir.assert_called()
@@ -342,10 +339,7 @@ class TestInitCommand:
             assert result.exit_code == 0
 
             # Check success message
-            assert "✅ Successfully created new OpenMAS project" in result.output
-
-            # Verify Poetry instructions are shown
-            assert "poetry install" in result.output
+            assert "OpenMAS project 'test_project' created successfully" in result.output
 
             # Verify directories were created
             mock_mkdir.assert_called()
@@ -366,7 +360,7 @@ class TestInitCommand:
             assert result.exit_code == 0
 
             # Check success message
-            assert "✅ Successfully created new OpenMAS project" in result.output
+            assert "OpenMAS project 'test_project' created successfully" in result.output
 
             # Verify directories were created
             mock_mkdir.assert_called()
@@ -386,9 +380,8 @@ class TestInitCommand:
             # Check the command succeeded
             assert result.exit_code == 0
 
-            # Check success message and Poetry-specific instructions
-            assert "✅ Successfully created new OpenMAS project" in result.output
-            assert "poetry install" in result.output
+            # Check success message
+            assert "OpenMAS project 'test_project' created successfully" in result.output
 
             # Verify directories were created
             mock_mkdir.assert_called()
