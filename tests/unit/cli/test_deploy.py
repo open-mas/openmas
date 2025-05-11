@@ -340,56 +340,40 @@ def test_configure_service_urls():
 
 
 @patch("openmas.cli.deploy.ComposeOrchestrator")
-def test_generate_compose_from_project_impl(mock_orchestrator):
-    """Test generating Docker Compose configuration from a project file."""
-    # Create a sample project file
-    with tempfile.TemporaryDirectory() as temp_dir:
-        project_dir = Path(temp_dir)
+@patch("pathlib.Path.exists")
+def test_generate_compose_from_project_impl(mock_path_exists, mock_orchestrator_class):
+    """Test generating a Docker Compose file from a project file."""
+    # Setup mocks
+    mock_path_exists.return_value = True  # Ensure path exists check passes
+    mock_orchestrator = mock_orchestrator_class.return_value
+    mock_components = [MagicMock(), MagicMock()]
+    mock_warnings = ["warning1", "warning2"]
+    mock_renamed = {"original": "renamed"}
+    mock_compose_dict = {"version": "3", "services": {"agent1": {}, "agent2": {}}}
 
-        # Create the project YAML file
-        project_data = {
-            "name": "test-project",
-            "version": "0.1.0",
-            "agents": {
-                "agent1": "agents/agent1",
-                "agent2": "agents/agent2",
-            },
-        }
+    # Configure mock for the generate_compose_dict_from_project method
+    mock_orchestrator.generate_compose_dict_from_project.return_value = (
+        mock_compose_dict,
+        mock_components,
+        mock_warnings,
+        mock_renamed,
+    )
 
-        project_file = project_dir / "openmas_project.yml"
-        with open(project_file, "w") as f:
-            yaml.safe_dump(project_data, f)
+    # Configure mock for the save_compose_to_file method
+    mock_orchestrator.save_compose_to_file.return_value = Path("/path/to/output.yml")
 
-        # Set up the ComposeOrchestrator mock
-        # Setup the mock to return components and other data
-        metadata1 = MagicMock()
-        metadata1.component.name = "agent1"
-        metadata2 = MagicMock()
-        metadata2.component.name = "agent2"
-        components = [metadata1, metadata2]
-        warnings: List[str] = []
-        renamed: Dict[str, str] = {}
+    # Call the function
+    result = _generate_compose_from_project_impl("project.yml", "output.yml", strict=False, use_project_names=True)
 
-        mock_orchestrator.return_value.process_project_file.return_value = (components, warnings, renamed)
-        mock_orchestrator.return_value.save_compose.return_value = Path("docker-compose.yaml")
+    # Assertions
+    assert result == 0
+    mock_orchestrator_class.assert_called_once()
+    mock_orchestrator.generate_compose_dict_from_project.assert_called_once_with(Path("project.yml"), False, True)
+    mock_orchestrator.save_compose_to_file.assert_called_once_with(mock_compose_dict, "output.yml")
 
-        # Mock _configure_service_urls to return the same components
-        with patch("openmas.cli.deploy._configure_service_urls") as mock_configure_urls:
-            mock_configure_urls.return_value = components
-
-            # Call the function
-            result = _generate_compose_from_project_impl(
-                project_file=str(project_file), output="docker-compose.yaml", strict=False, use_project_names=True
-            )
-
-            # Verify the function executed successfully
-            assert result == 0
-
-            # Verify that process_project_file was called with correct args
-            mock_orchestrator.return_value.process_project_file.assert_called_once()
-
-            # Verify that save_compose was called
-            mock_orchestrator.return_value.save_compose.assert_called_once_with(components, "docker-compose.yaml")
-
-            # Verify that _configure_service_urls was called
-            mock_configure_urls.assert_called_once_with(components)
+    # Verify no direct call to _configure_service_urls
+    assert (
+        not mock_orchestrator._configure_service_urls.called
+        if hasattr(mock_orchestrator, "_configure_service_urls")
+        else True
+    )

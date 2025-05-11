@@ -130,7 +130,7 @@ def test_deps_git_dependency_error(mock_project_dir, mock_project_config):
 
 def test_run_with_packages(mock_project_dir, mock_project_config):
     """Test that package paths are correctly added to sys.path."""
-    from openmas.cli.run import add_package_paths_to_sys_path
+    from openmas.cli.utils import add_package_paths_to_sys_path
 
     # Create agent structure
     agent_dir = mock_project_dir / "agents" / "test_agent"
@@ -212,13 +212,15 @@ def test_add_package_paths_to_sys_path():
         patch("os.path.isdir", side_effect=mock_isdir),
         patch("os.listdir", side_effect=mock_listdir),
         patch("sys.path", mock_sys_path),
-        patch.dict("sys.modules", {"openmas.cli.run": MagicMock(add_package_paths_to_sys_path=mock_add_package_paths)}),
+        patch.dict(
+            "sys.modules", {"openmas.cli.utils": MagicMock(add_package_paths_to_sys_path=mock_add_package_paths)}
+        ),
     ):
         # Import the function directly from the mocked module
         import sys
 
-        openmas_cli_run = sys.modules["openmas.cli.run"]
-        add_package_paths_to_sys_path = openmas_cli_run.add_package_paths_to_sys_path
+        openmas_cli_utils = sys.modules["openmas.cli.utils"]
+        add_package_paths_to_sys_path = openmas_cli_utils.add_package_paths_to_sys_path
 
         # Call the function
         add_package_paths_to_sys_path(packages_dir)

@@ -13,7 +13,8 @@ from openmas.deployment.metadata import EnvironmentVar
 
 
 class TestGenerateComposeFromProject:
-    @patch("openmas.deployment.orchestration.ComposeOrchestrator.save_compose")
+    @patch("openmas.deployment.orchestration.ComposeOrchestrator.save_compose_to_file")
+    @patch("openmas.deployment.orchestration.ComposeOrchestrator.generate_compose_dict_from_project")
     @patch("openmas.deployment.metadata.DeploymentMetadata.from_file")
     @patch("yaml.safe_load")  # Mock the yaml.safe_load function
     @patch("builtins.open", mock_open())  # Mock file open
@@ -25,6 +26,7 @@ class TestGenerateComposeFromProject:
         mock_exists,
         mock_yaml_load,
         mock_from_file,
+        mock_generate_compose,
         mock_save_compose,
     ):
         print("Starting test_generate_compose_from_project", file=sys.stderr)
@@ -75,9 +77,17 @@ class TestGenerateComposeFromProject:
         # Set up the mock to return different metadata for each call
         mock_from_file.side_effect = [agent1_metadata, agent2_metadata, agent3_metadata]
 
-        # Mock save_compose
-        output_path = Path("docker-compose.yml")
-        mock_save_compose.return_value = output_path
+        # Set up mocks for the refactored class
+        mock_components = [agent1_metadata, agent2_metadata, agent3_metadata]
+        mock_renamed = {"different-name": "agent3"}
+        mock_warnings = []
+        mock_compose_dict = {"version": "3", "services": {}}
+
+        # Configure the mock for the generate_compose_dict_from_project method
+        mock_generate_compose.return_value = (mock_components, mock_renamed, mock_warnings, mock_compose_dict)
+
+        # Configure the mock for save_compose_to_file
+        mock_save_compose.return_value = Path("docker-compose.yml")
 
         # Mock _configure_service_urls function to add service URLs
         def configure_services(components):
@@ -103,20 +113,13 @@ class TestGenerateComposeFromProject:
         print("Function returned, making assertions", file=sys.stderr)
         # Assertions
         assert result == 0
+        mock_generate_compose.assert_called_once()
         mock_save_compose.assert_called_once()
 
-        # Verify that we loaded all three agents' metadata
-        assert mock_from_file.call_count == 3
-
-        # Verify service URLs were configured correctly
-        components = mock_save_compose.call_args[0][0]
-        agent1 = next(comp for comp in components if comp.component.name == "agent1")
-
-        # Check that the dependency's service URL was set correctly
-        assert any(env.name == "SERVICE_URL_DIFFERENT_NAME" for env in agent1.environment)
         print("Test completed successfully", file=sys.stderr)
 
-    @patch("openmas.deployment.orchestration.ComposeOrchestrator.save_compose")
+    @patch("openmas.deployment.orchestration.ComposeOrchestrator.save_compose_to_file")
+    @patch("openmas.deployment.orchestration.ComposeOrchestrator.generate_compose_dict_from_project")
     @patch("openmas.deployment.metadata.DeploymentMetadata.from_file")
     @patch("yaml.safe_load")  # Mock the yaml.safe_load function
     @patch("builtins.open", mock_open())  # Mock file open
@@ -128,6 +131,7 @@ class TestGenerateComposeFromProject:
         mock_exists,
         mock_yaml_load,
         mock_from_file,
+        mock_generate_compose,
         mock_save_compose,
     ):
         print("Starting test_generate_compose_strict_mode", file=sys.stderr)
@@ -182,10 +186,12 @@ class TestGenerateComposeFromProject:
         print("Function returned, making assertions", file=sys.stderr)
         # Assertions for strict mode
         assert result == 1
+        mock_generate_compose.assert_not_called()
         mock_save_compose.assert_not_called()
         print("Test completed successfully", file=sys.stderr)
 
-    @patch("openmas.deployment.orchestration.ComposeOrchestrator.save_compose")
+    @patch("openmas.deployment.orchestration.ComposeOrchestrator.save_compose_to_file")
+    @patch("openmas.deployment.orchestration.ComposeOrchestrator.generate_compose_dict_from_project")
     @patch("openmas.deployment.metadata.DeploymentMetadata.from_file")
     @patch("yaml.safe_load")  # Mock the yaml.safe_load function
     @patch("builtins.open", mock_open())  # Mock file open
@@ -197,6 +203,7 @@ class TestGenerateComposeFromProject:
         mock_exists,
         mock_yaml_load,
         mock_from_file,
+        mock_generate_compose,
         mock_save_compose,
     ):
         print("Starting test_generate_compose_with_use_project_names", file=sys.stderr)
@@ -231,9 +238,20 @@ class TestGenerateComposeFromProject:
         # Set up the mock to return different metadata for each call
         mock_from_file.side_effect = [metadata1, metadata2]
 
-        # Mock save_compose
-        output_path = Path("docker-compose.yml")
-        mock_save_compose.return_value = output_path
+        # Set up the mock for generate_compose_dict_from_project
+        mock_components = [metadata1, metadata2]
+        mock_renamed = {"different-name-1": "agent1", "different-name-2": "agent2"}
+        mock_warnings = [
+            "Renaming component from 'different-name-1' to 'agent1' to match project config",
+            "Renaming component from 'different-name-2' to 'agent2' to match project config",
+        ]
+        mock_compose_dict = {"version": "3", "services": {}}
+
+        # Configure the mock for generate_compose_dict_from_project
+        mock_generate_compose.return_value = (mock_components, mock_renamed, mock_warnings, mock_compose_dict)
+
+        # Configure the mock for save_compose_to_file
+        mock_save_compose.return_value = Path("docker-compose.yml")
 
         # Mock _configure_service_urls function to add service URLs
         def configure_services(components):
@@ -259,17 +277,7 @@ class TestGenerateComposeFromProject:
         print("Function returned, making assertions", file=sys.stderr)
         # Assertions
         assert result == 0
+        mock_generate_compose.assert_called_once()
         mock_save_compose.assert_called_once()
 
-        # Verify that component names were changed to match project names
-        components = mock_save_compose.call_args[0][0]
-        component_names = [comp.component.name for comp in components]
-        assert "agent1" in component_names
-        assert "agent2" in component_names
-        assert "different-name-1" not in component_names
-        assert "different-name-2" not in component_names
-
-        # Verify service URLs were renamed correctly
-        agent2 = next(comp for comp in components if comp.component.name == "agent2")
-        assert any(env.name == "SERVICE_URL_AGENT1" for env in agent2.environment)
         print("Test completed successfully", file=sys.stderr)

@@ -4,7 +4,8 @@ import importlib
 import importlib.util
 import os
 import sys
-from typing import List, Optional
+from pathlib import Path
+from typing import Dict, List, Optional
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
@@ -14,6 +15,8 @@ from click.testing import CliRunner
 from openmas.agent.base import BaseAgent
 from openmas.assets.manager import AssetManager
 from openmas.cli.main import cli
+from openmas.config import ProjectConfig
+from openmas.exceptions import ConfigurationError
 
 # --- Create a Mock Agent Class at module level ---
 mock_start = AsyncMock()
@@ -171,22 +174,6 @@ class TestAgent(BaseAgent):
         self, mock_discover_local, mock_discover_ext, mock_find_root, mock_import, cli_runner, temp_test_dir
     ):
         """Test run command when there's an import error in the agent module."""
-        # This test is very unstable due to path resolution issues in test environment
-        # Better to skip than have flaky tests
-        pytest.skip("Skipping this test due to path resolution inconsistency in test environment")
-
-        # Configure mock to raise ImportError when called with specific module
-        def mock_import_side_effect(module_name):
-            if module_name.startswith("agents"):
-                raise ImportError("No module named 'missing_module'")
-            # For other modules (like openmas), just return a mock
-            return MagicMock()
-
-        mock_import.side_effect = mock_import_side_effect
-        mock_find_root.return_value = temp_test_dir
-        mock_discover_ext.return_value = []
-        mock_discover_local.return_value = []
-
         # Create a minimal project structure with an agent
         os.makedirs(temp_test_dir / "agents" / "test_agent", exist_ok=True)
         with open(temp_test_dir / "openmas_project.yml", "w") as f:
@@ -200,12 +187,17 @@ class TestAgent(BaseAgent):
                 f,
             )
 
-        # Create agent file without a BaseAgent subclass
-        with open(temp_test_dir / "agents" / "test_agent" / "agent.py", "w") as f:
-            f.write("# Empty agent file")
+        # Directly mock the run_project call with a more robust approach
+        with patch(
+            "openmas.cli.main.run_project",
+            side_effect=ConfigurationError("Error loading agent: No module named 'missing_module'"),
+        ):
+            # Run the command
+            result = cli_runner.invoke(cli, ["run", "test_agent"])
 
-        # Run the command - we're skipping this test so no need to store the result
-        cli_runner.invoke(cli, ["run", "test_agent"])
+            # Verify error was raised and displayed
+            assert result.exit_code != 0
+            assert "Error" in result.output
 
     def test_run_command_path_setup(self, cli_runner, temp_test_dir):
         """Test that the agent's path is added to sys.path."""
@@ -269,29 +261,25 @@ class TestAgent(BaseAgent):
         # Since our test passes by this point, we're verifying that the code executes
         # without the FileNotFoundError exception when trying to return to the original directory
 
-    @patch("openmas.cli.run._find_project_root")
-    @patch("openmas.cli.run._find_agent_class")
-    @patch("openmas.cli.run.asyncio.new_event_loop")
-    @patch("openmas.cli.run.asyncio.set_event_loop")
-    @patch("openmas.communication.discover_communicator_extensions")
-    @patch("openmas.communication.discover_local_communicators")
-    @patch("openmas.cli.run.asyncio.Event")
+    @patch("openmas.cli.run.run_project")
     def test_run_command_keyboard_interrupt(
         self,
-        mock_asyncio_event,
-        mock_discover_local,
-        mock_discover_ext,
-        mock_set_event_loop,
-        mock_new_event_loop,
-        mock_find_agent_class,
-        mock_find_root,
+        mock_run_project,
         cli_runner,
         mock_project_structure,
     ):
-        """Test run command attempts to register signal handlers and wires them correctly."""
-        # This test is unstable due to mocking issues with signal handlers
-        # Better to skip than have flaky tests
-        pytest.skip("Skipping this test due to signal handler mocking inconsistency")
+        """Test run command correctly handles KeyboardInterrupt."""
+        # Setup KeyboardInterrupt simulation
+        mock_run_project.side_effect = KeyboardInterrupt()
+
+        # Run the command
+        result = cli_runner.invoke(cli, ["run", "test_agent"])
+
+        # Verify run_project was called with the correct arguments
+        mock_run_project.assert_called_once_with("test_agent", None, None)
+
+        # For KeyboardInterrupt, CLI should exit with code 1
+        assert result.exit_code == 1
 
 
 class TestInitCommand:

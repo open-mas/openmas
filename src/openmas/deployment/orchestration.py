@@ -132,8 +132,26 @@ class ComposeOrchestrator:
                     volumes_list = cast(List[str], service_config["volumes"])
                     volumes_list.append(f"{volume_name}:{volume_spec.path}")
 
+    def save_compose_to_file(self, compose_config: Dict[str, Any], output_path: Union[str, Path]) -> Path:
+        """Save a Docker Compose configuration to a file.
+
+        Args:
+            compose_config: Docker Compose configuration dictionary
+            output_path: Path to save the Docker Compose file
+
+        Returns:
+            Path to the saved file
+        """
+        path = Path(output_path)
+        with open(path, "w") as f:
+            yaml.safe_dump(compose_config, f, sort_keys=False)
+
+        return path
+
     def save_compose(self, components: List[DeploymentMetadata], output_path: Union[str, Path]) -> Path:
         """Generate and save a Docker Compose file for multiple components.
+
+        This method calls generate_compose to create the configuration and then saves it.
 
         Args:
             components: List of component metadata
@@ -143,12 +161,39 @@ class ComposeOrchestrator:
             Path to the saved file
         """
         compose_config = self.generate_compose(components)
+        return self.save_compose_to_file(compose_config, output_path)
 
-        path = Path(output_path)
-        with open(path, "w") as f:
-            yaml.safe_dump(compose_config, f, sort_keys=False)
+    def generate_compose_dict_from_project(
+        self, project_file_path: Path, strict: bool = False, use_project_names: bool = False
+    ) -> Tuple[Dict[str, Any], List[DeploymentMetadata], List[str], Dict[str, str]]:
+        """Process a project file and generate a Docker Compose configuration dictionary.
 
-        return path
+        This method only processes the project file and generates the configuration,
+        without writing it to disk.
+
+        Args:
+            project_file_path: Path to the project file
+            strict: Whether to fail on missing metadata files
+            use_project_names: Whether to use project names instead of metadata names
+
+        Returns:
+            Tuple of (compose_config, components list, warning messages, renamed components)
+        """
+        # First, extract the metadata from the project file
+        components, warnings, renamed_components = self.process_project_file(
+            project_file_path, strict, use_project_names
+        )
+
+        # Update dependencies to match renamed components
+        self.update_dependencies(components, renamed_components)
+
+        # Configure service URLs
+        self.configure_service_urls(components)
+
+        # Generate the compose configuration
+        compose_config = self.generate_compose(components)
+
+        return compose_config, components, warnings, renamed_components
 
     def process_project_file(
         self, project_file_path: Path, strict: bool = False, use_project_names: bool = False
@@ -251,34 +296,32 @@ class ComposeOrchestrator:
                 # Get the first port for now (we could get more sophisticated later)
                 component_ports[component.component.name] = component.ports[0].port
 
-        # Add SERVICE_URL environment variables for each dependency
+        # For each component that has dependencies, add SERVICE_URL environment variables
         for component in components:
-            # Extract existing environment variable names
-            existing_env_names = {env.name for env in component.environment}
+            # Check if this component has any dependencies
+            if not component.dependencies:
+                continue
 
-            # Add SERVICE_URL variables for each dependency if not already defined
+            # Create environment variables for each dependency
             for dependency in component.dependencies:
                 dep_name = dependency.name
-                service_url_var = f"SERVICE_URL_{dep_name.upper().replace('-', '_')}"
-
-                # Skip if this environment variable is already defined
-                if service_url_var in existing_env_names:
-                    continue
-
-                # Only add if the dependency component exists and has a port
+                # Only add if dependency is in our component list and has a port
                 if dep_name in component_ports:
+                    # Create an environment variable for this dependency
+                    env_name = f"SERVICE_URL_{dep_name.upper().replace('-', '_')}"
                     port = component_ports[dep_name]
-                    url = f"http://{dep_name}:{port}"
+                    env_value = f"http://{dep_name}:{port}"
 
-                    # Add the environment variable
-                    component.environment.append(
-                        EnvironmentVar(
-                            name=service_url_var,
-                            value=url,
-                            secret=False,
-                            description=f"URL for {dep_name} service",
+                    # Add to environment if not already there
+                    env_var_names = [env.name for env in component.environment]
+                    if env_name not in env_var_names:
+                        component.environment.append(
+                            EnvironmentVar(
+                                name=env_name,
+                                value=env_value,
+                                description=f"URL for the {dep_name} service",
+                            )
                         )
-                    )
 
     def process_project_and_save_compose(
         self,
@@ -287,33 +330,26 @@ class ComposeOrchestrator:
         strict: bool = False,
         use_project_names: bool = False,
     ) -> Tuple[Path, List[DeploymentMetadata], List[str]]:
-        """Process a project file and generate a Docker Compose configuration.
+        """Process a project file, generate a Docker Compose configuration, and save it.
 
         Args:
-            project_file: Path to the OpenMAS project file
-            output_path: Path to save the Docker Compose configuration file
+            project_file: Path to the project file
+            output_path: Path to save the Docker Compose file
             strict: Whether to fail on missing metadata files
             use_project_names: Whether to use project names instead of metadata names
 
         Returns:
-            Tuple of (path to saved file, components list, warning messages)
+            Tuple of (saved file path, components list, warning messages)
         """
         project_file_path = Path(project_file)
 
-        # Process the project file
-        components, warnings, renamed_components = self.process_project_file(
+        # Generate the compose configuration
+        compose_config, components, warnings, _ = self.generate_compose_dict_from_project(
             project_file_path, strict, use_project_names
         )
 
-        # If we're using project names, update dependencies to use them
-        if use_project_names and renamed_components:
-            self.update_dependencies(components, renamed_components)
-
-        # Configure service URLs from dependencies
-        self.configure_service_urls(components)
-
-        # Generate and save Docker Compose configuration
-        saved_path = self.save_compose(components, output_path)
+        # Save the compose configuration
+        saved_path = self.save_compose_to_file(compose_config, output_path)
 
         return saved_path, components, warnings
 

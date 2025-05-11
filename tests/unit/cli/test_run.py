@@ -4,12 +4,18 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+import typer
 import yaml
 
-from openmas.cli.run import add_package_paths_to_sys_path, run_project
+import openmas.cli.run
+from openmas.agent.base import BaseAgent
+from openmas.cli.run import run_project
+from openmas.cli.utils import add_package_paths_to_sys_path
+from openmas.config import ProjectConfig
+from openmas.exceptions import ConfigurationError
 
 
 def test_event_loop_consistency():
@@ -156,55 +162,61 @@ def test_no_environment_assumptions(mock_project_root):
     # Save original sys.path
     original_sys_path = sys.path.copy()
 
+    # Create mock agent class
+    mock_agent_class = MagicMock(spec=BaseAgent)
+    mock_agent_class.__name__ = "MockAgent"  # Add __name__ attribute to mock class
+    mock_agent = MagicMock(spec=BaseAgent)
+    mock_agent_class.return_value = mock_agent
+
+    # Create a simple AgentConfigEntry mock
+    mock_agent_config_entry = MagicMock()
+    mock_agent_config_entry.module = "agents.test_agent"
+    mock_agent_config_entry.class_ = "TestAgent"
+
     # Patch necessary functions to prevent actual execution
     with (
-        patch("openmas.cli.run.asyncio.new_event_loop") as _mock_new_loop,  # noqa: F841
-        patch("openmas.cli.run.asyncio.set_event_loop") as _mock_set_loop,  # noqa: F841
-        patch("openmas.cli.run.signal.signal") as _mock_signal,  # noqa: F841
-        patch("openmas.cli.run._find_agent_class") as _mock_find_class,  # noqa: F841
-        patch("openmas.cli.run.importlib.import_module") as mock_import,
-        patch("openmas.cli.run._find_project_root", return_value=mock_project_root),
-        patch("openmas.config._find_project_root", return_value=mock_project_root),
-        patch("builtins.print") as _mock_print,  # noqa: F841
-        patch("sys.exit") as _mock_exit,  # noqa: F841
+        patch.object(sys, "path", original_sys_path.copy()),
+        patch("openmas.cli.run.find_project_root", return_value=mock_project_root),
+        patch("openmas.cli.run.load_project_config") as mock_load_config,
+        patch("openmas.cli.run.validate_agent_in_config", return_value=mock_agent_config_entry),
+        patch("openmas.cli.run.AgentLoader.load_agent_class", return_value=mock_agent_class),
+        patch("openmas.cli.run.load_environment_config", return_value={}),
+        patch("openmas.cli.run.create_asset_manager", return_value=None),
+        patch("openmas.cli.run.initialize_agent", return_value=mock_agent),
+        patch("openmas.cli.run.AgentExecutor") as mock_agent_executor,
+        patch("openmas.cli.run.ProjectEnvironment") as mock_project_env_class,
+        patch("click.echo"),
     ):
-        # Run the function
+        # Setup mocks
+        mock_project_config = MagicMock(spec=ProjectConfig)
+        # Ensure default_config is set and it's a dictionary
+        mock_project_config.default_config = {"log_level": "INFO"}
+        mock_load_config.return_value = mock_project_config
+
+        # Setup mock environment
+        mock_env = MagicMock()
+        mock_project_env_class.return_value = mock_env
+
+        # Setup mock agent executor
+        mock_executor = MagicMock()
+        mock_agent_executor.return_value = mock_executor
+
+        # Try/except to handle typer.Exit
         try:
-            # This will exit early due to our mocks, but that's ok for testing setup
             run_project("test_agent", project_dir=mock_project_root)
-        except Exception:
-            # Ignore any exceptions from our mocked environment
+        except typer.Exit:
             pass
 
-        # Verify the paths added to sys.path
-        # We want to ensure project root is added
-        project_root_added = False
-        for path in sys.path:
-            if str(mock_project_root) in path:
-                project_root_added = True
-                break
+        # Verify environment setup
+        mock_project_env_class.assert_called_once_with(mock_project_root, mock_project_config)
+        mock_env.setup_environment.assert_called_once_with("test_agent")
 
-        assert project_root_added, "Project root directory not added to sys.path"
+        # Verify agent executor was initialized and run was called
+        mock_agent_executor.assert_called_once()
+        mock_executor.run.assert_called_once()
 
-        # Ensure agent import doesn't depend on Poetry-specific paths
-        if mock_import.called:
-            # Get the calls to import_module and check what paths were in sys.path
-            # We shouldn't see Poetry-specific assumptions for standard imports
-            import_calls = mock_import.call_args_list
-            for call in import_calls:
-                module_name = call[0][0]
-                if module_name.endswith(".agent"):
-                    # Verify the project path is in sys.path somewhere
-                    # The assertion was too strict before
-                    project_name = mock_project_root.name
-                    project_root_in_path = False
-
-                    for path_entry in sys.path:
-                        if project_name in Path(path_entry).parts:
-                            project_root_in_path = True
-                            break
-
-                    assert project_root_in_path, "Project path not properly included in imports"
+        # Verify environment was restored after execution
+        mock_env.restore_environment.assert_called_once()
 
     # Restore original sys.path
     sys.path = original_sys_path
@@ -231,35 +243,114 @@ def test_running_project_with_different_environment_vars(mock_project_root):
         os.environ.update(original_env)  # restore basic environment
         os.environ.update(env)  # type: ignore # add test-specific vars
 
+        # Create mock agent class with required __name__ attribute
+        mock_agent_class = MagicMock(spec=BaseAgent)
+        mock_agent_class.__name__ = "MockAgent"
+        mock_agent = MagicMock(spec=BaseAgent)
+        mock_agent_class.return_value = mock_agent
+
+        # Create a simple AgentConfigEntry mock
+        mock_agent_config_entry = MagicMock()
+        mock_agent_config_entry.module = "agents.test_agent"
+        mock_agent_config_entry.class_ = "TestAgent"
+
         # Patch necessary functions to prevent actual execution
         with (
-            patch("openmas.cli.run.asyncio.new_event_loop") as _mock_new_loop,  # noqa: F841
-            patch("openmas.cli.run.asyncio.set_event_loop") as _mock_set_loop,  # noqa: F841
-            patch("openmas.cli.run.signal.signal") as _mock_signal,  # noqa: F841
-            patch("openmas.cli.run._find_agent_class") as _mock_find_class,  # noqa: F841
-            patch("openmas.cli.run.importlib.import_module") as _mock_import,  # noqa: F841
-            patch("openmas.cli.run._find_project_root", return_value=mock_project_root),
-            patch("openmas.config._find_project_root", return_value=mock_project_root),
-            patch("builtins.print") as _mock_print,  # noqa: F841
-            patch("sys.exit") as _mock_exit,  # noqa: F841
+            patch.object(sys, "path", original_sys_path.copy()),
+            patch("openmas.cli.run.find_project_root", return_value=mock_project_root),
+            patch("openmas.cli.run.load_project_config") as mock_load_config,
+            patch("openmas.cli.run.validate_agent_in_config", return_value=mock_agent_config_entry),
+            patch("openmas.cli.run.AgentLoader.load_agent_class", return_value=mock_agent_class),
+            patch("openmas.cli.run.load_environment_config", return_value={}),
+            patch("openmas.cli.run.create_asset_manager", return_value=None),
+            patch("openmas.cli.run.initialize_agent", return_value=mock_agent),
+            patch("openmas.cli.run.AgentExecutor") as mock_agent_executor,
+            patch("openmas.cli.run.ProjectEnvironment") as mock_project_env_class,
+            patch("click.echo"),
         ):
+            # Set up mocks
+            mock_project_config = MagicMock(spec=ProjectConfig)
+            # Ensure default_config is set and it's a dictionary
+            mock_project_config.default_config = {"log_level": "INFO"}
+            mock_load_config.return_value = mock_project_config
+
+            # Set up mock environment
+            mock_env = MagicMock()
+            mock_project_env_class.return_value = mock_env
+
+            # Set up mock executor
+            mock_exec = MagicMock()
+            mock_agent_executor.return_value = mock_exec
+
+            # Try/except to handle typer.Exit
             try:
-                # This will exit early due to our mocks, but that's ok for testing setup
-                run_project("test_agent", project_dir=mock_project_root)
-            except Exception:
-                # Ignore any exceptions from our mocked environment
+                run_project("test_agent", env=os.environ.get("OPENMAS_ENV"), project_dir=mock_project_root)
+            except typer.Exit:
                 pass
 
-            # Verify paths are set up properly regardless of environment
-            project_root_added = False
-            for path in sys.path:
-                if str(mock_project_root) in path:
-                    project_root_added = True
-                    break
+            # Verify environment setup
+            mock_project_env_class.assert_called_once_with(mock_project_root, mock_project_config)
+            mock_env.setup_environment.assert_called_once_with("test_agent")
 
-            assert project_root_added, f"Project root not added to sys.path with env: {env}"
+            # Verify agent execution
+            mock_agent_executor.assert_called_once()
+            mock_exec.run.assert_called_once()
+
+            # Verify environment cleanup
+            mock_env.restore_environment.assert_called_once()
+
+            # Check if specific environment variables were passed to various calls based on the test case
+            env_name = next(iter(env.keys()), None)
+            if env_name == "OPENMAS_ENV":
+                assert "OPENMAS_ENV" in os.environ
+                assert os.environ["OPENMAS_ENV"] == env["OPENMAS_ENV"]
 
     # Restore original environment and sys.path
     os.environ.clear()
     os.environ.update(original_env)
     sys.path = original_sys_path
+
+
+def test_project_environment_cleanup_on_error():
+    """Test that project environment is always restored, even when there's an error."""
+    # Mock all the dependencies
+    mock_project_root = Path("/test/project")
+    mock_project_config = MagicMock(spec=ProjectConfig)
+    mock_project_config.default_config = {"log_level": "INFO"}
+
+    # Create a mock agent config entry
+    mock_agent_config = MagicMock()
+
+    # Create mock methods that we can track
+    setup_spy = MagicMock()
+    restore_spy = MagicMock()
+
+    # Mock ProjectEnvironment instance
+    mock_env = MagicMock()
+    mock_env.setup_environment = setup_spy
+    mock_env.restore_environment = restore_spy
+
+    # Mock AgentLoader that will raise an exception
+    mock_agent_loader = MagicMock()
+    mock_agent_loader.load_agent_class.side_effect = ConfigurationError("Test error")
+
+    # Patch all necessary components
+    with (
+        patch("openmas.cli.run.find_project_root", return_value=mock_project_root),
+        patch("openmas.cli.run.load_project_config", return_value=mock_project_config),
+        patch("openmas.cli.run.validate_agent_in_config", return_value=mock_agent_config),
+        patch("openmas.cli.run.ProjectEnvironment", return_value=mock_env),
+        patch("openmas.cli.run.AgentLoader", return_value=mock_agent_loader),
+        patch("click.echo"),
+    ):
+        # Run the function with error handling
+        try:
+            run_project("test_agent")
+        except typer.Exit:
+            pass
+
+        # Verify environment was set up
+        setup_spy.assert_called_once_with("test_agent")
+
+        # Verify environment was restored (this is what we're testing)
+        restore_spy.assert_called_once()

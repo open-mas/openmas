@@ -229,16 +229,16 @@ def _generate_compose_from_project_impl(
         orchestrator = ComposeOrchestrator()
 
         try:
-            # Process the project file to get metadata
-            components, warnings, renamed_components = orchestrator.process_project_file(
+            # Process the project file to get compose dictionary and metadata
+            compose_config, components, warnings, renamed_components = orchestrator.generate_compose_dict_from_project(
                 project_path, strict, use_project_names
             )
 
-            # Configure service URLs (this is important for the tests to pass)
-            components = _configure_service_urls(components)
+            # Configure service URLs if needed (already done in generate_compose_dict_from_project)
+            # components = _configure_service_urls(components)
 
             # Save the Docker Compose file
-            orchestrator.save_compose(components, output)
+            orchestrator.save_compose_to_file(compose_config, output)
 
             # Output any warnings
             for warning in warnings:
@@ -253,13 +253,12 @@ def _generate_compose_from_project_impl(
             typer.echo(f"Error: {e}", err=True)
             return 1
         except ValueError as e:
-            logger.error(f"Invalid project configuration: {e}")
+            logger.error(f"Value error: {e}")
             typer.echo(f"Error: {e}", err=True)
             return 1
-
     except Exception as e:
-        logger.error(f"Error generating Docker Compose file: {e}")
-        typer.echo(f"Error generating Docker Compose file: {e}", err=True)
+        logger.error(f"Unexpected error: {e}")
+        typer.echo(f"Error: {e}", err=True)
         return 1
 
 
