@@ -55,7 +55,7 @@ A typical OpenMAS project, initialized via `openmas init your_mas_project_name`,
     * **Discovery:** The framework searches within the installed package directories (specifically configured subdirectories within it, often `src/` or the root) for components (e.g., communicators defined via entry points or convention) and adds relevant paths to `sys.path`.
 
 * **`config/`**:
-    * **Purpose:** Stores environment-specific configuration files (YAML format). See the [Configuration Guide](../guides/configuration.md).
+    * **Purpose:** Stores environment-specific configuration files (YAML format). See the [Configuration Guide](../guides/configuration/index.md).
     * **Contents:** Typically includes `default.yml` (base configuration) and files for different environments like `local.yml`, `development.yml`, `production.yml`.
 
 * **`tests/`**:
@@ -124,7 +124,7 @@ default_config:
 * **`shared_paths`**: A list of relative paths (from the project root) to directories containing shared Python modules accessible by agents and extensions.
 * **`extension_paths`**: A list of relative paths to directories containing project-local framework extensions (like custom communicators or base agents).
 * **`dependencies`**: A list defining external OpenMAS package dependencies. Currently supports `git` dependencies with an optional `revision`. Used by the `openmas deps` command to populate the `packages/` directory.
-* **`default_config`**: A dictionary containing default configuration parameters that apply to all agents in the project. These have the lowest precedence in the configuration layering. See [Configuration Guide](../guides/configuration.md).
+* **`default_config`**: A dictionary containing default configuration parameters that apply to all agents in the project. These have the lowest precedence in the configuration layering. See [Configuration Guide](../guides/configuration/index.md).
 
 ## How Components Interact
 
@@ -138,4 +138,4 @@ When a command like `openmas run <agent_name>` executes:
 6.  It loads the agent code (`agent.py`), which can now successfully `import` modules from `shared/`, `extensions/`, and installed `packages/`.
 7.  Framework mechanisms, like the communicator lookup based on `communicator_type`, search across built-in components, then `extension_paths`, then installed `packages/`.
 
-The `openmas_project.yml` serves as the root-level configuration file that defines the project structure, agent entry points, dependencies, and the primary reference in the configuration layering. See [Configuration Guide](../guides/configuration.md).
+The `openmas_project.yml` serves as the root-level configuration file that defines the project structure, agent entry points, dependencies, and the primary reference in the configuration layering. See [Configuration Guide](../guides/configuration/index.md).

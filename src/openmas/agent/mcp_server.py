@@ -28,7 +28,7 @@ class McpServerAgent(McpAgent):
         config: Optional[Dict[str, Any]] = None,
         server_type: str = "sse",
         host: str = "0.0.0.0",
-        port: int = 8000,
+        http_port: int = 8000,
         **kwargs: Any,
     ):
         """Initialize the MCP server agent.
@@ -38,14 +38,14 @@ class McpServerAgent(McpAgent):
             config: Optional configuration for the agent
             server_type: The type of server to create ('sse' or 'stdio')
             host: The host to bind to (for 'sse' server type)
-            port: The port to bind to (for 'sse' server type)
+            http_port: The port to bind to (for 'sse' server type)
             **kwargs: Additional keyword arguments for the parent class
         """
         super().__init__(name=name, config=config, **kwargs)
 
         self.server_type = server_type
         self.host = host
-        self.port = port
+        self.http_port = http_port
 
         # Set server mode flag to help the communicator know it should act as a server
         self._server_mode = True
@@ -87,7 +87,7 @@ class McpServerAgent(McpAgent):
                 agent_name=self.name,
                 service_urls={},  # Empty as we're a server
                 server_mode=True,
-                http_port=self.port,
+                http_port=self.http_port,
                 server_instructions=instructions,
             )
 
@@ -134,7 +134,7 @@ class McpServerAgent(McpAgent):
             await self.communicator.start()
             self.logger.info(
                 f"MCP {self.server_type} server started for agent {self.name}"
-                + (f" on port {self.port}" if self.server_type.lower() == "sse" else "")
+                + (f" on port {self.http_port}" if self.server_type.lower() == "sse" else "")
             )
         except Exception as e:
             self.logger.error(f"Failed to start MCP server: {e}")

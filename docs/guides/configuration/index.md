@@ -80,7 +80,7 @@ default_config:
 
 The `default_config` section provides base configuration values for all agents in the project. The `shared_paths` and `extension_paths` sections define locations where OpenMAS will look for project-specific shared code or framework extensions (like custom communicators).
 
-The `assets` section defines external resources that your agents might need. See the [Asset Management guide](asset_management.md) for details on configuring and using assets.
+The `assets` section defines external resources that your agents might need. See the [Asset Management guide](../asset_management.md) for details on configuring and using assets.
 
 ### Agent Configuration with Prompts, Sampling, and Assets
 
@@ -92,6 +92,7 @@ agents:
   llm_analyst:
     module: "agents.llm_analyst"
     class: "LlmAnalystAgent"
+    communicator: "http"  # Specify the communicator type
     # Define prompts for the agent
     prompts_dir: "prompts"  # Directory relative to project root
     prompts:
@@ -111,6 +112,10 @@ agents:
     # Define required assets
     required_assets:
       - "llama3-8b"         # References an asset defined in the global assets list
+    # Agent-specific configuration options
+    options:
+      communicator_options:
+        port: 8001          # Custom port for this agent
 ```
 
 #### Prompt Configuration
@@ -143,7 +148,7 @@ The `sampling` field configures how the agent samples from language models:
 | `presence_penalty` | Penalizes repeated topics | None |
 | `seed` | Seed for random sampling | None |
 
-When using the `"mcp"` provider, the MCP communication protocol will be used to interact with language models. This requires an appropriate MCP communicator configuration.
+When using the `"mcp"` provider, the MCP communication protocol will be used to interact with language models. This requires an appropriate MCP communicator configuration. See the [Communicator Configuration guide](communicator_configuration.md) for more details.
 
 ### Environment Configuration Files
 
@@ -189,7 +194,7 @@ Environment variables have the highest precedence and can override any configura
 
 - `AGENT_NAME`: Name of the agent
 - `LOG_LEVEL`: Logging level (e.g., "DEBUG", "INFO", "WARNING")
-- `COMMUNICATOR_TYPE`: Type of communicator to use (e.g., "http", "mcp_sse", "mcp_stdio")
+- `COMMUNICATOR_TYPE`: Type of communicator to use (e.g., "http", "mcp-sse", "mcp-stdio")
 
 ### Configuring Service URLs
 
@@ -323,4 +328,5 @@ Here are the commonly used configuration keys in OpenMAS:
 | `plugin_paths` | List of paths to look for plugins | `[]` |
 | `extension_paths` | List of paths to look for local framework extensions | `[]` |
 
-For communicator-specific options, refer to the [Communication Guide](communication/index.md).
+For communicator-specific options, refer to the [Communicator Configuration guide](communicator_configuration.md).
+For port configuration details, see the [Port Configuration guide](port_configuration.md). 

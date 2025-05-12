@@ -67,6 +67,7 @@ class McpSseCommunicator(BaseCommunicator):
         http_port: int = 8000,
         http_host: str = "0.0.0.0",
         server_instructions: Optional[str] = None,
+        **kwargs: Any,  # Accept any additional kwargs for flexibility
     ) -> None:
         """Initialize the MCP SSE communicator.
 
@@ -77,6 +78,7 @@ class McpSseCommunicator(BaseCommunicator):
             http_port: Port to use when in server mode
             http_host: Host to bind to when in server mode
             server_instructions: Optional instructions for the server
+            **kwargs: Additional keyword arguments (ignored)
         """
         super().__init__(agent_name, service_urls)
         self.server_mode = server_mode
@@ -584,7 +586,7 @@ class McpSseCommunicator(BaseCommunicator):
         # TODO: Consider fetching more dynamic info if needed, e.g., from FastMCP
         return {
             "type": "mcp-sse",  # Hardcoded type
-            "port": self.http_port,
+            "http_port": self.http_port,
             "host": self.http_host,
             # Add other relevant info here?
         }

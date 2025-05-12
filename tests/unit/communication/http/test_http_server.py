@@ -208,7 +208,7 @@ async def test_http_communicator_server_starts_on_handler_registration():
     # Mock the create_task function to return our mock
     with patch("openmas.communication.http.asyncio.create_task", return_value=mock_task) as mock_create_task:
         # Create a communicator
-        communicator = HttpCommunicator(agent_name="test-agent", service_urls={}, port=12345)
+        communicator = HttpCommunicator(agent_name="test-agent", service_urls={}, http_port=12345)
 
         # Define a handler
         async def test_handler(params):
@@ -228,7 +228,7 @@ async def test_http_communicator_server_starts_on_handler_registration():
 async def test_http_communicator_start_initializes_server():
     """Test that calling start() initializes the server if handlers are registered."""
     # Create a communicator
-    communicator = HttpCommunicator(agent_name="test-agent", service_urls={}, port=12345)
+    communicator = HttpCommunicator(agent_name="test-agent", service_urls={}, http_port=12345)
 
     # Define a handler
     async def test_handler(params):

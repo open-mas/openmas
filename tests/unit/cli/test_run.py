@@ -12,9 +12,9 @@ import typer
 import yaml
 
 from openmas.agent.base import BaseAgent
-from openmas.cli.run import run_project
+from openmas.cli.run import initialize_agent, run_project, verify_communicator_dependencies
 from openmas.cli.utils import add_package_paths_to_sys_path
-from openmas.config import ProjectConfig
+from openmas.config import AgentConfigEntry, ProjectConfig
 from openmas.exceptions import ConfigurationError
 
 
@@ -185,6 +185,7 @@ def test_no_environment_assumptions(mock_project_root):
         patch("openmas.cli.run.initialize_agent", return_value=mock_agent),
         patch("openmas.cli.run.AgentExecutor") as mock_agent_executor,
         patch("openmas.cli.run.ProjectEnvironment") as mock_project_env_class,
+        patch("openmas.cli.run.verify_communicator_dependencies"),  # Mock verify_communicator_dependencies
         patch("click.echo"),
     ):
         # Setup mocks
@@ -266,6 +267,7 @@ def test_running_project_with_different_environment_vars(mock_project_root):
             patch("openmas.cli.run.initialize_agent", return_value=mock_agent),
             patch("openmas.cli.run.AgentExecutor") as mock_agent_executor,
             patch("openmas.cli.run.ProjectEnvironment") as mock_project_env_class,
+            patch("openmas.cli.run.verify_communicator_dependencies"),  # Mock verify_communicator_dependencies
             patch("click.echo"),
         ):
             # Set up mocks
@@ -343,6 +345,7 @@ def test_project_environment_cleanup_on_error():
         patch("openmas.cli.run.validate_agent_in_config", return_value=mock_agent_config),
         patch("openmas.cli.run.ProjectEnvironment", return_value=mock_env),
         patch("openmas.cli.run.AgentLoader", return_value=mock_agent_loader),
+        patch("openmas.cli.run.verify_communicator_dependencies"),  # Mock verify_communicator_dependencies
         patch("click.echo"),
     ):
         # Run the function with error handling
@@ -356,3 +359,141 @@ def test_project_environment_cleanup_on_error():
 
         # Verify environment was restored (this is what we're testing)
         restore_spy.assert_called_once()
+
+
+class TestCliRun:
+    """Test suite for CLI run module."""
+
+    def test_initialize_agent_with_communicator_options(self):
+        """Test that initialize_agent correctly processes communicator options."""
+        # Create mock objects
+        mock_agent_class = MagicMock()
+        # Add __name__ attribute to fix the AttributeError
+        mock_agent_class.__name__ = "MockAgent"
+        mock_project_config = MagicMock(spec=ProjectConfig)
+        mock_project_config.default_config = {"default_key": "default_value"}
+        mock_project_config.communicator_defaults = {}
+
+        # Create agent config entry with communicator options
+        agent_config_entry = AgentConfigEntry(
+            module="test.agent",
+            class_="TestAgent",
+            communicator="mcp-sse",
+            options={"communicator_options": {"http_port": 9876, "server_mode": True}},
+        )
+
+        # Mock verify_communicator_dependencies to avoid dependency checks
+        with patch("openmas.cli.run.verify_communicator_dependencies"), patch("click.echo"):
+            # Call initialize_agent
+            initialize_agent(
+                agent_class=mock_agent_class,
+                agent_name="test_agent",
+                project_config=mock_project_config,
+                env_config={},
+                agent_config_entry=agent_config_entry,
+            )
+
+        # Verify the agent was initialized with the correct config
+        mock_agent_class.assert_called_once()
+        args, kwargs = mock_agent_class.call_args
+
+        # Check the agent config has the communicator type and options
+        assert kwargs["name"] == "test_agent"
+        assert isinstance(kwargs["config"], dict)
+        assert kwargs["config"]["communicator_type"] == "mcp-sse"
+        assert "communicator_options" in kwargs["config"]
+        assert kwargs["config"]["communicator_options"]["http_port"] == 9876
+        assert kwargs["config"]["communicator_options"]["server_mode"] is True
+
+    def test_initialize_agent_merges_configurations(self):
+        """Test that initialize_agent correctly merges different configuration sources."""
+        # Create mock objects
+        mock_agent_class = MagicMock()
+        # Add __name__ attribute to fix the AttributeError
+        mock_agent_class.__name__ = "MockAgent"
+
+        # Project config with default and communicator defaults
+        mock_project_config = MagicMock(spec=ProjectConfig)
+        mock_project_config.default_config = {"log_level": "INFO"}
+        mock_project_config.communicator_defaults = {"communicator_options": {"timeout": 30}}
+
+        # Environment config
+        env_config = {"env_key": "env_value"}
+
+        # Agent config entry with specific options
+        agent_config_entry = AgentConfigEntry(
+            module="test.agent",
+            class_="TestAgent",
+            communicator="http",
+            options={"communicator_options": {"http_port": 5678}},
+        )
+
+        # Mock verify_communicator_dependencies to avoid dependency checks
+        with patch("openmas.cli.run.verify_communicator_dependencies"), patch("click.echo"):
+            # Call initialize_agent
+            initialize_agent(
+                agent_class=mock_agent_class,
+                agent_name="test_agent",
+                project_config=mock_project_config,
+                env_config=env_config,
+                agent_config_entry=agent_config_entry,
+            )
+
+        # Verify the agent was initialized with the merged config
+        mock_agent_class.assert_called_once()
+        args, kwargs = mock_agent_class.call_args
+
+        # Check that all config sources were merged correctly
+        agent_config = kwargs["config"]
+
+        # Project defaults
+        assert agent_config["log_level"] == "INFO"
+
+        # Communicator defaults
+        assert agent_config["communicator_options"]["timeout"] == 30
+
+        # Environment config
+        assert agent_config["env_key"] == "env_value"
+
+        # Agent-specific config
+        assert agent_config["communicator_type"] == "http"
+        assert agent_config["communicator_options"]["http_port"] == 5678
+
+    @patch("openmas.cli.run.logger")
+    @patch("openmas.communication.get_communicator_by_type")
+    def test_verify_communicator_dependencies_success(self, mock_get_communicator, mock_logger):
+        """Test verify_communicator_dependencies when dependencies are satisfied."""
+        # For HTTP communicator, no dependencies need verification, so this is a no-op
+        verify_communicator_dependencies("http")
+
+        # Verification only happens for specific communicator types
+        # Verify get_communicator_by_type was NOT called for HTTP
+        mock_get_communicator.assert_not_called()
+
+        # Now test with MCP communicator
+        with patch("openmas.cli.run.importlib.import_module") as mock_import:
+            # Set up mock to succeed
+            mock_import.return_value = MagicMock()
+
+            # Call the function for MCP SSE
+            verify_communicator_dependencies("mcp-sse")
+
+            # Verify import was attempted
+            mock_import.assert_called_once_with("mcp")
+
+    @patch("openmas.cli.run.logger")
+    @patch("openmas.cli.run.click")
+    @patch("openmas.cli.run.importlib.import_module")
+    def test_verify_communicator_dependencies_failure(self, mock_import, mock_click, mock_logger):
+        """Test verify_communicator_dependencies when dependencies are missing."""
+        # Setup mock to raise an exception
+        mock_import.side_effect = ImportError("Missing dependency")
+
+        # Call the function for MCP communicator and expect ConfigurationError
+        with pytest.raises(ConfigurationError) as excinfo:
+            verify_communicator_dependencies("mcp-sse")
+
+        # Verify the error message contains the expected text
+        error_message = str(excinfo.value)
+        assert "Missing dependencies for communicator 'mcp-sse'" in error_message
+        assert "pip install 'openmas[mcp]'" in error_message

@@ -44,12 +44,18 @@ def test_environment_cleanup_on_error():
         with (
             patch("openmas.cli.run.find_project_root") as mock_find_root,
             patch("openmas.cli.run.load_project_config") as mock_load_config,
-            patch("openmas.cli.run.validate_agent_in_config"),
+            patch("openmas.cli.run.validate_agent_in_config") as mock_validate_agent,
             patch("click.echo"),
         ):
             # Configure mocks
             mock_find_root.return_value = Path("/test/project")
             mock_load_config.return_value = MagicMock(spec=ProjectConfig)
+
+            # Set up mock agent config entry with communicator=None
+            # to avoid the dependency check
+            mock_agent_config = MagicMock()
+            mock_agent_config.communicator = None
+            mock_validate_agent.return_value = mock_agent_config
 
             # Call the function with expected error
             with pytest.raises(typer.Exit):

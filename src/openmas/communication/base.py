@@ -300,7 +300,7 @@ class BaseCommunicator(abc.ABC):
         server_mode: bool = False,
         server_instructions: Optional[str] = None,
         service_args: Optional[Dict[str, List[str]]] = None,
-        port: Optional[int] = None,
+        http_port: Optional[int] = None,
     ):
         """Initialize the communicator.
 
@@ -310,7 +310,7 @@ class BaseCommunicator(abc.ABC):
             server_mode: Whether to run in server mode
             server_instructions: Instructions for the server
             service_args: Additional arguments for each service
-            port: Port for HTTP-based communicators
+            http_port: Port for HTTP-based communicators
         """
         self.agent_name = agent_name
         self.service_urls = service_urls
@@ -318,7 +318,7 @@ class BaseCommunicator(abc.ABC):
         self._server_mode = server_mode
         self._server_instructions = server_instructions
         self._service_args = service_args or {}
-        self._port = port
+        self.http_port = http_port
         # Placeholder for server status
         self._is_server_running = False
 

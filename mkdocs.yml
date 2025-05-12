@@ -42,7 +42,10 @@ nav:
   - Guides:
       - Installation: guides/installation.md
       - Getting Started: guides/getting_started.md
-      - Configuration: guides/configuration.md
+      - Configuration:
+        - Overview: guides/configuration/index.md
+        - Communicator Configuration: guides/configuration/communicator_config.md
+        - Port Configuration: guides/configuration/port_configuration.md
       - Deployment: guides/deployment.md
       - Communication:
         - Overview: guides/communication/index.md

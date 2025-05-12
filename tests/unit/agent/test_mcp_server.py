@@ -42,7 +42,7 @@ class TestMcpServerAgent:
         assert agent.name == "test_server"
         assert agent.server_type == "sse"
         assert agent.host == "0.0.0.0"
-        assert agent.port == 8000
+        assert agent.http_port == 8000
         assert agent._server_mode is True
 
     @patch("openmas.agent.base.load_config")
@@ -69,12 +69,12 @@ class TestMcpServerAgent:
         mock_load_config.return_value = mock_config
 
         # Create agent with mocked config and custom values
-        agent = McpServerAgent(name="custom_server", server_type="stdio", host="127.0.0.1", port=9000)
+        agent = McpServerAgent(name="custom_server", server_type="stdio", host="127.0.0.1", http_port=9000)
 
         assert agent.name == "custom_server"
         assert agent.server_type == "stdio"
         assert agent.host == "127.0.0.1"
-        assert agent.port == 9000
+        assert agent.http_port == 9000
         assert agent._server_mode is True
 
     @patch("openmas.agent.base.load_config")
@@ -100,7 +100,7 @@ class TestMcpServerAgent:
         mock_sse_comm.return_value = mock_comm_instance
 
         # Create agent
-        agent = McpServerAgent(name="sse_server", server_type="sse", port=8888)
+        agent = McpServerAgent(name="sse_server", server_type="sse", http_port=8888)
 
         # Call setup_communicator
         agent.setup_communicator(instructions="Test instructions")

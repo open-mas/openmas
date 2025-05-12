@@ -147,6 +147,7 @@ def create_communicator(
     http_port: int = 8000,
     server_instructions: Optional[str] = None,
     service_args: Optional[Dict[str, List[str]]] = None,
+    communicator_options: Optional[Dict[str, Any]] = None,
     **kwargs: Any,
 ) -> BaseCommunicator:
     """Create a communicator instance based on the specified type.
@@ -162,6 +163,7 @@ def create_communicator(
         http_port: The HTTP port to use (for HTTP-based communicators)
         server_instructions: Instructions for the server (for MCP communicators)
         service_args: Additional arguments for each service command (for stdio communicators)
+        communicator_options: Additional options specific to the selected communicator
         **kwargs: Additional keyword arguments to pass to the communicator
 
     Returns:
@@ -173,6 +175,18 @@ def create_communicator(
     """
     service_urls = service_urls or {}
     service_args = service_args or {}
+    communicator_options = communicator_options or {}
+
+    # Create combined options to pass to the communicator
+    combined_options = kwargs.copy()
+
+    # Add port parameter for HTTP communicator if not in communicator_options
+    if communicator_type == "http" and "port" not in communicator_options:
+        communicator_options["port"] = http_port
+
+    # Add communicator_options to the combined options
+    if communicator_options:
+        combined_options["communicator_options"] = communicator_options
 
     # Get the communicator class
     communicator_class = get_communicator_by_type(communicator_type)
@@ -186,21 +200,25 @@ def create_communicator(
             server_mode=server_mode,
             server_instructions=server_instructions,
             service_args=service_args,
-            **kwargs,
+            **combined_options,
         )
     elif communicator_type == "http":
-        # HTTP communicator doesn't accept these additional parameters
+        # For HTTP, pass port parameter directly
+        if "port" in communicator_options:
+            combined_options["port"] = communicator_options["port"]
+
+        # HTTP communicator
         return communicator_class(
             agent_name=agent_name,
             service_urls=service_urls,
-            **kwargs,
+            **combined_options,
         )
     else:
         # Default case for other communicator types
         return communicator_class(
             agent_name=agent_name,
             service_urls=service_urls,
-            **kwargs,
+            **combined_options,
         )
 
 

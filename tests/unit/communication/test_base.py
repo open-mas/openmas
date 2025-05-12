@@ -118,64 +118,70 @@ def test_get_available_communicator_types():
 # --- Tests for BaseCommunicator ABC ---
 
 
-# Create a minimal concrete subclass for testing __init__
+# Create a simple implementation for testing
 class ConcreteCommunicator(BaseCommunicator):
-    async def send_request(self, *args, **kwargs):
+    """Concrete implementation of the BaseCommunicator for testing."""
+
+    async def send_request(self, target_service, method, params=None, response_model=None, timeout=None):
+        """Send a request to a target service."""
+        return {"result": "test"}
+
+    async def send_notification(self, target_service, method, params=None):
+        """Send a notification to a target service."""
         pass
 
-    async def send_notification(self, *args, **kwargs):
+    async def register_handler(self, method, handler):
+        """Register a handler for a method."""
         pass
 
-    async def register_handler(self, *args, **kwargs):
+    async def start(self):
+        """Start the communicator."""
         pass
 
-    async def start(self, *args, **kwargs):
-        pass
-
-    async def stop(self, *args, **kwargs):
+    async def stop(self):
+        """Stop the communicator."""
         pass
 
 
 def test_base_communicator_init():
-    """Test the initialization of BaseCommunicator attributes."""
-    agent_name = "test-agent"
-    service_urls = {"s1": "url1"}
-    comm = ConcreteCommunicator(agent_name=agent_name, service_urls=service_urls)
+    """Test base communicator initialization."""
+    # Create a basic communicator
+    agent_name = "test_agent"
+    service_urls = {"service1": "http://service1:8080"}
+    communicator = ConcreteCommunicator(agent_name, service_urls)
 
-    # Attributes assigned directly from args (no underscore in __init__ assignment)
-    assert comm.agent_name == agent_name
-    assert comm.service_urls == service_urls
-    # Attributes assigned internally (using underscore in __init__ assignment)
-    assert comm._server_mode is False  # Default
-    assert comm._server_instructions is None  # Default
-    assert comm._service_args == {}  # Default is {} due to "or {}"
-    assert comm._port is None  # Default
-    # Note: handlers, lock, _started, _tasks are not initialized in base __init__
+    # Check initialization
+    assert communicator.agent_name == agent_name
+    assert communicator.service_urls == service_urls
+    assert communicator._server_mode is False
+    assert communicator._server_instructions is None
+    assert communicator._service_args == {}
+    assert communicator.http_port is None
 
 
 def test_base_communicator_init_with_optional_args():
-    """Test initialization with optional arguments."""
-    agent_name = "test-agent-2"
-    service_urls = {"s2": "url2"}
-    server_instructions = "Do something"
-    service_args = {"s2": ["--flag"]}
-    port = 9999
+    """Test base communicator initialization with optional arguments."""
+    # Create a communicator with all optional args
+    agent_name = "test_agent"
+    service_urls = {"service1": "http://service1:8080"}
+    server_mode = True
+    server_instructions = "Test instructions"
+    service_args = {"service1": ["--arg1", "--arg2"]}
+    http_port = 8080
 
-    comm = ConcreteCommunicator(
-        agent_name=agent_name,
-        service_urls=service_urls,
-        server_mode=True,
+    communicator = ConcreteCommunicator(
+        agent_name,
+        service_urls,
+        server_mode=server_mode,
         server_instructions=server_instructions,
         service_args=service_args,
-        port=port,
+        http_port=http_port,
     )
 
-    # Attributes assigned directly from args (no underscore in __init__ assignment)
-    assert comm.agent_name == agent_name
-    assert comm.service_urls == service_urls
-    # Attributes assigned internally (using underscore in __init__ assignment)
-    assert comm._server_mode is True
-    assert comm._server_instructions == server_instructions
-    assert comm._service_args == service_args
-    assert comm._port == port
-    # Note: handlers, lock, _started, _tasks are not initialized in base __init__
+    # Check initialization
+    assert communicator.agent_name == agent_name
+    assert communicator.service_urls == service_urls
+    assert communicator._server_mode is server_mode
+    assert communicator._server_instructions == server_instructions
+    assert communicator._service_args == service_args
+    assert communicator.http_port == http_port

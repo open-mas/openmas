@@ -58,6 +58,12 @@ class ToolProviderAgent(BaseAgent):
         """Set up the agent by registering the MCP tool."""
         logger.info(f"Setting up {self.name}")
 
+        # Add diagnostic logging about port configuration
+        logger.info(f"Communicator type: {self.communicator.__class__.__name__}")
+        logger.info(f"Communicator options: {getattr(self.config, 'communicator_options', 'Not found')}")
+        if hasattr(self.communicator, "http_port"):
+            logger.info(f"MCP SSE HTTP port: {self.communicator.http_port}")
+
         # Register the process_text MCP tool
         tool_name = "process_text"
 

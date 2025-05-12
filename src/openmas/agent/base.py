@@ -88,7 +88,22 @@ class BaseAgent(abc.ABC):
         if communicator_class is None:
             communicator_class = self._get_communicator_class(self.config.communicator_type)
 
-        self.communicator = communicator_class(self.config.name, self.config.service_urls)
+        # Create the communicator, passing communicator_options as kwargs
+        # Extract communicator options and pass them properly to constructor
+        communicator_kwargs = {}
+
+        # Pass all communicator_options as direct kwargs to ensure they're correctly passed
+        # to the appropriate parameter in the communicator's constructor
+        if hasattr(self.config, "communicator_options") and self.config.communicator_options:
+            communicator_kwargs.update(self.config.communicator_options)
+            self.logger.debug("Passing communicator options to communicator", options=communicator_kwargs)
+
+        # Create the communicator with extracted options
+        self.communicator = communicator_class(
+            self.config.name,
+            self.config.service_urls,
+            **communicator_kwargs,
+        )
 
         # Internal state
         self._is_running = False

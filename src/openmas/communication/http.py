@@ -29,7 +29,7 @@ class HttpCommunicator(BaseCommunicator):
         self,
         agent_name: str,
         service_urls: Dict[str, str],
-        port: Optional[int] = None,
+        http_port: Optional[int] = None,
         **kwargs: Any,
     ):
         """Initialize the HTTP communicator.
@@ -37,17 +37,27 @@ class HttpCommunicator(BaseCommunicator):
         Args:
             agent_name: The name of the agent using this communicator
             service_urls: Mapping of service names to URLs
-            port: Optional port to use for the server (default is determined by configuration)
+            http_port: Optional port to use for the server (default is determined by configuration)
+            **kwargs: Additional keyword arguments including communicator_options
         """
         super().__init__(agent_name, service_urls)
         self.client = httpx.AsyncClient(timeout=30.0)
         self.handlers: Dict[str, Callable] = {}
         self.server_task: Optional[asyncio.Task] = None
-        self.port = port
+        self.http_port = http_port
 
         # Check communicator options for the port if not explicitly provided
-        if self.port is None and kwargs.get("communicator_options"):
-            self.port = kwargs.get("communicator_options", {}).get("port")
+        if self.http_port is None and kwargs.get("communicator_options"):
+            self.http_port = kwargs.get("communicator_options", {}).get("http_port")
+
+        # Log the communicator initialization with detailed configuration information
+        logger.debug(
+            "Initialized HTTP communicator",
+            agent_name=agent_name,
+            communicator_options=kwargs.get("communicator_options", {}),
+            http_port=self.http_port,
+            service_urls=service_urls,
+        )
 
     async def send_request(
         self,
@@ -198,7 +208,7 @@ class HttpCommunicator(BaseCommunicator):
 
                 # Get port from agent config
                 agent_name = self.agent_name
-                port = self.port
+                port = self.http_port
 
                 # Default port if not specified
                 if port is None:
@@ -208,29 +218,35 @@ class HttpCommunicator(BaseCommunicator):
                         try:
                             import re
 
-                            port_match = re.search(r":(\d+)", url)
+                            port_match = re.search(r":(\d+)(?:/|$)", url)
                             if port_match:
                                 port = int(port_match.group(1))
-                        except Exception as e:
-                            logger.debug(f"Could not extract port from URL: {e}")
+                        except Exception:
+                            logger.warning("Failed to extract port from URL", url=url)
 
-                # Fall back to a default port if still none
-                if port is None:
-                    # Hard-coded fallback as a last resort
-                    if agent_name == "consumer":
-                        port = 8082  # For example, consumer agents use port 8082
-                    elif agent_name == "producer":
-                        port = 8081  # For example, producer agents use port 8081
-                    else:
-                        # This is a reasonable fallback, but may collide with other services
+                    # Use fallback port if extraction failed
+                    if port is None:
                         port = 8000
+                        logger.info(f"Using default port {port}")
 
-                # Update the instance port attribute with the determined value
-                self.port = port
-                logger.debug(f"Using port {port} for HTTP server")
+                self.http_port = port
+                logger.info(f"Starting HTTP server on port {port}")
+
+                # Use the newer FastAPI lifespan API instead of deprecated on_event
+                from contextlib import asynccontextmanager
+                from typing import AsyncIterator
+
+                @asynccontextmanager
+                async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+                    """Handle application lifespan events."""
+                    # Startup event
+                    logger.debug("HTTP server starting up")
+                    yield
+                    # Shutdown event
+                    logger.debug("HTTP server shutting down")
 
                 # Create FastAPI app
-                app = FastAPI(title=f"{agent_name}-api")
+                app = FastAPI(title=f"{agent_name}-api", lifespan=lifespan)
 
                 @app.post("/")  # type: ignore[misc]
                 async def handle_jsonrpc(request: Request) -> Response:
@@ -297,19 +313,6 @@ class HttpCommunicator(BaseCommunicator):
                             },
                             status_code=500,
                         )
-
-                # Use the newer FastAPI lifespan API instead of deprecated on_event
-                from contextlib import asynccontextmanager
-                from typing import AsyncIterator
-
-                @asynccontextmanager
-                async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-                    """Handle application lifespan events."""
-                    # Startup event
-                    logger.debug("HTTP server starting up")
-                    yield
-                    # Shutdown event
-                    logger.debug("HTTP server shutting down")
 
                 # Set the lifespan handler for the app
                 app.router.lifespan_context = lifespan  # type: ignore[assignment]

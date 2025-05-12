@@ -42,8 +42,12 @@ def test_no_environment_assumptions(tmp_path):
             mock_load_config.return_value = mock_project_config
             # Ensure default_config is set and it's a dictionary
             mock_project_config.default_config = {"log_level": "INFO"}
+            # Add communicator_defaults to the mock to avoid AttributeError
+            mock_project_config.communicator_defaults = {}
 
             mock_agent_config = MagicMock()
+            # Set communicator to None to avoid dependency check issues
+            mock_agent_config.communicator = None
             mock_validate_agent.return_value = mock_agent_config
 
             # Setup mock environment

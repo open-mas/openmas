@@ -3,7 +3,9 @@
 # flake8: noqa: E402
 
 import sys
+from pathlib import Path
 from unittest import mock
+from unittest.mock import patch
 
 import pytest
 
@@ -431,9 +433,11 @@ def test_agent_with_missing_dependency(monkeypatch):
             async def shutdown(self):
                 pass
 
-        # Try to initialize an agent with mcp-sse communicator type
-        with pytest.raises(DependencyError) as exc_info:
-            MockAgent(name="test_agent", config={"name": "test_agent", "communicator_type": "mcp-sse"})
+        # Mock Path.cwd() to avoid FileNotFoundError
+        with patch("pathlib.Path.cwd", return_value=Path("/tmp")):
+            # Try to initialize an agent with mcp-sse communicator type
+            with pytest.raises(DependencyError) as exc_info:
+                MockAgent(name="test_agent", config={"name": "test_agent", "communicator_type": "mcp-sse"})
 
         # Verify the error message mentions mcp and pip install
         assert "mcp" in str(exc_info.value)

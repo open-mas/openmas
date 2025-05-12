@@ -477,7 +477,7 @@ class TestMcpSseCommunicator:
             communicator_server.fastmcp_server = mock.MagicMock()
 
             info = await communicator_server.get_server_info()
-            assert info["port"] == port
+            assert info["http_port"] == port
             assert info["host"] == host
             assert info["type"] == "mcp-sse"
             assert "error" not in info

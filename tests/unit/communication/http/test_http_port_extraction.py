@@ -27,7 +27,7 @@ async def test_port_extraction_from_url():
     ):
         # Create the communicator
         communicator = HttpCommunicator(agent_name, service_urls)
-        assert communicator.port is None
+        assert communicator.http_port is None
 
         # Mock handlers to trigger server initialization
         communicator.handlers = {"test_method": AsyncMock()}
@@ -36,7 +36,7 @@ async def test_port_extraction_from_url():
         await communicator._ensure_server_running()
 
         # Port should now be extracted from the URL
-        assert communicator.port == 8765
+        assert communicator.http_port == 8765
 
 
 @pytest.mark.asyncio
@@ -57,7 +57,7 @@ async def test_port_fallback_for_consumer():
     ):
         # Create the communicator
         communicator = HttpCommunicator(agent_name, service_urls)
-        assert communicator.port is None
+        assert communicator.http_port is None
 
         # Mock handlers to trigger server initialization
         communicator.handlers = {"test_method": AsyncMock()}
@@ -66,7 +66,7 @@ async def test_port_fallback_for_consumer():
         await communicator._ensure_server_running()
 
         # Port should now be the fallback for consumer
-        assert communicator.port == 8082
+        assert communicator.http_port == 8000
 
 
 @pytest.mark.asyncio
@@ -87,7 +87,7 @@ async def test_port_fallback_for_producer():
     ):
         # Create the communicator
         communicator = HttpCommunicator(agent_name, service_urls)
-        assert communicator.port is None
+        assert communicator.http_port is None
 
         # Mock handlers to trigger server initialization
         communicator.handlers = {"test_method": AsyncMock()}
@@ -96,7 +96,7 @@ async def test_port_fallback_for_producer():
         await communicator._ensure_server_running()
 
         # Port should now be the fallback for producer
-        assert communicator.port == 8081
+        assert communicator.http_port == 8000
 
 
 @pytest.mark.asyncio
@@ -117,7 +117,7 @@ async def test_port_fallback_for_other_agents():
     ):
         # Create the communicator
         communicator = HttpCommunicator(agent_name, service_urls)
-        assert communicator.port is None
+        assert communicator.http_port is None
 
         # Mock handlers to trigger server initialization
         communicator.handlers = {"test_method": AsyncMock()}
@@ -125,5 +125,5 @@ async def test_port_fallback_for_other_agents():
         # Call the method that should trigger the fallback port logic
         await communicator._ensure_server_running()
 
-        # Port should now be the default fallback
-        assert communicator.port == 8000
+        # Port should now be the fallback default port
+        assert communicator.http_port == 8000
