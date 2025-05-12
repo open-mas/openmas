@@ -221,15 +221,21 @@ def initialize_agent(
             "name": agent_name,
             # Include default config from project
             **(project_config.default_config or {}),
-            # Include communicator defaults if present
-            **(project_config.communicator_defaults or {}),
+            # Initialize communicator_options if not already present
+            "communicator_options": {},
             # Override with environment-specific config
             **env_config,
         }
 
-        # Initialize communicator_options if not present
-        if "communicator_options" not in agent_config:
-            agent_config["communicator_options"] = {}
+        # Process communicator defaults properly
+        if project_config.communicator_defaults:
+            # If 'type' is specified in communicator_defaults, use it as communicator_type
+            if "type" in project_config.communicator_defaults:
+                agent_config["communicator_type"] = project_config.communicator_defaults["type"]
+
+            # If 'options' is specified, merge them into communicator_options
+            if "options" in project_config.communicator_defaults:
+                agent_config["communicator_options"].update(project_config.communicator_defaults["options"])
 
         # Add agent-specific configuration from agent_config_entry
         if agent_config_entry.communicator:

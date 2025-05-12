@@ -54,14 +54,32 @@ communicator_options:
 
 ### MCP/SSE Communicator
 
-For the MCP/SSE communicator, you can specify the port using either `http_port` (preferred) or `port` (for backward compatibility):
+For the MCP/SSE communicator, you can specify the port using the `http_port` parameter:
 
 ```yaml
 communicator_options:
   http_port: 9900
-  # OR
-  port: 9900
 ```
+
+## Project-Wide Communicator Defaults
+
+You can set default communicator settings for all agents in your project using the `communicator_defaults` field in `openmas_project.yml`. This is useful when you want multiple agents to use the same communicator type or share common configuration.
+
+```yaml
+# In openmas_project.yml
+communicator_defaults:
+  type: mcp-sse  # Default communicator type for all agents
+  options:
+    server_mode: true
+    http_port: 8000  # Default port
+    http_host: "127.0.0.1"  # All communicator options go inside 'options'
+```
+
+The `communicator_defaults` structure:
+- `type`: Sets the default `communicator_type` for all agents
+- `options`: A dictionary of options to be merged into each agent's `communicator_options`
+
+Agent-specific `communicator` and `communicator_options` settings will override these defaults.
 
 ## Configuration Precedence
 
@@ -100,4 +118,4 @@ OpenMAS provides the following built-in communicator types:
 
 3. **MCP/SSE configuration ignored**:
    - If your MCP/SSE agent falls back to HTTP, check your PYTHONPATH and ensure MCP is installed
-   - Verify your `openmas_project.yml` has the correct structure as shown above 
+   - Verify your `openmas_project.yml` has the correct structure as shown above

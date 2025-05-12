@@ -415,7 +415,8 @@ class TestCliRun:
         # Project config with default and communicator defaults
         mock_project_config = MagicMock(spec=ProjectConfig)
         mock_project_config.default_config = {"log_level": "INFO"}
-        mock_project_config.communicator_defaults = {"communicator_options": {"timeout": 30}}
+        # Updated structure for communicator_defaults with options field
+        mock_project_config.communicator_defaults = {"options": {"timeout": 30}}
 
         # Environment config
         env_config = {"env_key": "env_value"}
@@ -455,10 +456,6 @@ class TestCliRun:
         # Environment config
         assert agent_config["env_key"] == "env_value"
 
-        # Agent-specific config
-        assert agent_config["communicator_type"] == "http"
-        assert agent_config["communicator_options"]["http_port"] == 5678
-
     @patch("openmas.cli.run.logger")
     @patch("openmas.communication.get_communicator_by_type")
     def test_verify_communicator_dependencies_success(self, mock_get_communicator, mock_logger):
@@ -497,3 +494,94 @@ class TestCliRun:
         error_message = str(excinfo.value)
         assert "Missing dependencies for communicator 'mcp-sse'" in error_message
         assert "pip install 'openmas[mcp]'" in error_message
+
+    def test_initialize_agent_with_communicator_defaults(self):
+        """Test that initialize_agent correctly processes communicator_defaults field."""
+        # Create mock objects
+        mock_agent_class = MagicMock()
+        mock_agent_class.__name__ = "MockAgent"
+
+        # Set up project config with communicator_defaults
+        mock_project_config = MagicMock(spec=ProjectConfig)
+        mock_project_config.default_config = {"log_level": "INFO"}
+        mock_project_config.communicator_defaults = {
+            "type": "mcp-sse",
+            "options": {"server_mode": True, "http_port": 8000, "http_host": "127.0.0.1"},
+        }
+
+        # Agent config with no communicator type (should use the one from communicator_defaults)
+        agent_config_entry = AgentConfigEntry(
+            module="test.agent",
+            class_="TestAgent",
+            # No communicator specified - should use from communicator_defaults
+            options={},
+        )
+
+        # Mock verify_communicator_dependencies to avoid dependency checks
+        with patch("openmas.cli.run.verify_communicator_dependencies"), patch("click.echo"):
+            # Call initialize_agent
+            initialize_agent(
+                agent_class=mock_agent_class,
+                agent_name="test_agent",
+                project_config=mock_project_config,
+                env_config={},
+                agent_config_entry=agent_config_entry,
+            )
+
+        # Verify the agent was initialized with the correct config from communicator_defaults
+        mock_agent_class.assert_called_once()
+        args, kwargs = mock_agent_class.call_args
+
+        # Check the agent config has the communicator type from communicator_defaults.type
+        assert kwargs["config"]["communicator_type"] == "mcp-sse"
+
+        # Check that options were properly merged into communicator_options
+        assert kwargs["config"]["communicator_options"]["server_mode"] is True
+        assert kwargs["config"]["communicator_options"]["http_port"] == 8000
+        assert kwargs["config"]["communicator_options"]["http_host"] == "127.0.0.1"
+
+    def test_agent_communicator_overrides_defaults(self):
+        """Test that agent-specific communicator overrides communicator_defaults."""
+        # Create mock objects
+        mock_agent_class = MagicMock()
+        mock_agent_class.__name__ = "MockAgent"
+
+        # Set up project config with communicator_defaults
+        mock_project_config = MagicMock(spec=ProjectConfig)
+        mock_project_config.default_config = {"log_level": "INFO"}
+        mock_project_config.communicator_defaults = {
+            "type": "mcp-sse",
+            "options": {"server_mode": True, "http_port": 8000},
+        }
+
+        # Agent config with its own communicator type (should override defaults)
+        agent_config_entry = AgentConfigEntry(
+            module="test.agent",
+            class_="TestAgent",
+            communicator="http",  # Should override the mcp-sse from defaults
+            options={"communicator_options": {"http_port": 9999}},  # Should override port from defaults
+        )
+
+        # Mock verify_communicator_dependencies to avoid dependency checks
+        with patch("openmas.cli.run.verify_communicator_dependencies"), patch("click.echo"):
+            # Call initialize_agent
+            initialize_agent(
+                agent_class=mock_agent_class,
+                agent_name="test_agent",
+                project_config=mock_project_config,
+                env_config={},
+                agent_config_entry=agent_config_entry,
+            )
+
+        # Verify the agent was initialized with the agent-specific config
+        mock_agent_class.assert_called_once()
+        args, kwargs = mock_agent_class.call_args
+
+        # Check the agent-specific communicator type overrode the default
+        assert kwargs["config"]["communicator_type"] == "http"
+
+        # Check that agent-specific options overrode the defaults
+        assert kwargs["config"]["communicator_options"]["http_port"] == 9999
+
+        # Check that other options from defaults were preserved
+        assert kwargs["config"]["communicator_options"]["server_mode"] is True

@@ -329,4 +329,4 @@ Here are the commonly used configuration keys in OpenMAS:
 | `extension_paths` | List of paths to look for local framework extensions | `[]` |
 
 For communicator-specific options, refer to the [Communicator Configuration guide](communicator_configuration.md).
-For port configuration details, see the [Port Configuration guide](port_configuration.md). 
+For port configuration details, see the [Port Configuration guide](port_configuration.md).

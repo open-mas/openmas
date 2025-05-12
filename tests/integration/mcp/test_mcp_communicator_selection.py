@@ -57,38 +57,38 @@ from openmas.agent import BaseAgent
 
 class Agent(BaseAgent):
     \"\"\"Chess orchestrator agent that uses MCP/SSE communicator.\"\"\"
-    
+
     async def setup(self):
         \"\"\"Set up the agent.\"\"\"
         # Print diagnostic information
         print(f"AGENT_NAME:{self.name}")
         print(f"COMM_TYPE:{self.communicator.__class__.__name__}")
-        
+
         # Print communicator type from config
         if hasattr(self.config, "communicator_type"):
             print(f"CONFIG_COMM_TYPE:{self.config.communicator_type}")
-        
+
         # Print communicator options
         if hasattr(self.config, "communicator_options"):
             print(f"COMM_OPTIONS:{json.dumps(self.config.communicator_options)}")
-        
+
         # For MCP/SSE communicator, report the port
         if hasattr(self.communicator, "http_port"):
             print(f"MCP_SSE_PORT:{self.communicator.http_port}")
-        
+
         # For HTTP communicator, report the port
         if hasattr(self.communicator, "server") and hasattr(self.communicator.server, "port"):
             print(f"HTTP_PORT:{self.communicator.server.port}")
-            
+
         # Print all attributes of the communicator
         print(f"COMMUNICATOR_ATTRS:{dir(self.communicator)}")
-    
+
     async def run(self):
         \"\"\"Run the agent.\"\"\"
         # Just enough for testing
         await asyncio.sleep(0.1)
         return  # Exit immediately for test
-    
+
     async def shutdown(self):
         \"\"\"Shut down the agent.\"\"\"
         pass
@@ -109,38 +109,38 @@ from openmas.agent import BaseAgent
 
 class Agent(BaseAgent):
     \"\"\"Chess commentator agent that uses MCP/SSE communicator.\"\"\"
-    
+
     async def setup(self):
         \"\"\"Set up the agent.\"\"\"
         # Print diagnostic information
         print(f"AGENT_NAME:{self.name}")
         print(f"COMM_TYPE:{self.communicator.__class__.__name__}")
-        
+
         # Print communicator type from config
         if hasattr(self.config, "communicator_type"):
             print(f"CONFIG_COMM_TYPE:{self.config.communicator_type}")
-        
+
         # Print communicator options
         if hasattr(self.config, "communicator_options"):
             print(f"COMM_OPTIONS:{json.dumps(self.config.communicator_options)}")
-        
+
         # For MCP/SSE communicator, report the port
         if hasattr(self.communicator, "http_port"):
             print(f"MCP_SSE_PORT:{self.communicator.http_port}")
-        
+
         # For HTTP communicator, report the port
         if hasattr(self.communicator, "server") and hasattr(self.communicator.server, "port"):
             print(f"HTTP_PORT:{self.communicator.server.port}")
-            
+
         # Print all attributes of the communicator
         print(f"COMMUNICATOR_ATTRS:{dir(self.communicator)}")
-    
+
     async def run(self):
         \"\"\"Run the agent.\"\"\"
         # Just enough for testing
         await asyncio.sleep(0.1)
         return  # Exit immediately for test
-    
+
     async def shutdown(self):
         \"\"\"Shut down the agent.\"\"\"
         pass
@@ -216,6 +216,7 @@ def run_agent_in_subprocess(
         return {"stdout": process.stdout, "stderr": process.stderr, "returncode": process.returncode}
     except subprocess.TimeoutExpired:
         pytest.fail(f"Command timed out after {timeout} seconds")
+        return {}  # Added return statement to fix mypy error
 
 
 def parse_stdout_for_values(stdout: str) -> Dict[str, Any]:

@@ -43,7 +43,7 @@ agents:
     options:
       communicator_options:
         port: 8081
-  
+
   agent2:
     module: agents.agent2
     class: Agent
@@ -118,4 +118,4 @@ If you see errors like "Address already in use", it means there's a port conflic
 1. **Specify Unique Ports**: Always specify a unique port for each agent
 2. **Check Running Processes**: Use `lsof -i :<port>` (Unix/Mac) or `netstat -ano | findstr :<port>` (Windows) to see what's using a port
 3. **Use Higher Port Numbers**: Ports above 1024 are less likely to be reserved by the system
-4. **Enable Debug Logging**: Set the agent's log level to DEBUG to see more information about port configuration 
+4. **Enable Debug Logging**: Set the agent's log level to DEBUG to see more information about port configuration

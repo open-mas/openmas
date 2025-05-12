@@ -49,16 +49,16 @@ class Agent(BaseAgent):
         # Report communicator information
         comm_type = self.communicator.__class__.__name__
         print(f"COMM_TYPE:{comm_type}")
-        
+
         # Report detailed configuration
         if hasattr(self.config, "communicator_type"):
             print(f"CONFIG_COMM_TYPE:{self.config.communicator_type}")
-        
+
         if hasattr(self.config, "communicator_options"):
             # Convert to JSON for easy parsing in tests
             comm_options = self.config.communicator_options
             print(f"COMM_OPTIONS:{json.dumps(comm_options)}")
-        
+
         # For HTTP communicator, extract port if available
         if hasattr(self.communicator, "http_port"):
             print(f"HTTP_PORT:{self.communicator.http_port}")
@@ -200,6 +200,7 @@ def run_agent_in_subprocess(project_dir: Path, agent_name: str, env: str = None,
         return {"stdout": process.stdout, "stderr": process.stderr, "returncode": process.returncode}
     except subprocess.TimeoutExpired:
         pytest.fail(f"Command timed out after {timeout} seconds")
+        return {}  # Added return statement to fix mypy error
 
 
 def parse_stdout_for_values(stdout: str) -> Dict:
@@ -371,7 +372,7 @@ from openmas.communication.base import BaseCommunicator, register_communicator
 
 class MockCommunicator(BaseCommunicator):
     '''Mock communicator for testing.'''
-    
+
     def __init__(
         self,
         agent_name,
@@ -390,19 +391,19 @@ class MockCommunicator(BaseCommunicator):
         self.server_mode = server_mode
         self.communicator_options = communicator_options or {}
         self.kwargs = kwargs
-        
+
     async def send_request(self, *args, **kwargs):
         return {"result": "mock_response"}
-        
+
     async def send_notification(self, *args, **kwargs):
         pass
-        
+
     async def register_handler(self, *args, **kwargs):
         pass
-        
+
     async def start(self):
         pass
-        
+
     async def stop(self):
         pass
 
@@ -473,11 +474,11 @@ class Agent(BaseAgent):
         # Report communicator information
         comm_type = self.communicator.__class__.__name__
         print(f"COMM_TYPE:{comm_type}")
-        
+
         # Report communicator options if available
         if hasattr(self.config, "communicator_options"):
             print(f"COMM_OPTIONS:{json.dumps(self.config.communicator_options)}")
-            
+
         # Report communicator type from config
         if hasattr(self.config, "communicator_type"):
             print(f"CONFIG_COMM_TYPE:{self.config.communicator_type}")
@@ -531,16 +532,16 @@ from openmas.communication.base import BaseCommunicator
 
 class MockCommunicator(BaseCommunicator):
     \"\"\"Mock communicator for testing.\"\"\"
-    
+
     def __init__(
-        self, 
-        agent_name, 
-        service_urls, 
-        timeout=30, 
+        self,
+        agent_name,
+        service_urls,
+        timeout=30,
         http_port=None,
         port=None,  # Keep for backward compatibility
-        server_mode=False, 
-        communicator_options=None, 
+        server_mode=False,
+        communicator_options=None,
         **kwargs
     ):
         \"\"\"Initialize with all potential parameters to prevent errors.\"\"\"
@@ -556,19 +557,19 @@ class MockCommunicator(BaseCommunicator):
             print(f"MOCK_SERVER_MODE:{server_mode}")
         if self.http_port:
             print(f"MOCK_HTTP_PORT:{self.http_port}")
-    
+
     async def send_request(self, *args, **kwargs):
         return {}
-        
+
     async def send_notification(self, *args, **kwargs):
         pass
-        
+
     async def register_handler(self, *args, **kwargs):
         pass
-        
+
     async def start(self):
         pass
-        
+
     async def stop(self):
         pass
 """
@@ -647,7 +648,7 @@ from openmas.communication.base import BaseCommunicator
 
 class McpSseCommunicator(BaseCommunicator):
     '''Simplified Mock MCP/SSE Communicator for testing.'''
-    
+
     def __init__(
         self,
         agent_name,
@@ -657,26 +658,26 @@ class McpSseCommunicator(BaseCommunicator):
         '''Initialize with minimal dependencies.'''
         super().__init__(agent_name, service_urls)
         self.kwargs = kwargs
-        
+
         # Extract important config values
         self.server_mode = kwargs.get('server_mode', False)
         self.http_port = kwargs.get('http_port', 8000)
-        
+
         # Print key information for test assertions
         print(f"MOCK_MCP_SSE_INITIALIZED:{json.dumps({'port': self.http_port, 'server_mode': self.server_mode})}")
-        
+
     async def start(self):
         print(f"MOCK_MCP_SSE_START:{self.http_port}")
-        
+
     async def stop(self):
         print("MOCK_MCP_SSE_STOP")
-        
+
     async def send_request(self, *args, **kwargs):
         return {}
-        
+
     async def send_notification(self, *args, **kwargs):
         pass
-        
+
     async def register_handler(self, *args, **kwargs):
         pass
 """

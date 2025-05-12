@@ -60,20 +60,20 @@ class Agent(BaseAgent):
         # Report communicator information
         comm_type = self.communicator.__class__.__name__
         print(f"COMM_TYPE:{comm_type}")
-        
+
         # Report detailed configuration
         if hasattr(self.config, "communicator_type"):
             print(f"CONFIG_COMM_TYPE:{self.config.communicator_type}")
-        
+
         if hasattr(self.config, "communicator_options"):
             # Convert to JSON for easy parsing in tests
             comm_options = self.config.communicator_options
             print(f"COMM_OPTIONS:{json.dumps(comm_options)}")
-        
+
         # For MCP/SSE communicator, extract port if available
         if hasattr(self.communicator, "http_port"):
             print(f"MCP_SSE_PORT:{self.communicator.http_port}")
-        
+
         # For HTTP communicator, extract port if available
         if hasattr(self.communicator, "server") and hasattr(self.communicator.server, "port"):
             print(f"HTTP_PORT:{self.communicator.server.port}")
@@ -182,6 +182,7 @@ def run_agent_in_subprocess(
         return {"stdout": process.stdout, "stderr": process.stderr, "returncode": process.returncode}
     except subprocess.TimeoutExpired:
         pytest.fail(f"Command timed out after {timeout} seconds")
+        return {}
 
 
 def parse_stdout_for_values(stdout: str) -> Dict[str, Any]:
@@ -405,20 +406,20 @@ class Agent(BaseAgent):
         # Report communicator information
         comm_type = self.communicator.__class__.__name__
         print(f"COMM_TYPE:{comm_type}")
-        
+
         # Report detailed configuration
         if hasattr(self.config, "communicator_type"):
             print(f"CONFIG_COMM_TYPE:{self.config.communicator_type}")
-        
+
         if hasattr(self.config, "communicator_options"):
             # Convert to JSON for easy parsing in tests
             comm_options = self.config.communicator_options
             print(f"COMM_OPTIONS:{json.dumps(comm_options)}")
-        
+
         # For MCP/SSE communicator, extract port if available
         if hasattr(self.communicator, "http_port"):
             print(f"MCP_SSE_PORT:{self.communicator.http_port}")
-        
+
         # For HTTP communicator, extract port if available
         if hasattr(self.communicator, "server") and hasattr(self.communicator.server, "port"):
             print(f"HTTP_PORT:{self.communicator.server.port}")

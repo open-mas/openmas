@@ -180,7 +180,7 @@ agents:
     class: Agent
     communicator: http
     # This agent will use the default timeout of 30
-  
+
   agent2:
     module: agents.agent2
     class: Agent
@@ -241,4 +241,4 @@ agents:
     class: MyAgent
     options:
       log_level: DEBUG
-``` 
+```
