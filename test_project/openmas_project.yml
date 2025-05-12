@@ -1,0 +1,16 @@
+name: test_project
+version: 0.1.0
+description: "Test project for MCP/SSE port configuration issue"
+
+agents:
+  test_agent: "agents/test_agent"
+
+default_config:
+  log_level: INFO
+
+agent_configs:
+  test_agent:
+    communicator_type: mcp-sse
+    communicator_options:
+      server_mode: true
+      http_port: 9900

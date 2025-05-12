@@ -200,6 +200,7 @@ def test_create_communicator_mcp(mock_get_class):
         agent_name=agent_name,
         service_urls=service_urls,
         server_mode=True,
+        http_port=8000,  # Default port value
         server_instructions=server_instructions,
         service_args=service_args,
         timeout=30,  # Assert the kwarg directly

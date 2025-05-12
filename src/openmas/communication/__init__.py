@@ -193,11 +193,17 @@ def create_communicator(
 
     # Initialize the appropriate communicator based on its type
     if communicator_type.startswith("mcp-"):
+        # Check if http_port is provided in communicator_options
+        communicator_http_port = http_port
+        if "http_port" in communicator_options:
+            communicator_http_port = communicator_options["http_port"]
+
         # MCP communicators have a special init signature
         return communicator_class(
             agent_name=agent_name,
             service_urls=service_urls,
             server_mode=server_mode,
+            http_port=communicator_http_port,  # Explicitly pass the http_port parameter
             server_instructions=server_instructions,
             service_args=service_args,
             **combined_options,
