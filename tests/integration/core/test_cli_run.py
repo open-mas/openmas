@@ -217,19 +217,13 @@ def _test_cli_run_command_with_subprocess(sample_project):
         assert "Using project root:" in result.stdout
         assert "Using environment: test" in result.stdout
         assert "Setting up simple_agent" in result.stdout
-        assert "Config loaded: log_level=DEBUG" in result.stdout
-
-        # Skip assertions that may fail due to asyncio loop issues
-        # assert "Running simple_agent" in result.stdout
-        # assert "Agent simple_agent completed successfully" in result.stdout
-
+        assert "Config loaded: log_level=INFO" in result.stdout, "Expected log_level=INFO in output"
+        assert "Running simple_agent" in result.stdout
+        assert "Agent simple_agent completed successfully" in result.stdout
+    except subprocess.CalledProcessError as e:
+        pytest.fail(f"Command failed with exit code {e.returncode}: {e.stderr.decode()}")
     except Exception as e:
-        print(f"Test failed with error: {str(e)}")
-        if hasattr(e, "result") and hasattr(e.result, "stdout"):
-            print(f"Partial stdout: {e.result.stdout}")
-        if hasattr(e, "result") and hasattr(e.result, "stderr"):
-            print(f"Partial stderr: {e.result.stderr}")
-        raise
+        pytest.fail(f"Error running test: {e}")
 
 
 @pytest.mark.integration

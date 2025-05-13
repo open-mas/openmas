@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from typing import Any, Callable, Dict, List, Optional, Set, Type, TypeVar
+from typing import Any, Callable, Dict, List, Optional, Set, Type, TypeVar, Union
 
 import structlog
 
@@ -64,8 +64,9 @@ class McpSseCommunicator(BaseCommunicator):
         agent_name: str,
         service_urls: Dict[str, str],
         server_mode: bool = False,
-        http_port: int = 8000,
         http_host: str = "0.0.0.0",
+        http_port: Union[int, str] = 8000,
+        client_headers: Optional[Dict[str, str]] = None,
         server_instructions: Optional[str] = None,
         **kwargs: Any,  # Accept any additional kwargs for flexibility
     ) -> None:
@@ -75,15 +76,30 @@ class McpSseCommunicator(BaseCommunicator):
             agent_name: The name of the agent using this communicator
             service_urls: Mapping of service names to SSE endpoint URLs
             server_mode: Whether to run as a server
-            http_port: Port to use when in server mode
             http_host: Host to bind to when in server mode
+            http_port: Port to use when in server mode (can be int or str)
+            client_headers: Optional headers to include in client requests
             server_instructions: Optional instructions for the server
             **kwargs: Additional keyword arguments (ignored)
         """
         super().__init__(agent_name, service_urls)
         self.server_mode = server_mode
-        self.http_port = http_port
         self.http_host = http_host
+
+        # Ensure http_port is an integer when used
+        try:
+            if not isinstance(http_port, int):
+                self.http_port = int(http_port)
+                logger.info(f"Converted http_port from {http_port} to integer: {self.http_port}")
+            else:
+                self.http_port = http_port
+        except (ValueError, TypeError):
+            logger.warning(f"Could not convert http_port value '{http_port}' to integer, using default 8000")
+            self.http_port = 8000
+
+        logger.info(f"HTTP port configured: {self.http_port}")
+
+        self.client_headers = client_headers or {}
         self.server_instructions = server_instructions or f"Agent: {agent_name}"
 
         # Server components (only used if server_mode is True)
@@ -488,6 +504,9 @@ class McpSseCommunicator(BaseCommunicator):
             return
 
         try:
+            # Debug prints for port configuration
+            logger.info(f"HTTP port configured: {self.http_port}")
+
             # Create the FastMCP server, passing host and port settings
             logger.info(f"Creating FastMCP server on {self.http_host}:{self.http_port}")
 
@@ -495,7 +514,7 @@ class McpSseCommunicator(BaseCommunicator):
             self.fastmcp_server = FastMCP(
                 instructions=self.server_instructions or f"Agent {self.agent_name}",
                 host=self.http_host,
-                port=self.http_port,
+                port=self.http_port,  # Use the configured port value
             )
 
             # Register all queued tools
@@ -511,21 +530,7 @@ class McpSseCommunicator(BaseCommunicator):
             await self.fastmcp_server.run_sse_async()
 
         except Exception as e:
-            logger.exception(f"Error running FastMCP server: {e}")
-            raise
-        finally:
-            # Clean up resources
-            if self.fastmcp_server is not None:
-                try:
-                    # In MCP 1.7.1, FastMCP doesn't have a specific shutdown method called here.
-                    # Server shutdown is handled by canceling the run task.
-                    # Just cleanup reference.
-                    self.fastmcp_server = None
-                except Exception as e:
-                    logger.error("Error during FastMCP server cleanup: {e}", e=str(e))
-                    self.fastmcp_server = None
-
-            logger.info("FastMCP server stopped")
+            logger.error(f"Error starting FastMCP server: {e}", exc_info=True)
 
     async def stop_server(self) -> None:
         """Stop the server if it's running."""

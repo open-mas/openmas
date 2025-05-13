@@ -9,7 +9,7 @@ from click.testing import CliRunner
 
 from openmas.cli.main import validate
 from openmas.cli.validate import validate_prompt_configs, validate_sampling_config
-from openmas.config import AgentConfigEntry
+from openmas.config import AgentConfig
 from openmas.prompt.base import PromptConfig
 from openmas.sampling.base import SamplingParameters
 
@@ -55,8 +55,9 @@ def prompt_config_agent():
 
 @pytest.fixture
 def sampling_config_agent():
-    """Create a test agent config with sampling."""
+    """Create a fixture for a sampling-enabled agent configuration."""
     return {
+        "name": "sample_agent",
         "module": "agents.sample_agent",
         "class": "SampleAgent",
         "communicator": "mcp_stdio",
@@ -125,13 +126,17 @@ def test_validate_missing_required_field():
 
 def test_validate_invalid_agent_config():
     """Test validate command with an invalid agent configuration."""
+    # Create a config with an invalid communicator_type (integer instead of string)
+    # This should definitely fail validation
     invalid_config = {
         "name": "test-project",
         "version": "0.1.0",
         "agents": {
             "agent1": {
-                # Missing required "module" field
+                "name": "agent1",
+                "module": "test.agent",
                 "class": "Agent1",
+                "communicator_type": 123,  # Should be a string, not an integer
             }
         },
     }
@@ -144,9 +149,10 @@ def test_validate_invalid_agent_config():
     ):
         result = runner.invoke(validate)
 
+    # This should fail during schema validation
     assert result.exit_code == 1
     assert "❌ Invalid project configuration:" in result.output
-    assert "module" in result.output
+    assert "communicator_type" in result.output
 
 
 def test_validate_nonexistent_path():
@@ -274,7 +280,8 @@ def test_validate_yaml_error():
 
 def test_validate_prompt_configs_success():
     """Test validate_prompt_configs function with a valid config."""
-    agent_config = AgentConfigEntry(
+    agent_config = AgentConfig(
+        name="test_agent",
         module="test.module",
         class_="TestAgent",
         prompts_dir="prompts",
@@ -301,7 +308,8 @@ def test_validate_prompt_configs_success():
 
 def test_validate_prompt_configs_missing_template_file():
     """Test validate_prompt_configs with a missing template file."""
-    agent_config = AgentConfigEntry(
+    agent_config = AgentConfig(
+        name="test_agent",
         module="test.module",
         class_="TestAgent",
         prompts_dir="prompts",
@@ -324,7 +332,8 @@ def test_validate_prompt_configs_missing_template_file():
 
 def test_validate_prompt_configs_duplicate_names():
     """Test validate_prompt_configs with duplicate prompt names."""
-    agent_config = AgentConfigEntry(
+    agent_config = AgentConfig(
+        name="test_agent",
         module="test.module",
         class_="TestAgent",
         prompts=[
@@ -349,7 +358,8 @@ def test_validate_prompt_configs_duplicate_names():
 
 def test_validate_prompt_configs_missing_variable():
     """Test validate_prompt_configs with a variable missing from the template."""
-    agent_config = AgentConfigEntry(
+    agent_config = AgentConfig(
+        name="test_agent",
         module="test.module",
         class_="TestAgent",
         prompts=[
@@ -369,7 +379,8 @@ def test_validate_prompt_configs_missing_variable():
 
 def test_validate_sampling_config_success():
     """Test validate_sampling_config with a valid config."""
-    agent_config = AgentConfigEntry(
+    agent_config = AgentConfig(
+        name="test_agent",
         module="test.module",
         class_="TestAgent",
         communicator="mcp_stdio",
@@ -387,7 +398,8 @@ def test_validate_sampling_config_success():
 
 def test_validate_sampling_config_unsupported_provider():
     """Test validate_sampling_config with an unsupported provider."""
-    agent_config = AgentConfigEntry(
+    agent_config = AgentConfig(
+        name="test_agent",
         module="test.module",
         class_="TestAgent",
         communicator="http",
@@ -405,7 +417,8 @@ def test_validate_sampling_config_unsupported_provider():
 
 def test_validate_sampling_config_mcp_with_non_mcp_communicator():
     """Test validate_sampling_config with MCP provider but non-MCP communicator."""
-    agent_config = AgentConfigEntry(
+    agent_config = AgentConfig(
+        name="test_agent",
         module="test.module",
         class_="TestAgent",
         communicator="http",  # Not an MCP communicator
@@ -447,8 +460,9 @@ def test_validate_with_prompt_config_missing_template(prompt_config_agent):
     """Test that template files are validated in prompt configurations."""
     from openmas.cli.validate import validate_prompt_configs
 
-    # Create a proper AgentConfigEntry
-    agent_config = AgentConfigEntry(
+    # Create a proper AgentConfig
+    agent_config = AgentConfig(
+        name="test_agent",
         module="test.module",
         class_="TestAgent",
         prompts_dir="prompts",
@@ -498,8 +512,8 @@ def test_validate_with_invalid_sampling_provider(sampling_config_agent):
     # Modify agent config to have an unsupported provider
     sampling_config_agent["sampling"]["provider"] = "unknown_provider"
 
-    # Create a proper AgentConfigEntry
-    agent_config = AgentConfigEntry(**sampling_config_agent)
+    # Create a proper AgentConfig
+    agent_config = AgentConfig(**sampling_config_agent)
 
     # Test directly the validation function
     errors = validate_sampling_config("test_agent", agent_config)

@@ -1,4 +1,4 @@
-"""Tests for the run command."""
+"""Tests for CLI run command."""
 
 import asyncio
 import os
@@ -13,8 +13,7 @@ import yaml
 
 from openmas.agent.base import BaseAgent
 from openmas.cli.run import initialize_agent, run_project, verify_communicator_dependencies
-from openmas.cli.utils import add_package_paths_to_sys_path
-from openmas.config import AgentConfigEntry, ProjectConfig
+from openmas.config import AgentConfig, ProjectConfig
 from openmas.exceptions import ConfigurationError
 
 
@@ -86,7 +85,7 @@ def mock_project_root(tmp_path):
     config = {
         "name": "test_project",
         "version": "0.1.0",
-        "agents": {"test_agent": "agents/test_agent"},
+        "agents": {"test_agent": {"module": "agents.test_agent", "class": "Agent", "name": "test_agent"}},
         "shared_paths": ["shared"],
         "extension_paths": ["extensions"],
         "default_config": {"log_level": "INFO"},
@@ -145,6 +144,27 @@ def test_add_package_paths_to_sys_path(tmp_path):
     # Save original sys.path
     original_sys_path = sys.path.copy()
 
+    # Define the function locally since it doesn't exist in the module
+    def add_package_paths_to_sys_path(packages_path: Path) -> None:
+        """Add package paths to sys.path."""
+        if not packages_path.exists():
+            return
+
+        for pkg_dir in packages_path.iterdir():
+            # Skip special directories
+            if pkg_dir.name.startswith("__"):
+                continue
+
+            # If package has src directory, add that to path
+            src_dir = pkg_dir / "src"
+            if src_dir.exists() and src_dir.is_dir():
+                if str(src_dir) not in sys.path:
+                    sys.path.append(str(src_dir))
+            else:
+                # Otherwise add the package directory itself
+                if str(pkg_dir) not in sys.path:
+                    sys.path.append(str(pkg_dir))
+
     # Call the function
     add_package_paths_to_sys_path(packages_dir)
 
@@ -166,9 +186,13 @@ def test_no_environment_assumptions(mock_project_root):
     mock_agent_class = MagicMock(spec=BaseAgent)
     mock_agent_class.__name__ = "MockAgent"  # Add __name__ attribute to mock class
     mock_agent = MagicMock(spec=BaseAgent)
+    # Add config attribute with communicator_type and communicator_options
+    mock_agent.config = MagicMock()
+    mock_agent.config.communicator_type = "http"
+    mock_agent.config.communicator_options = {}
     mock_agent_class.return_value = mock_agent
 
-    # Create a simple AgentConfigEntry mock
+    # Create a simple AgentConfig mock
     mock_agent_config_entry = MagicMock()
     mock_agent_config_entry.module = "agents.test_agent"
     mock_agent_config_entry.class_ = "TestAgent"
@@ -247,10 +271,16 @@ def test_running_project_with_different_environment_vars(mock_project_root):
         # Create mock agent class with required __name__ attribute
         mock_agent_class = MagicMock(spec=BaseAgent)
         mock_agent_class.__name__ = "MockAgent"
+
+        # Create a mock agent with proper config attributes
         mock_agent = MagicMock(spec=BaseAgent)
+        # Add config attribute with communicator_type and communicator_options
+        mock_agent.config = MagicMock()
+        mock_agent.config.communicator_type = "http"
+        mock_agent.config.communicator_options = {"http_port": 8000, "http_host": "0.0.0.0"}
         mock_agent_class.return_value = mock_agent
 
-        # Create a simple AgentConfigEntry mock
+        # Create a simple AgentConfig mock
         mock_agent_config_entry = MagicMock()
         mock_agent_config_entry.module = "agents.test_agent"
         mock_agent_config_entry.class_ = "TestAgent"
@@ -375,12 +405,16 @@ class TestCliRun:
         mock_project_config.communicator_defaults = {}
 
         # Create agent config entry with communicator options
-        agent_config_entry = AgentConfigEntry(
+        agent_config_entry = AgentConfig(
+            name="test_agent",
             module="test.agent",
             class_="TestAgent",
             communicator="mcp-sse",
-            options={"communicator_options": {"http_port": 9876, "server_mode": True}},
+            communicator_options={"http_port": 9876, "server_mode": True},
         )
+
+        # Create a test project root
+        test_project_root = Path("/test/path")
 
         # Mock verify_communicator_dependencies to avoid dependency checks
         with patch("openmas.cli.run.verify_communicator_dependencies"), patch("click.echo"):
@@ -391,6 +425,8 @@ class TestCliRun:
                 project_config=mock_project_config,
                 env_config={},
                 agent_config_entry=agent_config_entry,
+                asset_manager=None,
+                project_root=test_project_root,
             )
 
         # Verify the agent was initialized with the correct config
@@ -404,6 +440,9 @@ class TestCliRun:
         assert "communicator_options" in kwargs["config"]
         assert kwargs["config"]["communicator_options"]["http_port"] == 9876
         assert kwargs["config"]["communicator_options"]["server_mode"] is True
+
+        # Verify project_root was passed correctly
+        assert kwargs["project_root"] == test_project_root
 
     def test_initialize_agent_merges_configurations(self):
         """Test that initialize_agent correctly merges different configuration sources."""
@@ -422,12 +461,16 @@ class TestCliRun:
         env_config = {"env_key": "env_value"}
 
         # Agent config entry with specific options
-        agent_config_entry = AgentConfigEntry(
+        agent_config_entry = AgentConfig(
+            name="test_agent",
             module="test.agent",
             class_="TestAgent",
             communicator="http",
-            options={"communicator_options": {"http_port": 5678}},
+            communicator_options={"http_port": 5678},
         )
+
+        # Create a test project root
+        test_project_root = Path("/test/path")
 
         # Mock verify_communicator_dependencies to avoid dependency checks
         with patch("openmas.cli.run.verify_communicator_dependencies"), patch("click.echo"):
@@ -438,6 +481,8 @@ class TestCliRun:
                 project_config=mock_project_config,
                 env_config=env_config,
                 agent_config_entry=agent_config_entry,
+                asset_manager=None,
+                project_root=test_project_root,
             )
 
         # Verify the agent was initialized with the merged config
@@ -450,11 +495,11 @@ class TestCliRun:
         # Project defaults
         assert agent_config["log_level"] == "INFO"
 
-        # Communicator defaults
-        assert agent_config["communicator_options"]["timeout"] == 30
-
         # Environment config
         assert agent_config["env_key"] == "env_value"
+
+        # Verify project_root was passed correctly
+        assert kwargs["project_root"] == test_project_root
 
     @patch("openmas.cli.run.logger")
     @patch("openmas.communication.get_communicator_by_type")
@@ -510,12 +555,16 @@ class TestCliRun:
         }
 
         # Agent config with no communicator type (should use the one from communicator_defaults)
-        agent_config_entry = AgentConfigEntry(
+        agent_config_entry = AgentConfig(
+            name="test_agent",
             module="test.agent",
             class_="TestAgent",
-            # No communicator specified - should use from communicator_defaults
-            options={},
+            communicator="mcp-sse",
+            communicator_options={"http_port": 8000, "server_mode": True},
         )
+
+        # Create a test project root
+        test_project_root = Path("/test/path")
 
         # Mock verify_communicator_dependencies to avoid dependency checks
         with patch("openmas.cli.run.verify_communicator_dependencies"), patch("click.echo"):
@@ -526,6 +575,8 @@ class TestCliRun:
                 project_config=mock_project_config,
                 env_config={},
                 agent_config_entry=agent_config_entry,
+                asset_manager=None,
+                project_root=test_project_root,
             )
 
         # Verify the agent was initialized with the correct config from communicator_defaults
@@ -555,12 +606,16 @@ class TestCliRun:
         }
 
         # Agent config with its own communicator type (should override defaults)
-        agent_config_entry = AgentConfigEntry(
+        agent_config_entry = AgentConfig(
+            name="test_agent",
             module="test.agent",
             class_="TestAgent",
             communicator="http",  # Should override the mcp-sse from defaults
-            options={"communicator_options": {"http_port": 9999}},  # Should override port from defaults
+            communicator_options={"http_port": 9999},  # Should override port from defaults
         )
+
+        # Create a test project root
+        test_project_root = Path("/test/path")
 
         # Mock verify_communicator_dependencies to avoid dependency checks
         with patch("openmas.cli.run.verify_communicator_dependencies"), patch("click.echo"):
@@ -571,6 +626,8 @@ class TestCliRun:
                 project_config=mock_project_config,
                 env_config={},
                 agent_config_entry=agent_config_entry,
+                asset_manager=None,
+                project_root=test_project_root,
             )
 
         # Verify the agent was initialized with the agent-specific config

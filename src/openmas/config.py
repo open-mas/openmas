@@ -4,7 +4,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Type, TypeVar, Union, cast
+from typing import Any, Dict, List, Mapping, Optional, Type, TypeVar, Union, cast, get_type_hints
 
 import yaml
 from dotenv import load_dotenv  # type: ignore
@@ -64,20 +64,31 @@ class SettingsConfig(BaseModel):
 
 
 class AgentConfig(BaseModel):
-    """Base configuration model for agents."""
+    """Configuration for an agent in the project configuration."""
 
+    # Basic agent information
+    module: Optional[str] = Field(None, description="Module path for the agent")
+    class_: Optional[str] = Field(None, alias="class", description="Agent class name")
     name: str = Field(..., description="The name of the agent")
-    log_level: str = Field("INFO", description="Logging level")
-    service_urls: Dict[str, str] = Field(default_factory=dict, description="Mapping of service names to URLs")
+
+    # Communication configuration
+    communicator: Optional[str] = Field(None, description="Communicator type to use for this agent")
     communicator_type: str = Field("http", description="Type of communicator to use (e.g., 'http', 'mcp_stdio')")
     communicator_options: Dict[str, Any] = Field(
-        default_factory=dict, description="Additional options specific to the selected communicator"
+        default_factory=dict, description="Options specific to the selected communicator"
     )
+
+    # Logging and service configuration
+    log_level: str = Field("INFO", description="Logging level")
+    service_urls: Dict[str, str] = Field(default_factory=dict, description="Mapping of service names to URLs")
+
+    # Extension and shared paths
     extension_paths: list[str] = Field(
         default_factory=list, description="List of paths to search for project-local extensions"
     )
     shared_paths: list[str] = Field(default_factory=list, description="List of paths to search for shared code")
 
+    # Prompt configuration
     prompts: Optional[List[PromptConfig]] = Field(
         default=None, description="List of prompt configurations for the agent"
     )
@@ -85,26 +96,15 @@ class AgentConfig(BaseModel):
         default=Path("prompts"),
         description="Directory where prompt template files are stored (relative to project root)",
     )
+
+    # Sampling configuration
     sampling: Optional[SamplingParameters] = Field(default=None, description="Sampling configuration for the agent")
+
+    # Asset requirements
     required_assets: List[str] = Field(default_factory=list, description="List of asset names required by the agent")
 
-
-class AgentConfigEntry(BaseModel):
-    """Configuration for an agent in the project configuration."""
-
-    module: str = Field(..., description="Module path for the agent")
-    class_: str = Field(..., alias="class", description="Agent class name")
-    communicator: Optional[str] = Field(None, description="Communicator type to use for this agent")
-    options: Dict[str, Any] = Field(default_factory=dict, description="Additional options for the agent")
+    # Deployment configuration
     deploy_config_path: Optional[str] = Field(None, description="Path to deployment configuration for the agent")
-
-    prompts: Optional[List[PromptConfig]] = Field(
-        default=None, description="List of prompt configurations for the agent"
-    )
-    prompts_dir: Optional[Path] = Field(
-        default=None, description="Directory where prompt template files are stored (relative to project root)"
-    )
-    sampling: Optional[SamplingParameters] = Field(default=None, description="Sampling configuration for the agent")
 
     model_config = {"populate_by_name": True}  # Allow using class_ without alias
 
@@ -114,7 +114,7 @@ class ProjectConfig(BaseModel):
 
     name: str = Field(..., description="The name of the project")
     version: str = Field(..., description="The version of the project")
-    agents: Mapping[str, Union[str, dict, AgentConfigEntry]] = Field(
+    agents: Mapping[str, Union[str, dict, AgentConfig]] = Field(
         ..., description="Mapping of agent names to configurations"
     )
     shared_paths: List[str] = Field(default_factory=list, description="List of paths to shared code")
@@ -144,8 +144,8 @@ class ProjectConfig(BaseModel):
 
     def model_post_init(self, __context: Any) -> None:
         """Process agents after initialization."""
-        # Convert all agent entries to AgentConfigEntry
-        processed_agents: Dict[str, AgentConfigEntry] = {}
+        # Convert all agent entries to AgentConfig
+        processed_agents: Dict[str, AgentConfig] = {}
         for name, config in self.agents.items():
             if isinstance(config, str):
                 # Convert string path to module path (replace slashes with dots, strip .py extension)
@@ -153,17 +153,29 @@ class ProjectConfig(BaseModel):
                 if path.endswith(".py"):
                     path = path[:-3]
 
-                # Create an AgentConfigEntry
-                processed_agents[name] = AgentConfigEntry.model_validate({"module": path, "class": "Agent"})
+                # Create an AgentConfig with the name from the key
+                processed_agents[name] = AgentConfig.model_validate({"module": path, "class": "Agent", "name": name})
             elif isinstance(config, dict):
-                processed_agents[name] = AgentConfigEntry.model_validate(config)
-            elif isinstance(config, AgentConfigEntry):
-                processed_agents[name] = config
+                # Add name field if not present
+                if "name" not in config:
+                    config_with_name = dict(config)
+                    config_with_name["name"] = name
+                    processed_agents[name] = AgentConfig.model_validate(config_with_name)
+                else:
+                    processed_agents[name] = AgentConfig.model_validate(config)
+            elif isinstance(config, AgentConfig):
+                # Update name field if exists
+                if not config.name:
+                    config_dict = config.model_dump()
+                    config_dict["name"] = name
+                    processed_agents[name] = AgentConfig.model_validate(config_dict)
+                else:
+                    processed_agents[name] = config
             else:
                 raise ValueError(f"Invalid agent configuration for '{name}': {config}")
 
         # Cast to correct type to satisfy mypy
-        self.agents = cast(Mapping[str, Union[str, dict, AgentConfigEntry]], processed_agents)
+        self.agents = cast(Mapping[str, Union[str, dict, AgentConfig]], processed_agents)
 
 
 def _find_project_root(project_dir: Optional[Path] = None) -> Optional[Path]:
@@ -448,10 +460,18 @@ def _coerce_env_value(value: str, target_type: Any) -> Any:
             raise ValueError(f"Cannot convert '{value}' to boolean")
 
     if target_type == int:
-        return int(value)
+        # Convert numeric strings to integer
+        try:
+            return int(value)
+        except ValueError:
+            raise ValueError(f"Cannot convert '{value}' to integer")
 
     if target_type == float:
-        return float(value)
+        # Convert numeric strings to float
+        try:
+            return float(value)
+        except ValueError:
+            raise ValueError(f"Cannot convert '{value}' to float")
 
     # Default to string
     return value
@@ -519,6 +539,10 @@ def load_config(config_model: Type[T], prefix: str = "", project_dir: Optional[P
             logger.debug("Applying default configuration from project config")
             config_data.update(default_config)
 
+        # Store project-level shared_paths and extension_paths for later
+        project_shared_paths = project_config.get("shared_paths", [])
+        project_extension_paths = project_config.get("extension_paths", [])
+
         # [LAYER 3 & 4] Config files (default.yml and <env>.yml)
         yaml_config = _load_environment_config_files(project_dir)
         if yaml_config:
@@ -583,6 +607,68 @@ def load_config(config_model: Type[T], prefix: str = "", project_dir: Optional[P
                     config_data["service_urls"] = {}
                 config_data["service_urls"][service_name] = value
 
+        # Apply extension_paths from project config first
+        if project_extension_paths:
+            if "extension_paths" not in config_data:
+                config_data["extension_paths"] = []
+            # Add project paths to existing extension_paths
+            for path in project_extension_paths:
+                if path not in config_data["extension_paths"]:
+                    config_data["extension_paths"].append(path)
+            logger.debug(f"Applied extension_paths from project: {project_extension_paths}")
+
+        # Apply shared_paths from project config
+        if project_shared_paths:
+            if "shared_paths" not in config_data:
+                config_data["shared_paths"] = []
+            # Add project paths to existing shared_paths
+            for path in project_shared_paths:
+                if path not in config_data["shared_paths"]:
+                    config_data["shared_paths"].append(path)
+            logger.debug(f"Applied shared_paths from project: {project_shared_paths}")
+
+        # Handle special case for extension_paths from env var (JSON list of strings)
+        extension_paths_var = f"{env_prefix}EXTENSION_PATHS"
+        if extension_paths_var in os.environ:
+            try:
+                extension_paths = json.loads(os.environ[extension_paths_var])
+                if not isinstance(extension_paths, list):
+                    raise ConfigurationError(f"{extension_paths_var} must be a JSON array")
+
+                # Initialize extension_paths if not present
+                if "extension_paths" not in config_data:
+                    config_data["extension_paths"] = []
+
+                # Add any paths from the environment that aren't already in the list
+                for path in extension_paths:
+                    if path not in config_data["extension_paths"]:
+                        config_data["extension_paths"].append(path)
+
+                logger.debug(f"Applied environment variable {extension_paths_var}: {extension_paths}")
+            except json.JSONDecodeError as e:
+                raise ConfigurationError(f"Invalid JSON in {extension_paths_var}: {e}")
+
+        # Handle special case for shared_paths from env var (JSON list of strings)
+        shared_paths_var = f"{env_prefix}SHARED_PATHS"
+        if shared_paths_var in os.environ:
+            try:
+                shared_paths = json.loads(os.environ[shared_paths_var])
+                if not isinstance(shared_paths, list):
+                    raise ConfigurationError(f"{shared_paths_var} must be a JSON array")
+
+                # Initialize shared_paths if not present
+                if "shared_paths" not in config_data:
+                    config_data["shared_paths"] = []
+
+                # Add any paths from the environment that aren't already in the list
+                for path in shared_paths:
+                    if path not in config_data["shared_paths"]:
+                        config_data["shared_paths"].append(path)
+
+                logger.debug(f"Applied environment variable {shared_paths_var}: {shared_paths}")
+            except json.JSONDecodeError as e:
+                raise ConfigurationError(f"Invalid JSON in {shared_paths_var}: {e}")
+
         # Communicator options (JSON dictionary)
         communicator_options_str = os.environ.get(f"{env_prefix}COMMUNICATOR_OPTIONS")
         if communicator_options_str:
@@ -599,6 +685,7 @@ def load_config(config_model: Type[T], prefix: str = "", project_dir: Optional[P
                 config_data["communicator_options"] = _deep_merge_dicts(
                     config_data["communicator_options"], communicator_options
                 )
+                logger.debug(f"Applied environment variable {env_prefix}COMMUNICATOR_OPTIONS: {communicator_options}")
             except json.JSONDecodeError as e:
                 raise ConfigurationError(f"Invalid JSON in {env_prefix}COMMUNICATOR_OPTIONS: {e}")
 
@@ -609,70 +696,155 @@ def load_config(config_model: Type[T], prefix: str = "", project_dir: Optional[P
                 if "communicator_options" not in config_data:
                     config_data["communicator_options"] = {}
 
-                # Try to parse the value as JSON, fallback to string if it fails
+                # Try to interpret the value
                 try:
+                    # First try to parse as JSON
                     option_value = json.loads(value)
-                    config_data["communicator_options"][option_name] = option_value
                 except json.JSONDecodeError:
-                    # Try to coerce to appropriate type by looking at field info in config_model
-                    # This is a best effort; if unsure, leave as string
-                    if hasattr(config_model, "model_fields") and "communicator_options" in config_model.model_fields:
-                        # This is for newer Pydantic v2
-                        config_data["communicator_options"][option_name] = value
+                    # If not valid JSON, try simple type conversions
+                    if value.lower() == "true":
+                        option_value = True
+                    elif value.lower() == "false":
+                        option_value = False
+                    elif value.isdigit():
+                        option_value = int(value)
+                    elif value.replace(".", "", 1).isdigit() and value.count(".") == 1:
+                        option_value = float(value)
                     else:
-                        # Fallback for older Pydantic
-                        config_data["communicator_options"][option_name] = value
+                        # Keep as string
+                        option_value = value
 
-        # Extension paths
-        extension_paths_str = os.environ.get(f"{env_prefix}EXTENSION_PATHS")
-        if extension_paths_str:
-            try:
-                extension_paths = json.loads(extension_paths_str)
-                if not isinstance(extension_paths, list):
-                    raise ConfigurationError(f"{env_prefix}EXTENSION_PATHS must be a JSON array")
-                config_data["extension_paths"] = extension_paths
-            except json.JSONDecodeError as e:
-                raise ConfigurationError(f"Invalid JSON in {env_prefix}EXTENSION_PATHS: {e}")
+                config_data["communicator_options"][option_name] = option_value
+                logger.debug(f"Applied environment variable {key}={value}")
 
-        # Shared paths
-        shared_paths_str = os.environ.get(f"{env_prefix}SHARED_PATHS")
-        if shared_paths_str:
-            try:
-                shared_paths = json.loads(shared_paths_str)
-                if not isinstance(shared_paths, list):
-                    raise ConfigurationError(f"{env_prefix}SHARED_PATHS must be a JSON array")
-                config_data["shared_paths"] = shared_paths
-            except json.JSONDecodeError as e:
-                raise ConfigurationError(f"Invalid JSON in {env_prefix}SHARED_PATHS: {e}")
+        # Create and validate the model instance
+        logger.debug(f"Creating configuration model with data: {config_data}")
+        model_instance = config_model(**config_data)
+        logger.debug(f"Configuration loaded successfully: {model_instance}")
 
-        # Add extension paths from project config if available
-        if "extension_paths" in project_config:
-            project_extension_paths = project_config["extension_paths"]
-            if "extension_paths" not in config_data:
-                config_data["extension_paths"] = []
-            config_data["extension_paths"].extend(project_extension_paths)
-
-        # Add shared paths from project config if available
-        if "shared_paths" in project_config:
-            project_shared_paths = project_config["shared_paths"]
-            if "shared_paths" not in config_data:
-                config_data["shared_paths"] = []
-            config_data["shared_paths"].extend(project_shared_paths)
-
-        # Validate and create the configuration object
-        try:
-            config = config_model(**config_data)
-            logger.debug("Configuration loaded successfully")
-            return config
-        except ValidationError as e:
-            error_msg = f"Configuration validation failed: {e}"
-            logger.error(error_msg)
-            raise ConfigurationError(error_msg)
-
+        # Return the validated configuration
+        return model_instance
+    except ValidationError as e:
+        message = f"Configuration validation failed: {e}"
+        logger.error(message)
+        raise ConfigurationError(message)
     except ConfigurationError:
-        # Re-raise ConfigurationError without wrapping it again
+        # Re-raise configuration errors as they're already properly formatted
         raise
     except Exception as e:
-        error_msg = f"Failed to load configuration: {e}"
-        logger.error(error_msg)
-        raise ConfigurationError(error_msg)
+        message = f"Unexpected error loading configuration: {e}"
+        logger.error(message, exc_info=True)
+        raise ConfigurationError(message)
+
+
+def _update_from_env(config_dict: Dict[str, Any], model_class: Type[T], env_prefix: str = "OPENMAS_") -> Dict[str, Any]:
+    """Update the config dictionary with values from environment variables.
+
+    This function recursively processes environment variables that match expected fields
+    in the given model class, converting them to the appropriate types.
+
+    Args:
+        config_dict: Current configuration dictionary to update
+        model_class: Pydantic model class to use for type information
+        env_prefix: Prefix for environment variables (e.g., "OPENMAS_")
+
+    Returns:
+        Updated configuration dictionary
+    """
+    # Get the type hints for the model fields
+    model_fields = get_type_hints(model_class)
+
+    # Handle top-level fields
+    for field_name, field_type in model_fields.items():
+        # Skip fields with leading underscore
+        if field_name.startswith("_"):
+            continue
+
+        # Convert to uppercase for environment variables
+        env_name = f"{env_prefix}{field_name.upper()}"
+
+        # Check if the environment variable exists
+        value = os.environ.get(env_name)
+
+        if value is not None:
+            try:
+                config_dict[field_name] = _coerce_env_value(value, field_type)
+                logger.debug(f"Applied environment variable {env_name} = {value}")
+            except (ValueError, TypeError) as e:
+                logger.error(f"Failed to apply environment variable {env_name}: {e}")
+
+    # Handle special case for extension_paths - JSON list of strings
+    extension_paths_var = f"{env_prefix}EXTENSION_PATHS"
+    if extension_paths_var in os.environ:
+        try:
+            extension_paths = json.loads(os.environ[extension_paths_var])
+            if not isinstance(extension_paths, list):
+                raise ConfigurationError(f"{extension_paths_var} must be a JSON array")
+            config_dict["extension_paths"] = extension_paths
+            logger.debug(f"Applied environment variable {extension_paths_var}")
+        except json.JSONDecodeError as e:
+            raise ConfigurationError(f"Invalid JSON in {extension_paths_var}: {e}")
+
+    # Handle special case for shared_paths - JSON list of strings
+    shared_paths_var = f"{env_prefix}SHARED_PATHS"
+    if shared_paths_var in os.environ:
+        try:
+            shared_paths = json.loads(os.environ[shared_paths_var])
+            if not isinstance(shared_paths, list):
+                raise ConfigurationError(f"{shared_paths_var} must be a JSON array")
+            config_dict["shared_paths"] = shared_paths
+            logger.debug(f"Applied environment variable {shared_paths_var}")
+        except json.JSONDecodeError as e:
+            raise ConfigurationError(f"Invalid JSON in {shared_paths_var}: {e}")
+
+    # Handle special case for communicator_options - JSON dictionary
+    communicator_options_var = f"{env_prefix}COMMUNICATOR_OPTIONS"
+    if communicator_options_var in os.environ:
+        try:
+            communicator_options = json.loads(os.environ[communicator_options_var])
+            if not isinstance(communicator_options, dict):
+                raise ConfigurationError(f"{communicator_options_var} must be a JSON dictionary")
+
+            # Initialize communicator_options if not present
+            if "communicator_options" not in config_dict:
+                config_dict["communicator_options"] = {}
+
+            # Merge options rather than replace
+            config_dict["communicator_options"] = _deep_merge_dicts(
+                config_dict["communicator_options"], communicator_options
+            )
+            logger.debug(f"Applied environment variable {communicator_options_var}")
+        except json.JSONDecodeError as e:
+            raise ConfigurationError(f"Invalid JSON in {communicator_options_var}: {e}")
+
+    # Handle individual communicator options (COMMUNICATOR_OPTION_*)
+    for key, value in os.environ.items():
+        if key.startswith(f"{env_prefix}COMMUNICATOR_OPTION_"):
+            option_name = key[len(f"{env_prefix}COMMUNICATOR_OPTION_") :].lower()
+
+            # Initialize communicator_options if not present
+            if "communicator_options" not in config_dict:
+                config_dict["communicator_options"] = {}
+
+            # Try to interpret the value
+            try:
+                # First try to parse as JSON
+                option_value = json.loads(value)
+            except json.JSONDecodeError:
+                # If not valid JSON, try simple type conversions
+                if value.lower() == "true":
+                    option_value = True
+                elif value.lower() == "false":
+                    option_value = False
+                elif value.isdigit():
+                    option_value = int(value)
+                elif value.replace(".", "", 1).isdigit() and value.count(".") == 1:
+                    option_value = float(value)
+                else:
+                    # Keep as string
+                    option_value = value
+
+            config_dict["communicator_options"][option_name] = option_value
+            logger.debug(f"Applied environment variable {key}")
+
+    return config_dict

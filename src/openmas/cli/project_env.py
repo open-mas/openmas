@@ -3,10 +3,13 @@
 import os
 import sys
 from pathlib import Path
-from typing import List
+from typing import Optional
 
 from openmas.cli.utils import add_package_paths_to_sys_path
-from openmas.config import AgentConfigEntry, ProjectConfig
+from openmas.config import AgentConfig, ProjectConfig
+from openmas.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 class ProjectEnvironment:
@@ -25,10 +28,10 @@ class ProjectEnvironment:
         """
         self.project_root = project_root
         self.project_config = project_config
-        self.original_sys_path: List[str] = []
-        self.added_paths: List[str] = []
+        self.original_python_path = sys.path.copy()
+        self.original_env = os.environ.copy()
 
-    def setup_environment(self, agent_name: str) -> None:
+    def setup_environment(self, agent_name: Optional[str] = None) -> None:
         """Set up the environment for running the specified agent.
 
         This method:
@@ -38,74 +41,153 @@ class ProjectEnvironment:
         Args:
             agent_name: The name of the agent to run
         """
-        # Store original sys.path to restore later
-        self.original_sys_path = sys.path.copy()
+        logger.info(f"Setting up environment for project: {self.project_config.name}")
 
-        # Prepare additional paths for sys.path
-        sys_path_additions = []
+        # 1. Add the project root to sys.path
+        if str(self.project_root) not in sys.path:
+            sys.path.insert(0, str(self.project_root))
+            logger.debug(f"Added project root to sys.path: {self.project_root}")
 
-        # Add project root first to ensure absolute imports work
-        sys_path_additions.append(str(self.project_root))
+        # 2. Add shared paths to sys.path
+        for shared_path in self.project_config.shared_paths:
+            path = self.project_root / shared_path
+            if path.exists() and str(path) not in sys.path:
+                sys.path.insert(0, str(path))
+                logger.debug(f"Added shared path to sys.path: {path}")
 
-        # Get shared and extension paths
-        shared_paths = [self.project_root / path for path in self.project_config.shared_paths]
-        extension_paths = [self.project_root / path for path in self.project_config.extension_paths]
+        # 3. Add extension paths to sys.path
+        for extension_path in self.project_config.extension_paths:
+            path = self.project_root / extension_path
+            if path.exists() and str(path) not in sys.path:
+                sys.path.insert(0, str(path))
+                logger.debug(f"Added extension path to sys.path: {path}")
 
-        # Get agent config entry to determine the module path
-        agent_config_entry = self.project_config.agents.get(agent_name)
-        if agent_config_entry:
-            # Only proceed if agent_config_entry is an AgentConfigEntry with a module attribute
-            if isinstance(agent_config_entry, AgentConfigEntry) and hasattr(agent_config_entry, "module"):
+        # 4. Process any Python packages in the packages directory
+        packages_path = self.project_root / "packages"
+        if packages_path.exists():
+            add_package_paths_to_sys_path(packages_path)
+            logger.debug(f"Added package paths from: {packages_path}")
+
+        # 5. If an agent is specified, add its package directory to sys.path
+        if agent_name and agent_name in self.project_config.agents:
+            agent_config_entry = self.project_config.agents[agent_name]
+
+            # Only proceed if agent_config_entry is an AgentConfig with a module attribute
+            if isinstance(agent_config_entry, AgentConfig) and hasattr(agent_config_entry, "module"):
                 module_path = agent_config_entry.module
-                # Determine agent directory from module path
-                if "/" in module_path or "\\" in module_path:
-                    # For path-based entries, use the path directly
-                    agent_path = module_path.replace("\\", "/")
-                    agent_dir_path = self.project_root / agent_path
+
+                # Ensure module_path is a non-empty string
+                if not module_path:
+                    logger.warning("Agent config has no module path specified; skipping sys.path additions")
+                    return
+
+                # If module_path is in path format (with slashes), convert to directory path
+                if "/" in module_path:
+                    # If it ends with .py, we want the parent directory
+                    if module_path.endswith(".py"):
+                        module_path = str(Path(module_path).parent)
+
+                    # Add the module path to sys.path
+                    parts = module_path.split("/")
+                    current_path = self.project_root
+
+                    # Add parent paths incrementally to support nested packages
+                    for i, part in enumerate(parts):
+                        # Add each parent directory
+                        if i > 0:  # Skip adding the project root
+                            parent_path = self.project_root / "/".join(parts[:i])
+                            if str(parent_path) not in sys.path:
+                                sys.path.insert(0, str(parent_path))
+                                logger.debug(f"Added parent path to sys.path: {parent_path}")
+
+                        # Add the full path at the end
+                        current_path = current_path / part
+
+                    if str(current_path) not in sys.path:
+                        sys.path.insert(0, str(current_path))
+                        logger.debug(f"Added agent module path to sys.path: {current_path}")
                 else:
-                    # For module-based entries, convert dots to path separators
-                    module_parts = module_path.split(".")
-                    agent_dir_path = self.project_root
-                    for part in module_parts:
-                        agent_dir_path = agent_dir_path / part
+                    # For dotted module paths, add each package directory to sys.path
+                    parts = module_path.split(".")
 
-                # Add the agent's parent directory
-                sys_path_additions.append(str(agent_dir_path.parent))
+                    # Add each parent directory to sys.path
+                    for i in range(len(parts)):
+                        parent_path = self.project_root / "/".join(parts[: i + 1])
+                        parent_dir = str(self.project_root / "/".join(parts[:i]))
 
-                # Add the agent directory itself
-                sys_path_additions.append(str(agent_dir_path))
+                        # Add parent directories like "agents" for dotted paths like "agents.test_agent"
+                        if i > 0 and parent_dir not in sys.path:
+                            sys.path.insert(0, parent_dir)
+                            logger.debug(f"Added parent directory to sys.path: {parent_dir}")
 
-        # Add shared and extension paths
-        for path in shared_paths + extension_paths:
-            if path.exists() and str(path) not in sys_path_additions:
-                sys_path_additions.append(str(path))
+                    # Add the full module path
+                    full_path = self.project_root / "/".join(parts)
+                    if str(full_path) not in sys.path:
+                        sys.path.insert(0, str(full_path))
+                        logger.debug(f"Added agent directory to sys.path: {full_path}")
 
-        # Add packages to sys.path
-        packages_dir = self.project_root / "packages"
-        if packages_dir.exists():
-            # Use the utility function to add packages
-            add_package_paths_to_sys_path(packages_dir)
+                    # Continue with the package-based approach for dotted notation
+                    current_path = self.project_root
+                    for i in range(len(parts)):
+                        if i == len(parts) - 1 and current_path.is_dir():
+                            # Last part might be a module (.py file) not a package,
+                            # so don't go into it
+                            candidate_py = current_path / f"{parts[i]}.py"
+                            if candidate_py.exists():
+                                # Seems to be a .py file module, just ensure the parent dir is in sys.path
+                                if str(current_path) not in sys.path:
+                                    sys.path.insert(0, str(current_path))
+                                    logger.debug(f"Added module parent to sys.path: {current_path}")
+                                break
 
-        # Update sys.path - add in reverse order so that higher priority paths appear first
-        for path_str in reversed(sys_path_additions):
-            if path_str not in sys.path:
-                sys.path.insert(0, path_str)
-                self.added_paths.append(path_str)
+                        # Add the next part to the path
+                        current_path = current_path / parts[i]
+                        if current_path.is_dir():
+                            if (current_path / "__init__.py").exists():
+                                # It's a package, add to sys.path
+                                if str(current_path.parent) not in sys.path:
+                                    sys.path.insert(0, str(current_path.parent))
+                                    logger.debug(f"Added package parent to sys.path: {current_path.parent}")
+                            else:
+                                # Not a package, but might be a directory containing modules
+                                if str(current_path) not in sys.path:
+                                    sys.path.insert(0, str(current_path))
+                                    logger.debug(f"Added directory to sys.path: {current_path}")
+                        else:
+                            # Not a directory, stop here
+                            break
+
+        # Log the final sys.path state
+        logger.debug("Python path after setup:")
+        for i, path_str in enumerate(sys.path[:5]):
+            logger.debug(f"{i + 1}: {path_str}")
+        if len(sys.path) > 5:
+            logger.debug(f"... and {len(sys.path) - 5} more paths")
 
         # Set environment variables
         os.environ["OPENMAS_PROJECT_ROOT"] = str(self.project_root)
-        os.environ["AGENT_NAME"] = agent_name
+        if agent_name:
+            os.environ["AGENT_NAME"] = agent_name
 
         # Set default OPENMAS_ENV if not already set
         if "OPENMAS_ENV" not in os.environ:
             os.environ["OPENMAS_ENV"] = "development"
 
     def restore_environment(self) -> None:
-        """Restore the original sys.path.
+        """Restore the original Python environment.
 
-        This should be called when the agent execution is complete.
+        This should be called when the project is no longer needed
+        to clean up the Python environment.
         """
-        # Restore original sys.path by clearing and extending
-        # This is a more reliable approach than replacing the list
+        logger.debug("Restoring original Python environment")
+        # First clear sys.path, then restore it with exactly the original list
         sys.path.clear()
-        sys.path.extend(self.original_sys_path)
+        # Make a separate copy to ensure we're not using the same object reference
+        original_path_copy = self.original_python_path.copy()
+        sys.path.extend(original_path_copy)
+
+        # Only restore environment variables we might have modified
+        # to avoid wiping out env vars set by other code
+        for key, value in self.original_env.items():
+            if key.startswith("OPENMAS_") or key.startswith("PYTHONPATH"):
+                os.environ[key] = value

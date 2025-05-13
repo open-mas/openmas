@@ -17,7 +17,7 @@ from openmas.cli.agent_executor import AgentExecutor
 from openmas.cli.agent_loader import AgentLoader
 from openmas.cli.event_loop import EventLoopManager
 from openmas.cli.project_env import ProjectEnvironment
-from openmas.config import AgentConfigEntry, ConfigLoader, ProjectConfig, _find_project_root, logger
+from openmas.config import AgentConfig, ConfigLoader, ProjectConfig, _deep_merge_dicts, _find_project_root, logger
 from openmas.exceptions import ConfigurationError
 
 
@@ -55,7 +55,7 @@ def load_project_config(project_root: Path) -> ProjectConfig:
         raise ConfigurationError(f"Unexpected error loading project configuration: {e}")
 
 
-def validate_agent_in_config(project_config: ProjectConfig, agent_name: str) -> AgentConfigEntry:
+def validate_agent_in_config(project_config: ProjectConfig, agent_name: str) -> AgentConfig:
     """Validate that the agent exists in the project configuration.
 
     Args:
@@ -74,7 +74,7 @@ def validate_agent_in_config(project_config: ProjectConfig, agent_name: str) -> 
         raise ConfigurationError(f"Agent '{agent_name}' not found in project configuration. {available_agents_msg}")
 
     agent_config_entry = project_config.agents.get(agent_name)
-    if not isinstance(agent_config_entry, AgentConfigEntry):
+    if not isinstance(agent_config_entry, AgentConfig):
         raise ConfigurationError(f"Invalid agent configuration for '{agent_name}'")
 
     return agent_config_entry
@@ -97,13 +97,18 @@ def load_environment_config(project_root: Path, env: Optional[str] = None) -> Di
     env_config_path = project_root / "config" / f"{env}.yml"
     if env_config_path.exists():
         logger.debug(f"Loading environment configuration from {env_config_path}")
-        return config_loader.load_yaml_file(env_config_path)
+        config = config_loader.load_yaml_file(env_config_path)
+        logger.info(f"Loaded environment config: {config}")
+        click.echo(f"Using environment configuration from {env_config_path}")
+        if "communicator_options" in config and "http_port" in config["communicator_options"]:
+            click.echo(f"Environment config sets HTTP port: {config['communicator_options']['http_port']}")
+        return config
 
     logger.debug(f"Environment config file not found: {env_config_path}")
     return {}
 
 
-def load_agent_class(agent_loader: AgentLoader, agent_config_entry: AgentConfigEntry) -> Type[BaseAgent]:
+def load_agent_class(agent_loader: AgentLoader, agent_config_entry: AgentConfig) -> Type[BaseAgent]:
     """Load the agent class using the agent loader.
 
     Args:
@@ -117,8 +122,13 @@ def load_agent_class(agent_loader: AgentLoader, agent_config_entry: AgentConfigE
         ConfigurationError: If the agent class could not be loaded
     """
     try:
+        module_path = agent_config_entry.module
+        if module_path is None:
+            raise ConfigurationError("Agent configuration missing 'module' attribute")
+
         return agent_loader.load_agent_class(
-            agent_config_entry.module, agent_config_entry.class_ if hasattr(agent_config_entry, "class_") else None
+            module_path,
+            agent_config_entry.class_ if hasattr(agent_config_entry, "class_") else None,
         )
     except (ImportError, ConfigurationError) as e:
         # Check for the specific error about class not found to match test expectations
@@ -196,8 +206,9 @@ def initialize_agent(
     agent_name: str,
     project_config: ProjectConfig,
     env_config: Dict[str, Any],
-    agent_config_entry: AgentConfigEntry,
-    asset_manager: Optional[AssetManager] = None,
+    agent_config_entry: AgentConfig,
+    asset_manager: Optional[AssetManager],
+    project_root: Path,
 ) -> BaseAgent:
     """Initialize an agent instance with proper configuration.
 
@@ -206,8 +217,9 @@ def initialize_agent(
         agent_name: Name of the agent
         project_config: The project configuration
         env_config: Environment-specific configuration
-        agent_config_entry: The agent's specific configuration entry
+        agent_config_entry: The agent's specific configuration
         asset_manager: Optional asset manager
+        project_root: Path to the project root
 
     Returns:
         Initialized agent instance
@@ -216,96 +228,127 @@ def initialize_agent(
         ConfigurationError: If the agent could not be initialized
     """
     try:
-        # Create agent config with the required name field and correct communicator configuration
-        agent_config = {
-            "name": agent_name,
-            # Include default config from project
-            **(project_config.default_config or {}),
-            # Initialize communicator_options if not already present
-            "communicator_options": {},
-            # Override with environment-specific config
-            **env_config,
-        }
+        # Create the agent configuration by merging defaults and specifics in the right order
+        # Order of precedence (highest to lowest):
+        # 1. Environment variables (handled by agent constructor)
+        # 2. Agent-specific configuration
+        # 3. Communicator defaults from project config
+        # 4. Environment-specific configuration
+        # 5. Project default_config
 
-        # Process communicator defaults properly
-        if project_config.communicator_defaults:
-            # If 'type' is specified in communicator_defaults, use it as communicator_type
-            if "type" in project_config.communicator_defaults:
-                agent_config["communicator_type"] = project_config.communicator_defaults["type"]
+        # 1. Start with default config from project
+        merged_config: Dict[str, Any] = {}
+        if "default_config" in project_config.model_dump():
+            merged_config.update(project_config.default_config)
+            logger.debug(f"Applied default config from project for agent {agent_name}")
 
-            # If 'options' is specified, merge them into communicator_options
-            if "options" in project_config.communicator_defaults:
-                agent_config["communicator_options"].update(project_config.communicator_defaults["options"])
+        # 2. Add environment-specific config
+        merged_config = _deep_merge_dicts(merged_config, env_config)
+        logger.debug(f"Applied environment-specific config for agent {agent_name}")
 
-        # Add agent-specific configuration from agent_config_entry
+        # 3. Add communicator defaults if this agent uses that communicator type
+
+        # Handle special case for testing where communicator may be set but communicator_type is still default
+        # Important: we set this directly in merged_config because we need it to take effect before using it
         if agent_config_entry.communicator:
-            # Set the communicator type if specified in the agent config
-            communicator_type = agent_config_entry.communicator
-            agent_config["communicator_type"] = communicator_type
-            logger.info(f"Using agent-specific communicator type: {communicator_type}")
-            click.echo(f"Using communicator type: {communicator_type}")
+            merged_config["communicator_type"] = agent_config_entry.communicator
+            agent_communicator_type = agent_config_entry.communicator
+        else:
+            agent_communicator_type = agent_config_entry.communicator_type
 
-            # For MCP communicator types, ensure we don't pass timeout which can cause issues
-            if communicator_type.startswith("mcp-") and "timeout" in agent_config.get("communicator_options", {}):
-                del agent_config["communicator_options"]["timeout"]
-                logger.info("Removed timeout from communicator options for MCP communicator")
+        # Look for communicator defaults in project config
+        if project_config.communicator_defaults:
+            # For backward compatibility, check the old structure with 'type' and 'options'
+            if "type" in project_config.communicator_defaults:
+                # Use the type from communicator_defaults if none was specified in agent config
+                if not agent_config_entry.communicator:
+                    merged_config["communicator_type"] = project_config.communicator_defaults["type"]
+                    agent_communicator_type = project_config.communicator_defaults["type"]
 
-            # Verify that the required dependencies for the communicator are installed
-            verify_communicator_dependencies(communicator_type)
-
-        # Add any agent-specific options
-        if agent_config_entry.options:
-            # Check for communicator_options in agent options
-            if "communicator_options" in agent_config_entry.options:
-                # Merge communicator options from agent config with any existing ones
-                agent_options = agent_config_entry.options.get("communicator_options", {})
-                agent_config["communicator_options"].update(agent_options)
-
-                # Log the communicator options for better visibility
-                logger.info(f"Using agent-specific communicator options: {agent_config['communicator_options']}")
-
-                # Log http_port configuration if present
-                if "http_port" in agent_config["communicator_options"]:
-                    http_port = agent_config["communicator_options"]["http_port"]
-                    click.echo(f"HTTP port configured: {http_port}")
-
-            # Merge all other options
-            for key, value in agent_config_entry.options.items():
-                if key != "communicator_options":
-                    agent_config[key] = value
-
-        # Show final communicator configuration
-        communicator_type = agent_config.get("communicator_type", "http")
-        click.echo(f"Starting agent '{agent_name}' with communicator: {communicator_type}")
-
-        # Extra verification for MCP communicators
-        if communicator_type.startswith("mcp-"):
-            try:
-                import mcp
-
-                # Some versions may not have __version__, just check if module is importable
-                version = getattr(mcp, "__version__", "unknown version")
-                click.echo(f"Found MCP dependency: {version}")
-            except ImportError:
-                error_msg = (
-                    f"MCP communicator '{communicator_type}' requires the 'mcp' package.\n"
-                    "Install it with: poetry install openmas[mcp]"
+                # Apply options if present
+                if "options" in project_config.communicator_defaults:
+                    options = project_config.communicator_defaults["options"]
+                    if "communicator_options" not in merged_config:
+                        merged_config["communicator_options"] = {}
+                    merged_config["communicator_options"] = _deep_merge_dicts(
+                        merged_config.get("communicator_options", {}), options
+                    )
+            # Try to match directly if not using 'type' and 'options' structure
+            elif agent_communicator_type in project_config.communicator_defaults:
+                comm_defaults = project_config.communicator_defaults[agent_communicator_type]
+                logger.debug(
+                    f"Applying {agent_communicator_type} communicator defaults for agent {agent_name}",
+                    defaults=comm_defaults,
                 )
-                logger.error(error_msg)
-                click.echo(click.style(error_msg, fg="red"))
-                raise ConfigurationError(error_msg)
+                # Ensure we have a communicator_options dict
+                if "communicator_options" not in merged_config:
+                    merged_config["communicator_options"] = {}
+                # Apply communicator defaults to communicator_options
+                merged_config["communicator_options"] = _deep_merge_dicts(
+                    merged_config.get("communicator_options", {}), comm_defaults
+                )
 
-        # Initialize agent with configuration and asset manager
-        return agent_class(name=agent_name, config=agent_config, asset_manager=asset_manager)
-    except (ImportError, AttributeError, TypeError, ConfigurationError) as e:
-        raise ConfigurationError(
-            f"Error initializing agent '{agent_name}': {e}\n"
-            "This may be due to configuration issues or missing dependencies."
+        # 4. Add agent-specific configuration (highest priority except for env vars)
+        # First get the config as a dictionary
+        agent_config_dict = agent_config_entry.model_dump()
+        merged_config = _deep_merge_dicts(merged_config, agent_config_dict)
+        logger.debug(f"Applied agent-specific config for agent {agent_name}")
+
+        # Ensure communicator_type is set to communicator if provided
+        if agent_config_entry.communicator:
+            merged_config["communicator_type"] = agent_config_entry.communicator
+            logger.debug(f"Set communicator_type to {agent_config_entry.communicator} from communicator field")
+
+        # 5. Apply environment variables (highest priority)
+        # Check for environment variables that should override the configuration
+        # Format: OPENMAS_COMMUNICATOR_OPTIONS_HTTP_PORT=8888
+        prefix = "OPENMAS_"
+        for key, value in os.environ.items():
+            if key.startswith(f"{prefix}COMMUNICATOR_OPTIONS_"):
+                option_name = key[len(f"{prefix}COMMUNICATOR_OPTIONS_") :].lower()
+
+                # Ensure communicator_options exists
+                if "communicator_options" not in merged_config:
+                    merged_config["communicator_options"] = {}
+
+                # Convert value to appropriate type
+                typed_value: Any
+                if option_name == "http_port" and value.isdigit():
+                    # Special case for port which needs to be an integer
+                    merged_config["communicator_options"][option_name] = int(value)
+                    logger.info(f"Environment variable overrides http_port: {value}")
+                    print(f"Using environment variable {key}={value}")
+                else:
+                    # For other values, try to convert to appropriate type
+                    if value.lower() == "true":
+                        typed_value = True
+                    elif value.lower() == "false":
+                        typed_value = False
+                    elif value.isdigit():
+                        typed_value = int(value)
+                    elif value.replace(".", "", 1).isdigit() and value.count(".") == 1:
+                        typed_value = float(value)
+                    else:
+                        typed_value = value
+
+                    merged_config["communicator_options"][option_name] = typed_value
+                    logger.info(f"Environment variable overrides {option_name}: {typed_value}")
+                    print(f"Using environment variable {key}={value}")
+
+        # Let's log the final configuration for debugging
+        logger.debug(f"Final agent configuration for {agent_name}: {merged_config}")
+
+        # Initialize the agent
+        return agent_class(
+            name=agent_name,
+            config=merged_config,
+            project_root=project_root,
+            asset_manager=asset_manager,
         )
     except Exception as e:
-        # Log the full exception for easier debugging
-        logger.exception(f"Unexpected error initializing agent: {e}")
-        raise ConfigurationError(f"Unexpected error initializing agent: {e}")
+        error_msg = f"Failed to initialize agent {agent_name}: {e}"
+        logger.error(error_msg, exc_info=True)
+        raise ConfigurationError(error_msg)
 
 
 def run_project(
@@ -372,25 +415,20 @@ def run_project(
         click.echo(f"  Class: {agent_config_entry.class_}")
         click.echo(f"  Communicator: {communicator_type}")
 
+        # Log communicator options if any
+        if agent_config_entry.communicator_options:
+            click.echo("  Communicator options:")
+            for key, value in agent_config_entry.communicator_options.items():
+                click.echo(f"    {key}: {value}")
+
+            # Specifically log port for better visibility
+            if "http_port" in agent_config_entry.communicator_options:
+                click.echo(f"  HTTP port configured: {agent_config_entry.communicator_options['http_port']}")
+
         # Verify that the required dependencies for the communicator are installed
         if agent_config_entry.communicator:
             click.echo(f"Verifying dependencies for communicator: {agent_config_entry.communicator}")
             verify_communicator_dependencies(agent_config_entry.communicator)
-
-        # Log agent options if any
-        if agent_config_entry.options:
-            communicator_options = agent_config_entry.options.get("communicator_options", {})
-            if communicator_options:
-                click.echo("  Communicator options:")
-                for key, value in communicator_options.items():
-                    click.echo(f"    {key}: {value}")
-
-            # Log any other options
-            other_options = {k: v for k, v in agent_config_entry.options.items() if k != "communicator_options"}
-            if other_options:
-                click.echo("  Other options:")
-                for key, value in other_options.items():
-                    click.echo(f"    {key}: {value}")
 
         # Set up and manage the project environment
         project_env = ProjectEnvironment(project_root, project_config)
@@ -414,7 +452,26 @@ def run_project(
         asset_manager = create_asset_manager(project_config)
 
         # Initialize the agent
-        agent = initialize_agent(agent_class, agent_name, project_config, env_config, agent_config_entry, asset_manager)
+        agent = initialize_agent(
+            agent_class,
+            agent_name,
+            project_config,
+            env_config,
+            agent_config_entry,
+            asset_manager,
+            project_root,  # Pass the project_root directly
+        )
+
+        # Show final communicator configuration
+        communicator_type = agent.config.communicator_type
+        click.echo(f"Starting agent '{agent_name}' with communicator: {communicator_type}")
+
+        # Log the final configuration for better debugging
+        if communicator_type.startswith("mcp-"):
+            port = agent.config.communicator_options.get("http_port", 8000)
+            host = agent.config.communicator_options.get("http_host", "0.0.0.0")
+            logger.debug(f"Final MCP configuration: host={host}, port={port}")
+            click.echo(f"MCP server will use: {host}:{port}")
 
         # Run the agent using the AgentExecutor
         agent_executor = AgentExecutor(agent, project_config, event_loop_manager=event_loop_manager)

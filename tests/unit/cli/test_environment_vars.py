@@ -5,13 +5,13 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from openmas.config import AgentConfigEntry, ProjectConfig
+from openmas.config import AgentConfig, ProjectConfig
 
 
 @pytest.fixture
 def mock_project_config():
     """Create a mocked project config."""
-    agent_config = AgentConfigEntry(module="test_agent_module", class_="Agent")
+    agent_config = AgentConfig(name="test_agent", module="test_agent_module", class_="Agent")
     config = ProjectConfig(
         name="test_project",
         description="Test project for environment vars",

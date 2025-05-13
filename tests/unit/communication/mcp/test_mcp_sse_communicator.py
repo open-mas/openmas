@@ -583,22 +583,16 @@ class TestMcpSseCommunicator:
 
                 communicator = McpSseCommunicator("test-server", {}, server_mode=True)
 
-                # Call the internal method directly
-                with pytest.raises(Exception) as exc_info:  # Expect the original exception to be re-raised
-                    await communicator._run_fastmcp_server()
-
-                # Verify the exception message
-                assert error_message in str(exc_info.value)
+                # Call the internal method directly - the method now logs the error instead of re-raising
+                await communicator._run_fastmcp_server()
 
                 # Verify mocks were called
                 MockFastMCP.assert_called_once()
                 mock_server_instance.run_sse_async.assert_awaited_once()
 
-                # Verify error log (REMOVING assertion as caplog seems unreliable here)
-                # assert any(f"Error running FastMCP server: {error_message}" in record.message for record in caplog.records)
-
-                # Verify server reference is cleaned up in finally block
-                assert communicator.fastmcp_server is None
+                # Verify error was logged (instead of raised)
+                assert any(error_message in record.message for record in caplog.records)
+                assert any("Error starting FastMCP server" in record.message for record in caplog.records)
 
     @pytest.mark.asyncio
     async def test_get_service_url_valid(self, mocked_sse_environment):

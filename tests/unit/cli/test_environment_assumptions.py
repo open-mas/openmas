@@ -1,7 +1,9 @@
-"""Test that the CLI doesn't make assumptions about specific Python environments."""
+"""Test that the CLI doesn't make assumptions about environment features."""
 
 import sys
 from unittest.mock import MagicMock, patch
+
+import typer
 
 from openmas.agent.base import BaseAgent
 from openmas.cli.run import run_project
@@ -21,7 +23,13 @@ def test_no_environment_assumptions(tmp_path):
         # Create mock agent class
         mock_agent_class = MagicMock(spec=BaseAgent)
         mock_agent_class.__name__ = "MockAgent"  # Required for f-string interpolation in run.py
+
+        # Create a mock agent with proper config attributes
         mock_agent = MagicMock(spec=BaseAgent)
+        # Add config attribute with communicator_type and communicator_options attributes
+        mock_agent.config = MagicMock()
+        mock_agent.config.communicator_type = "http"
+        mock_agent.config.communicator_options = {"http_port": 8000}
         mock_agent_class.return_value = mock_agent
 
         # Set up test environment with specific mocking approach
@@ -33,6 +41,8 @@ def test_no_environment_assumptions(tmp_path):
             patch("openmas.cli.run.load_agent_class", return_value=mock_agent_class),
             patch("openmas.cli.run.load_environment_config", return_value={}),
             patch("openmas.cli.run.create_asset_manager", return_value=None),
+            # Return the pre-configured mock_agent instead of creating a new one
+            patch("openmas.cli.run.initialize_agent", return_value=mock_agent),
             patch("openmas.cli.run.AgentExecutor") as mock_agent_executor,
             patch("openmas.cli.run.ProjectEnvironment") as mock_project_env_class,
             patch("click.echo"),
@@ -59,17 +69,20 @@ def test_no_environment_assumptions(tmp_path):
             mock_agent_executor.return_value = mock_exec
 
             # Call the function
-            run_project("test_agent", project_dir=project_root)
+            try:
+                run_project("test_agent", project_dir=project_root)
+            except typer.Exit:
+                pass
 
             # Verify environment setup
             mock_project_env_class.assert_called_once_with(project_root, mock_project_config)
             mock_env.setup_environment.assert_called_once_with("test_agent")
 
-            # Verify agent was executed
+            # Verify agent executor was initialized and run was called
             mock_agent_executor.assert_called_once()
             mock_exec.run.assert_called_once()
 
-            # Verify environment cleanup
+            # Verify environment was restored after execution
             mock_env.restore_environment.assert_called_once()
 
             # Check sys.path for poetry-specific paths (which should not be added)

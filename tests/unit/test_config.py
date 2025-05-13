@@ -33,16 +33,23 @@ class TestAgentConfig:
 
     def test_required_fields(self) -> None:
         """Test that the required fields are validated."""
-        # Should succeed with just a name
+        # Should succeed with just a name (name is required)
         config = AgentConfig(name="test-agent")
         assert config.name == "test-agent"
         assert config.log_level == "INFO"
         assert config.service_urls == {}
         assert config.required_assets == []
 
-        # Should fail without a name
+        # Check default values for optional fields
+        assert config.module is None
+        assert config.class_ is None
+        assert config.communicator is None
+        assert config.communicator_type == "http"
+        assert config.communicator_options == {}
+
+        # Should fail without a name (name is required)
         with pytest.raises(ValidationError):
-            AgentConfig()
+            AgentConfig()  # No name provided, should raise error
 
     def test_prompts_and_sampling_fields(self):
         """Test that prompts, prompts_dir, and sampling fields are parsed correctly."""
@@ -1097,17 +1104,13 @@ class TestProjectConfig:
 
     def test_agent_config_validation(self) -> None:
         """Test validation of agent configurations."""
-        # Missing required field 'module'
+        # Should fail if no name is provided for the agent
         with pytest.raises(ValidationError):
-            ProjectConfig(
-                name="test-project",
-                version="0.1.0",
-                agents={
-                    "agent1": {
-                        "class": "Agent1",
-                    }
-                },
-            )
+            AgentConfig()  # Missing required field 'name'
+
+        # Should validate field types properly
+        with pytest.raises(ValidationError):
+            AgentConfig(name="test-agent", communicator_type=123)  # type: ignore
 
     def test_default_values(self) -> None:
         """Test default values."""
@@ -1178,7 +1181,7 @@ class TestProjectConfig:
         # Check that all agents were processed correctly
         assert len(config.agents) == 3
 
-        # Verify agents are converted to AgentConfigEntry objects
+        # Verify agents are converted to AgentConfig objects
         assert config.agents["agent1"].module == "agents.agent1"
         assert config.agents["agent1"].class_ == "Agent"
 
@@ -1201,7 +1204,7 @@ class TestProjectConfig:
                     "module": "agents.agent2",
                     "class": "Agent2",
                     "communicator": "http",
-                    "options": {"timeout": 30},
+                    "communicator_options": {"timeout": 30},
                 },
                 "agent3": {"module": "path.to.agent3", "class": "Agent3", "deploy_config_path": "deploy/agent3.yml"},
             },
@@ -1216,12 +1219,12 @@ class TestProjectConfig:
         assert config.agents["agent1"].module == "agents.agent1"
         assert config.agents["agent1"].class_ == "CustomAgent"
         assert config.agents["agent1"].communicator is None
-        assert config.agents["agent1"].options == {}
+        assert config.agents["agent1"].communicator_options == {}
 
         assert config.agents["agent2"].module == "agents.agent2"
         assert config.agents["agent2"].class_ == "Agent2"
         assert config.agents["agent2"].communicator == "http"
-        assert config.agents["agent2"].options == {"timeout": 30}
+        assert config.agents["agent2"].communicator_options == {"timeout": 30}
 
         assert config.agents["agent3"].module == "path.to.agent3"
         assert config.agents["agent3"].class_ == "Agent3"

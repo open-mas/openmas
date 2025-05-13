@@ -7,11 +7,11 @@ from typing import List, Set, cast
 import click
 from pydantic import ValidationError
 
-from openmas.config import AgentConfigEntry, ConfigLoader, ProjectConfig
+from openmas.config import AgentConfig, ConfigLoader, ProjectConfig
 from openmas.exceptions import ConfigurationError
 
 
-def validate_prompt_configs(agent_name: str, agent_config: AgentConfigEntry, project_root: Path) -> List[str]:
+def validate_prompt_configs(agent_name: str, agent_config: AgentConfig, project_root: Path) -> List[str]:
     """Validate prompt configurations for an agent.
 
     Args:
@@ -66,7 +66,7 @@ def validate_prompt_configs(agent_name: str, agent_config: AgentConfigEntry, pro
     return errors
 
 
-def validate_sampling_config(agent_name: str, agent_config: AgentConfigEntry) -> List[str]:
+def validate_sampling_config(agent_name: str, agent_config: AgentConfig) -> List[str]:
     """Validate sampling configuration for an agent.
 
     Args:
@@ -144,10 +144,12 @@ def validate_config(config_path: Path = Path("openmas_project.yml")) -> int:
 
         # 1. Check agent paths
         for agent_name, agent_config in config.agents.items():
-            # In model_post_init, all agent configs are converted to AgentConfigEntry
+            # In model_post_init, all agent configs are converted to AgentConfig
             # Cast to ensure type checking works correctly
-            agent_entry = cast(AgentConfigEntry, agent_config)
-            module_parts = agent_entry.module.split(".")
+            agent_entry = cast(AgentConfig, agent_config)
+            # Ensure module is a string before splitting (mypy strict optional)
+            module_str: str = agent_entry.module or ""
+            module_parts = module_str.split(".")
 
             # Convert module path to directory path for validation
             # This is an approximation - in practice, Python modules could be organized differently
@@ -268,7 +270,7 @@ def validate_config(config_path: Path = Path("openmas_project.yml")) -> int:
         has_validation_errors = False
 
         for agent_name, agent_config in config.agents.items():
-            agent_entry = cast(AgentConfigEntry, agent_config)
+            agent_entry = cast(AgentConfig, agent_config)
             prompt_errors = validate_prompt_configs(agent_name, agent_entry, config_path.parent)
             sampling_errors = validate_sampling_config(agent_name, agent_entry)
 

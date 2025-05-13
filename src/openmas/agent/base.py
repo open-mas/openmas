@@ -250,92 +250,78 @@ class BaseAgent(abc.ABC):
             return
 
         self.logger.info("Stopping agent", agent_name=self.name)
-
-        # First cancel any background tasks
-        if self._background_tasks:
-            self.logger.debug(f"Cancelling {len(self._background_tasks)} background tasks")
-            for task in self._background_tasks:
-                task.cancel()
-
-            # Wait for all background tasks to complete (or be cancelled)
-            if self._background_tasks:
-                with suppress(asyncio.CancelledError):
-                    await asyncio.gather(*self._background_tasks, return_exceptions=True)
-            self._background_tasks.clear()
+        self._is_running = False
 
         # Cancel the main loop task
-        if self._task is not None:
-            self.logger.debug("Cancelling main agent task")
+        if self._task:
             self._task.cancel()
-            try:
-                with suppress(asyncio.CancelledError):
-                    await self._task
-            except Exception as e:
-                self.logger.error("Error cancelling main agent task", error=str(e), exc_info=True)
-            finally:
-                self._task = None
+            with suppress(asyncio.CancelledError):
+                await self._task
+            self._task = None
 
-        # Even if cancellation of tasks failed, try to run the shutdown hook
+        # Cancel all background tasks
+        for task in list(self._background_tasks):
+            if not task.done():
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
+
+        # Call shutdown hook - wrap in try/except to catch any exceptions
+        # and ensure communicator is stopped even if shutdown fails
         try:
-            # Call shutdown hook
             self.logger.debug("Shutting down agent")
             await self.shutdown()
             self.logger.debug("Agent shutdown complete")
         except Exception as e:
             self.logger.error("Error in agent shutdown", error=str(e), exc_info=True)
-            # Continue with communicator shutdown even if agent shutdown failed
+        finally:
+            # Stop the communicator (last, in case shutdown needs it)
+            try:
+                await self.communicator.stop()
+            except Exception as e:
+                self.logger.error("Failed to stop communicator", error=str(e), exc_info=True)
 
-        # Finally stop the communicator
-        try:
-            self.logger.debug("Stopping communicator")
-            await self.communicator.stop()
-            self.logger.debug("Communicator stopped")
-        except Exception as e:
-            self.logger.error("Error stopping communicator", error=str(e), exc_info=True)
-
-        self._is_running = False
         self.logger.info("Agent stopped", agent_name=self.name)
 
     async def _run_lifecycle(self) -> None:
-        """Run the agent lifecycle.
+        """Run the agent's lifecycle.
 
-        This method runs the main loop and handles exceptions.
+        This method is the main loop for the agent.
         """
         try:
-            self.logger.debug("Running agent lifecycle")
+            self.logger.debug("Running agent")
             await self.run()
-            self.logger.debug("Agent lifecycle completed normally")
+            self.logger.debug("Agent run method completed")
         except asyncio.CancelledError:
-            self.logger.info("Agent lifecycle cancelled", agent_name=self.name)
+            self.logger.debug("Agent lifecycle task was cancelled")
             raise
         except Exception as e:
-            self.logger.exception("Error in agent lifecycle", agent_name=self.name, error=str(e))
-            raise
+            self.logger.error("Error in agent run method", error=str(e), exc_info=True)
+            # We don't re-raise the exception here to avoid killing the agent process
+            # This gives us a chance to clean up properly via stop()
+        finally:
+            # This handles the case when run() completes naturally
+            if self._is_running:
+                # We're still running, meaning run() completed on its own
+                # Call stop to perform a clean shutdown
+                self.logger.debug("Agent run method completed, stopping agent")
+                await self.stop()
 
     @abc.abstractmethod
     async def setup(self) -> None:
         """Set up the agent.
 
-        This method is called when the agent starts and can be used to initialize
-        resources, register handlers, etc.
-
-        If this method raises an exception, the agent will not start and the communicator
-        will be stopped. The exception will be wrapped in a LifecycleError.
+        This method is called when the agent is started, before run().
+        Override this method to perform any initialization tasks.
         """
         pass
 
     @abc.abstractmethod
     async def run(self) -> None:
-        """Run the agent's main loop.
+        """Run the agent.
 
-        This method should implement the agent's core logic. It will be called
-        after setup() and should run until the agent is stopped.
-
-        If this method raises an exception, the agent will be stopped and the exception
-        will be propagated. The shutdown method will still be called.
-
-        For long-running background tasks, use the create_background_task method to ensure
-        proper cancellation during shutdown.
+        This method is called after setup() and represents the main operation of the agent.
+        Override this method to implement the agent's main behavior.
         """
         pass
 
@@ -343,11 +329,7 @@ class BaseAgent(abc.ABC):
     async def shutdown(self) -> None:
         """Shut down the agent.
 
-        This method is called when the agent stops and can be used to clean up
-        resources, close connections, etc.
-
-        This method will be called even if the agent's run() method raised an exception.
-        Any exceptions raised by this method will be logged but not propagated,
-        to ensure the communicator.stop() method is still called.
+        This method is called when the agent is stopped, after run() completes.
+        Override this method to perform any cleanup tasks.
         """
         pass

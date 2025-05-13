@@ -56,6 +56,10 @@ class SimpleAgent(BaseAgent):
     async def run(self) -> None:
         """Run the agent's main logic."""
         self.run_called = True
+        # Sleep a little bit to allow background tasks to complete in tests
+        import asyncio
+
+        await asyncio.sleep(1.0)  # Sleep for longer to ensure background tasks complete
         await super().run()
 
     async def shutdown(self) -> None:
