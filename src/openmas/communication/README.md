@@ -40,7 +40,7 @@ To use a specific communicator in your agent:
 from openmas.agent import BaseAgent
 
 # Configure through environment variables
-# COMMUNICATOR_TYPE=mcp_stdio
+# COMMUNICATOR_TYPE=mcp-stdio
 # COMMUNICATOR_OPTION_SERVER_MODE=true
 
 # Or through direct initialization
@@ -48,7 +48,7 @@ agent = BaseAgent(
     name="my-agent",
     config=AgentConfig(
         name="my-agent",
-        communicator_type="http",  # or "mcp_stdio", "mcp_sse", etc.
+        communicator_type="http",  # or "mcp-stdio", "mcp-sse", etc.
         communicator_options={
             "server_mode": True,
             "http_port": 8000
@@ -156,7 +156,7 @@ register_communicator("my_custom", MyCustomCommunicator)
 
 When a OpenMAS agent is initialized:
 
-1. The agent configuration specifies a `communicator_type` (e.g., "http", "mcp_stdio", "my_custom").
+1. The agent configuration specifies a `communicator_type` (e.g., "http", "mcp-stdio", "my_custom").
 2. The agent looks up the corresponding communicator class in the registry.
 3. The communicator is instantiated with the agent name, service URLs, and any additional options specified in `communicator_options`.
 4. The communicator's lifecycle is managed by the agent (start/stop).

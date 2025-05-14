@@ -94,7 +94,7 @@ def validate_sampling_config(agent_name: str, agent_config: AgentConfig) -> List
     # Check for MCP provider compatibility
     if sampling.provider == "mcp":
         communicator = agent_config.communicator
-        if communicator and not (communicator.startswith("mcp_") or communicator == "mcp"):
+        if communicator and not (communicator.startswith("mcp")):
             errors.append(
                 f"⚠️ Agent '{agent_name}': Using 'mcp' sampling provider with non-MCP communicator '{communicator}'. "
                 f"This may cause compatibility issues."

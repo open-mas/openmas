@@ -768,4 +768,4 @@ class McpStdioCommunicator(BaseCommunicator):
 
 
 # Register the communicator
-register_communicator("mcp_stdio", McpStdioCommunicator)
+register_communicator("mcp-stdio", McpStdioCommunicator)

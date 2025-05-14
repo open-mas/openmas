@@ -64,7 +64,7 @@ MCP is designed for interacting with AI models and tools, particularly from Anth
     * **Protocol:** MCP over standard input/output.
     * **Best For:** Running an agent as an MCP service interacted with via stdin/stdout (e.g., as a CLI tool or managed subprocess). Connecting to external tools/engines that expose an MCP interface via stdio (like Stockfish configured for MCP).
     * **Dependencies:** `mcp` SDK.
-    * **Configuration:** `communicator_type: mcp_stdio`. Options: `server_mode` (bool).
+    * **Configuration:** `communicator_type: mcp-stdio`. Options: `server_mode` (bool).
 
 ### gRPC (`GrpcCommunicator`)
 
@@ -307,7 +307,7 @@ from openmas.agent import BaseAgent
 from openmas.config import AgentConfig
 
 # Configure through environment variables
-# COMMUNICATOR_TYPE=mcp_stdio
+# COMMUNICATOR_TYPE=mcp-stdio
 # COMMUNICATOR_OPTION_SERVER_MODE=true
 
 # Or through direct initialization with config
@@ -315,7 +315,7 @@ agent = BaseAgent(
     name="my-agent",
     config=AgentConfig(
         name="my-agent",
-        communicator_type="http",  # or "mcp_stdio", "mcp_sse", etc.
+        communicator_type="http",  # or "mcp-stdio", "mcp-sse", etc.
         communicator_options={
             "server_mode": True,
             "http_port": 8000

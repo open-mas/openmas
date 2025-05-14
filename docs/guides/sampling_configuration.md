@@ -72,7 +72,7 @@ sampling:
 When using the MCP provider, your agent must use an MCP-compatible communicator:
 
 ```yaml
-communicator_type: "mcp_sse"  # or "mcp_stdio"
+communicator_type: "mcp-sse"  # or "mcp-stdio"
 communicator_options:
   server_mode: false
 ```
@@ -169,7 +169,7 @@ agents:
   mcp_agent:
     module: "agents.mcp_agent"
     class: "McpAgent"
-    communicator_type: "mcp_sse"
+    communicator_type: "mcp-sse"
     communicator_options:
       server_mode: false
     service_urls:

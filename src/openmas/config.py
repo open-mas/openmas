@@ -73,7 +73,7 @@ class AgentConfig(BaseModel):
 
     # Communication configuration
     communicator: Optional[str] = Field(None, description="Communicator type to use for this agent")
-    communicator_type: str = Field("http", description="Type of communicator to use (e.g., 'http', 'mcp_stdio')")
+    communicator_type: str = Field("http", description="Type of communicator to use (e.g., 'http', 'mcp-stdio')")
     communicator_options: Dict[str, Any] = Field(
         default_factory=dict, description="Options specific to the selected communicator"
     )

@@ -60,7 +60,7 @@ def sampling_config_agent():
         "name": "sample_agent",
         "module": "agents.sample_agent",
         "class": "SampleAgent",
-        "communicator": "mcp_stdio",
+        "communicator": "mcp-stdio",
         "sampling": {
             "provider": "mcp",
             "model": "claude-3-sonnet-20240229",
@@ -383,7 +383,7 @@ def test_validate_sampling_config_success():
         name="test_agent",
         module="test.module",
         class_="TestAgent",
-        communicator="mcp_stdio",
+        communicator="mcp-stdio",
         sampling=SamplingParameters(
             provider="mcp",
             model="claude-3-sonnet-20240229",

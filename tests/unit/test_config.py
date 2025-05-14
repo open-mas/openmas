@@ -358,7 +358,7 @@ def test_load_config_env_overrides_default(mock_project_config):
             {
                 "AGENT_NAME": "test_agent",
                 "LOG_LEVEL": "INFO",  # Override default DEBUG
-                "COMMUNICATOR_TYPE": "mcp_stdio",  # Override default http
+                "COMMUNICATOR_TYPE": "mcp-stdio",  # Override default http
             },
         ),
     ):
@@ -366,7 +366,7 @@ def test_load_config_env_overrides_default(mock_project_config):
 
         assert config.name == "test_agent"
         assert config.log_level == "INFO"  # From env, overriding default
-        assert config.communicator_type == "mcp_stdio"  # From env, overriding default
+        assert config.communicator_type == "mcp-stdio"  # From env, overriding default
         assert config.communicator_options["timeout"] == 30  # Still from default_config
 
 
