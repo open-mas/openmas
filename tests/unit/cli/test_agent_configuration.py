@@ -65,9 +65,10 @@ def test_initialize_agent_with_direct_config(mock_agent_class, mock_project_conf
     _, kwargs = mock_agent_class.call_args
 
     # Verify config values
-    assert kwargs["config"]["communicator"] == "mcp-sse"
-    assert kwargs["config"]["communicator_options"]["http_port"] == 9900
-    assert kwargs["config"]["communicator_options"]["http_host"] == "127.0.0.1"
+    assert kwargs["config"].communicator == "mcp-sse"
+    assert kwargs["config"].communicator_options["server_mode"] is True
+    assert kwargs["config"].communicator_options["http_port"] == 9900
+    assert kwargs["config"].communicator_options["http_host"] == "127.0.0.1"
 
 
 def test_config_merge_precedence(mock_agent_class, mock_project_config, agent_config_entry):
@@ -106,5 +107,7 @@ def test_config_merge_precedence(mock_agent_class, mock_project_config, agent_co
     _, kwargs = mock_agent_class.call_args
 
     # Test that agent-specific config takes precedence
-    assert kwargs["config"]["communicator_options"]["http_port"] == 9900
-    assert kwargs["config"]["communicator_options"]["http_host"] == "127.0.0.1"
+    assert kwargs["config"].communicator_options["http_port"] == 9900
+    assert kwargs["config"].communicator_options["http_host"] == "127.0.0.1"
+    # Ensure other values are from the correct sources
+    assert kwargs["config"].communicator_type == "http"  # From agent_config_entry.communicator

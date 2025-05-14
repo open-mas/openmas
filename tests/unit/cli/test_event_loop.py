@@ -102,7 +102,6 @@ class TestEventLoopManager:
             assert len(manager.signal_handlers) == 0
             assert len(manager.shutdown_callbacks) == 0
 
-    @pytest.mark.asyncio
     def test_run_coro_with_signals(self, cleanup_event_loop):
         """Test running a coroutine with signal handling."""
         # Setup

@@ -75,8 +75,8 @@ class TestPortConfiguration:
 
         mock_agent_class.assert_called_once()
         _, kwargs = mock_agent_class.call_args
-        assert kwargs["config"]["communicator_options"]["http_port"] == 9999
-        assert kwargs["config"]["communicator_type"] == "mcp-sse"
+        assert kwargs["config"].communicator_options["http_port"] == 9999
+        assert kwargs["config"].communicator_type == "mcp-sse"
         assert kwargs["project_root"] == project_root
 
     def test_agent_executor_uses_passed_project_dir(self):

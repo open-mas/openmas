@@ -6,11 +6,14 @@ enabling agents to organize, version, and reuse prompts across different context
 
 import datetime
 import json
+import logging
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from pydantic import BaseModel, Field
+
+logger = logging.getLogger(__name__)
 
 
 class PromptConfig(BaseModel):
@@ -228,9 +231,14 @@ class PromptManager:
                 if not self.prompts_base_path:
                     raise ValueError("prompts_base_path must be set to resolve template_file")
                 template_path = self.prompts_base_path / config.template_file
+                logger.info(f"PROMPT_MANAGER: Checking for template file at relative path: {template_path}")
+                logger.info(f"PROMPT_MANAGER: Absolute path being checked: {template_path.resolve()}")
                 if not template_path.exists():
-                    raise FileNotFoundError(f"Prompt template file not found: {template_path}")
-                template = template_path.read_text(encoding="utf-8")
+                    logger.error(f"Prompt template file not found: {template_path.resolve()}, but specified in config.")
+                    raise FileNotFoundError(f"Prompt template file not found: {template_path.resolve()}")
+                else:
+                    logger.info(f"PROMPT_MANAGER: Template file found: {template_path.resolve()}")
+                    template = template_path.read_text(encoding="utf-8")
             # Build Prompt object
             metadata = PromptMetadata(name=config.name)
             content = PromptContent(template=template)
@@ -417,14 +425,14 @@ class PromptManager:
 
     async def render_prompt(
         self,
-        prompt_id: str,
+        prompt_identifier: str,
         context: Optional[Dict[str, Any]] = None,
         system_override: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Render a prompt with context.
 
         Args:
-            prompt_id: The ID of the prompt to render.
+            prompt_identifier: The ID or Name of the prompt to render.
             context: Optional context to use for rendering.
             system_override: Optional system prompt override.
 
@@ -432,7 +440,11 @@ class PromptManager:
             The rendered prompt as a dictionary with system and content fields,
             or None if the prompt was not found.
         """
-        prompt = await self.get_prompt(prompt_id)
+        # Try to get by ID first, then by name
+        prompt = await self.get_prompt(prompt_identifier)
+        if not prompt:
+            prompt = await self.get_prompt_by_name(prompt_identifier)
+
         if not prompt:
             return None
 

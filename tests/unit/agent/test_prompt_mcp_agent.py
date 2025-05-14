@@ -190,14 +190,14 @@ class TestPromptMcpAgent:
 
         # Call the method
         result = await agent.render_prompt(
-            prompt_id="test-id",
+            prompt_identifier="test-id",
             context={"key": "value"},
             system_override="Override system prompt",
         )
 
         # Check that render_prompt was called with the correct arguments
         agent.prompt_manager.render_prompt.assert_called_once_with(
-            prompt_id="test-id",
+            prompt_identifier="test-id",
             context={"key": "value"},
             system_override="Override system prompt",
         )

@@ -7,7 +7,7 @@ from openmas.agent.mcp import McpAgent
 # Configure logging
 from openmas.logging import get_logger
 from openmas.prompt.base import Prompt, PromptManager
-from openmas.prompt.mcp import McpPromptManager
+from openmas.prompt.providers.mcp import McpPromptManager
 from openmas.sampling import MessageRole, SamplingResult
 from openmas.sampling.providers.mcp import McpAgentSampler
 
@@ -135,14 +135,14 @@ class PromptMcpAgent(McpAgent):
 
     async def render_prompt(
         self,
-        prompt_id: str,
+        prompt_identifier: str,
         context: Optional[Dict[str, Any]] = None,
         system_override: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Render a prompt with context.
 
         Args:
-            prompt_id: The ID of the prompt to render
+            prompt_identifier: The ID or Name of the prompt to render
             context: Optional context to use for rendering
             system_override: Optional system prompt override
 
@@ -151,7 +151,7 @@ class PromptMcpAgent(McpAgent):
             or None if the prompt was not found
         """
         return await self.prompt_manager.render_prompt(
-            prompt_id=prompt_id,
+            prompt_identifier=prompt_identifier,
             context=context,
             system_override=system_override,
         )

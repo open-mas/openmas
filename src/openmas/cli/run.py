@@ -1,6 +1,7 @@
 """CLI run module for OpenMAS."""
 
 import importlib
+import json
 import os
 import sys
 import traceback
@@ -10,6 +11,7 @@ from typing import Any, Dict, Optional, Type
 import click
 import typer
 import yaml
+from pydantic import ValidationError  # Added to handle validation errors
 
 from openmas.agent.base import BaseAgent
 from openmas.assets.manager import AssetManager
@@ -227,6 +229,9 @@ def initialize_agent(
     Raises:
         ConfigurationError: If the agent could not be initialized
     """
+    logger.info(f"INITIALIZE_AGENT CALLED FOR: {agent_name}")
+    logger.info(f"INITIALIZE_AGENT - SEEN ENVIRONMENT: {os.environ}")
+    logger.info(f"INITIALIZE_AGENT - AGENT_CONFIG_ENTRY (from project.yml): {agent_config_entry.model_dump()}")
     try:
         # Create the agent configuration by merging defaults and specifics in the right order
         # Order of precedence (highest to lowest):
@@ -290,9 +295,22 @@ def initialize_agent(
 
         # 4. Add agent-specific configuration (highest priority except for env vars)
         # First get the config as a dictionary
-        agent_config_dict = agent_config_entry.model_dump()
+        agent_config_dict = agent_config_entry.model_dump(exclude_unset=True)
         merged_config = _deep_merge_dicts(merged_config, agent_config_dict)
         logger.debug(f"Applied agent-specific config for agent {agent_name}")
+
+        # Handle OPENMAS_PROMPTS environment variable
+        prompts_env_var_str = os.environ.get("OPENMAS_PROMPTS")
+        if prompts_env_var_str:
+            try:
+                prompts_data = json.loads(prompts_env_var_str)
+                if isinstance(prompts_data, list):
+                    merged_config["prompts"] = prompts_data
+                    logger.info("Loaded prompts configuration from OPENMAS_PROMPTS environment variable.")
+                else:
+                    logger.warning("OPENMAS_PROMPTS environment variable is not a valid JSON list. Ignoring.")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse JSON from OPENMAS_PROMPTS environment variable: {e}. Ignoring.")
 
         # Ensure communicator_type is set to communicator if provided
         if agent_config_entry.communicator:
@@ -338,10 +356,26 @@ def initialize_agent(
         # Let's log the final configuration for debugging
         logger.debug(f"Final agent configuration for {agent_name}: {merged_config}")
 
-        # Initialize the agent
+        # ADD DEBUGGING HERE
+        logger.info(
+            "BEFORE AgentConfig instantiation: merged_config['prompts'] is %s, type is %s",
+            merged_config.get("prompts"),
+            type(merged_config.get("prompts")),
+        )
+
+        # Explicitly create AgentConfig instance from the merged dictionary
+        # This ensures Pydantic handles parsing of nested models like prompts.
+        try:
+            final_agent_config = AgentConfig(**merged_config)
+        except ValidationError as e:
+            error_msg = f"Validation error when creating final AgentConfig for {agent_name}: {e}"
+            logger.error(error_msg, exc_info=True)
+            raise ConfigurationError(error_msg)
+
+        # Initialize the agent with the validated AgentConfig object
         return agent_class(
             name=agent_name,
-            config=merged_config,
+            config=final_agent_config,  # Pass the AgentConfig instance
             project_root=project_root,
             asset_manager=asset_manager,
         )

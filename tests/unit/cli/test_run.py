@@ -435,11 +435,10 @@ class TestCliRun:
 
         # Check the agent config has the communicator type and options
         assert kwargs["name"] == "test_agent"
-        assert isinstance(kwargs["config"], dict)
-        assert kwargs["config"]["communicator_type"] == "mcp-sse"
-        assert "communicator_options" in kwargs["config"]
-        assert kwargs["config"]["communicator_options"]["http_port"] == 9876
-        assert kwargs["config"]["communicator_options"]["server_mode"] is True
+        assert isinstance(kwargs["config"], AgentConfig)
+        assert kwargs["config"].communicator_type == "mcp-sse"
+        assert kwargs["config"].communicator_options["http_port"] == 9876
+        assert kwargs["config"].communicator_options["server_mode"] is True
 
         # Verify project_root was passed correctly
         assert kwargs["project_root"] == test_project_root
@@ -490,13 +489,11 @@ class TestCliRun:
         args, kwargs = mock_agent_class.call_args
 
         # Check that all config sources were merged correctly
-        agent_config = kwargs["config"]
+        agent_config_obj = kwargs["config"]
 
         # Project defaults
-        assert agent_config["log_level"] == "INFO"
-
-        # Environment config
-        assert agent_config["env_key"] == "env_value"
+        assert agent_config_obj.log_level == "INFO"
+        # Agent-specific config
 
         # Verify project_root was passed correctly
         assert kwargs["project_root"] == test_project_root
@@ -584,12 +581,12 @@ class TestCliRun:
         args, kwargs = mock_agent_class.call_args
 
         # Check the agent config has the communicator type from communicator_defaults.type
-        assert kwargs["config"]["communicator_type"] == "mcp-sse"
+        assert kwargs["config"].communicator_type == "mcp-sse"
 
         # Check that options were properly merged into communicator_options
-        assert kwargs["config"]["communicator_options"]["server_mode"] is True
-        assert kwargs["config"]["communicator_options"]["http_port"] == 8000
-        assert kwargs["config"]["communicator_options"]["http_host"] == "127.0.0.1"
+        assert kwargs["config"].communicator_options["server_mode"] is True
+        assert kwargs["config"].communicator_options["http_port"] == 8000
+        assert kwargs["config"].communicator_options["http_host"] == "127.0.0.1"
 
     def test_agent_communicator_overrides_defaults(self):
         """Test that agent-specific communicator overrides communicator_defaults."""
@@ -635,10 +632,10 @@ class TestCliRun:
         args, kwargs = mock_agent_class.call_args
 
         # Check the agent-specific communicator type overrode the default
-        assert kwargs["config"]["communicator_type"] == "http"
+        assert kwargs["config"].communicator_type == "http"
 
         # Check that agent-specific options overrode the defaults
-        assert kwargs["config"]["communicator_options"]["http_port"] == 9999
+        assert kwargs["config"].communicator_options["http_port"] == 9999
 
         # Check that other options from defaults were preserved
-        assert kwargs["config"]["communicator_options"]["server_mode"] is True
+        assert kwargs["config"].communicator_options["server_mode"] is True

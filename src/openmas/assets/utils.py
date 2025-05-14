@@ -158,7 +158,16 @@ def unpack_archive(archive_path: Path, target_dir: Path, format: str, destinatio
 
                 # Get safe members
                 members = [member for member in tar_ref.getmembers() if is_safe(member)]
-                tar_ref.extractall(target_dir, members=members)
+
+                # Define a filter function to ensure safe extraction
+                def filter_func(tarinfo: tarfile.TarInfo, path: str) -> Optional[tarfile.TarInfo]:
+                    # Avoid path traversal using extracted paths
+                    if not tarinfo.name.startswith("/") and ".." not in tarinfo.name.split("/"):
+                        return tarinfo
+                    return None
+
+                # Use the filter function in extractall
+                tar_ref.extractall(target_dir, members=members, filter=filter_func)
 
                 # If destination_is_file is True, find the content file
                 if destination_is_file:

@@ -502,7 +502,9 @@ def _get_env_var_with_type(name: str, target_type: Any, prefix: str = "") -> Opt
         raise ConfigurationError(message)
 
 
-def load_config(config_model: Type[T], prefix: str = "", project_dir: Optional[Path] = None) -> T:
+def load_config(
+    config_model: Type[T], prefix: str = "", project_dir: Optional[Path] = None, agent_name: Optional[str] = None
+) -> T:
     """Load configuration from files, environment variables and project configuration.
 
     Configuration is loaded in the following order (lowest to highest precedence):
@@ -517,6 +519,7 @@ def load_config(config_model: Type[T], prefix: str = "", project_dir: Optional[P
         config_model: The Pydantic model to use for validation
         prefix: Optional prefix for environment variables
         project_dir: Optional explicit path to the project directory
+        agent_name: Optional agent name to load specific configuration for
 
     Returns:
         A validated configuration object
@@ -538,6 +541,18 @@ def load_config(config_model: Type[T], prefix: str = "", project_dir: Optional[P
         if default_config:
             logger.debug("Applying default configuration from project config")
             config_data.update(default_config)
+
+        # If agent_name is provided, load its specific config from project_config
+        if agent_name:
+            agent_specific_config = project_config.get("agents", {}).get(agent_name, {})
+            if isinstance(agent_specific_config, AgentConfig):  # If it's already an AgentConfig instance
+                agent_specific_config = agent_specific_config.model_dump(exclude_unset=True)
+            elif not isinstance(agent_specific_config, dict):  # Ensure it's a dict if not AgentConfig
+                agent_specific_config = {}
+
+            if agent_specific_config:
+                logger.debug(f"Applying agent-specific configuration for '{agent_name}' from project_config")
+                config_data = _deep_merge_dicts(config_data, agent_specific_config)
 
         # Store project-level shared_paths and extension_paths for later
         project_shared_paths = project_config.get("shared_paths", [])
@@ -715,7 +730,19 @@ def load_config(config_model: Type[T], prefix: str = "", project_dir: Optional[P
                         option_value = value
 
                 config_data["communicator_options"][option_name] = option_value
-                logger.debug(f"Applied environment variable {key}={value}")
+                logger.debug(f"Applied environment variable {key}")
+
+        # Prompts configuration (JSON list of prompt configs)
+        prompts_str = os.environ.get(f"{env_prefix}PROMPTS")
+        if prompts_str:
+            try:
+                prompts_data = json.loads(prompts_str)
+                if not isinstance(prompts_data, list):
+                    raise ConfigurationError(f"{env_prefix}PROMPTS must be a JSON list of prompt configurations")
+                config_data["prompts"] = prompts_data  # Pydantic will validate structure later
+                logger.debug(f"Applied environment variable {env_prefix}PROMPTS: {prompts_data}")
+            except json.JSONDecodeError as e:
+                raise ConfigurationError(f"Invalid JSON in {env_prefix}PROMPTS: {e}")
 
         # Create and validate the model instance
         logger.debug(f"Creating configuration model with data: {config_data}")
