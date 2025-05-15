@@ -6,7 +6,8 @@ from openmas.agent.base import BaseAgent
 
 
 # Create a concrete test agent implementation to avoid abstract class instantiation error
-class TestAgent(BaseAgent):
+# This is NOT a test class, but a helper implementation for the tests
+class _TestAgent(BaseAgent):
     """Concrete implementation of BaseAgent for testing."""
 
     async def setup(self):
@@ -38,7 +39,7 @@ class TestAgentConfiguration:
         }
 
         # Create the agent with the mock communicator class
-        agent = TestAgent(config=agent_config, communicator_class=mock_communicator_class)
+        agent = _TestAgent(config=agent_config, communicator_class=mock_communicator_class)
 
         # Verify the agent was created with the correct config
         assert agent.name == "test_agent"
@@ -69,7 +70,7 @@ class TestAgentConfiguration:
         agent_config = {"name": "test_agent", "communicator_type": "http", "communicator_options": {"port": 8888}}
 
         # Create the agent
-        agent = TestAgent(config=agent_config)
+        agent = _TestAgent(config=agent_config)
 
         # Verify the agent was created successfully
         assert agent.name == "test_agent"
@@ -95,7 +96,7 @@ class TestAgentConfiguration:
         }
 
         # Create the agent
-        agent = TestAgent(config=agent_config)
+        agent = _TestAgent(config=agent_config)
 
         # Verify the agent was created successfully
         assert agent.name == "test_agent"

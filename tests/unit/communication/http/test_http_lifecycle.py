@@ -53,17 +53,26 @@ async def test_stop_with_server_task():
 
     # Create a mock task
     mock_task = MagicMock()
+    mock_task.done = MagicMock(return_value=False)  # Task is not done
     mock_task.cancel = MagicMock()
-    mock_task._is_coroutine = False  # Mark as a mock for special handling
 
     # Set it as the server task
     communicator.server_task = mock_task
 
+    # Mock client to avoid issues with aclose
+    communicator.client = MagicMock()
+    communicator.client.aclose = AsyncMock()
+
     # Stop the communicator
     await communicator.stop()
 
+    # Verify the done method was called
+    mock_task.done.assert_called_once()
+
     # Verify the task was cancelled
     mock_task.cancel.assert_called_once()
+
+    # Verify the server task reference was cleared
     assert communicator.server_task is None
 
 

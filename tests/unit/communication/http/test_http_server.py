@@ -46,10 +46,13 @@ async def test_server_lifecycle(mock_uvicorn_server):
     # Create a communicator
     communicator = HttpCommunicator("test-agent", {})
 
+    # Create a properly awaitable mock task
+    mock_task = AsyncMock()
+
     # Mock key components
     with (
         patch("uvicorn.Server", server_class_mock),
-        patch("asyncio.create_task", side_effect=lambda coro: MagicMock()),
+        patch("asyncio.create_task", return_value=mock_task),
     ):
         try:
             # Add a handler to trigger server startup
@@ -200,50 +203,63 @@ async def test_register_handler_with_running_server():
 @pytest.mark.asyncio
 async def test_http_communicator_server_starts_on_handler_registration():
     """Test that the HTTP server starts when a handler is registered."""
-    # Create a proper AsyncMock that can be awaited
+    communicator = HttpCommunicator("test-agent", {})
+
+    # Verify that server task is None initially
+    assert communicator.server_task is None
+
+    # Create a properly awaitable mock for the task
     mock_task = AsyncMock()
-    # Configure it to be identified as not a coroutine for the stop method
-    mock_task._is_coroutine = False
 
-    # Mock the create_task function to return our mock
-    with patch("openmas.communication.http.asyncio.create_task", return_value=mock_task) as mock_create_task:
-        # Create a communicator
-        communicator = HttpCommunicator(agent_name="test-agent", service_urls={}, http_port=12345)
+    with (
+        patch("fastapi.FastAPI"),
+        patch("uvicorn.Server"),
+        patch("uvicorn.Config"),
+        patch("asyncio.create_task", return_value=mock_task),
+    ):
 
-        # Define a handler
         async def test_handler(params):
-            return {"success": True}
+            return {"result": "success"}
 
-        # Register the handler
-        await communicator.register_handler("test_method", test_handler)
+        # Register handler should trigger server start
+        await communicator.register_handler("test", test_handler)
 
-        # Assert that the server task was created
-        mock_create_task.assert_called_once()
+        # Server task should now be set
+        assert communicator.server_task is not None
 
-        # Clean up
-        await communicator.stop()
+    # Clean up
+    await communicator.stop()
 
 
 @pytest.mark.asyncio
 async def test_http_communicator_start_initializes_server():
-    """Test that calling start() initializes the server if handlers are registered."""
-    # Create a communicator
-    communicator = HttpCommunicator(agent_name="test-agent", service_urls={}, http_port=12345)
+    """Test that start() initializes the server if handlers are present."""
+    communicator = HttpCommunicator("test-agent", {})
 
-    # Define a handler
+    # Create a properly awaitable mock task
+    mock_task = AsyncMock()
+
+    # Add a handler
     async def test_handler(params):
-        return {"success": True}
+        return {"result": "success"}
 
-    # Add the handler directly to simulate registration
-    communicator.handlers["test_method"] = test_handler
+    with (
+        patch("fastapi.FastAPI"),
+        patch("uvicorn.Server"),
+        patch("uvicorn.Config"),
+        patch("asyncio.create_task", return_value=mock_task),
+    ):
+        # Register handler
+        await communicator.register_handler("test", test_handler)
 
-    # Mock the ensure_server method
-    with patch.object(communicator, "_ensure_server_running", new_callable=AsyncMock) as mock_ensure:
-        # Call start
+        # Reset server task to simulate it being stopped
+        communicator.server_task = None
+
+        # Call start - should initialize server
         await communicator.start()
 
-        # Check that ensure_server was called
-        mock_ensure.assert_called_once()
+        # Verify server was started
+        assert communicator.server_task is not None
 
-        # Clean up
-        await communicator.stop()
+    # Clean up
+    await communicator.stop()

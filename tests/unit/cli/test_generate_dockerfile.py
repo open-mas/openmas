@@ -54,9 +54,14 @@ def test_generate_dockerfile(temp_project_dir):
     """Test generating a Dockerfile for an agent."""
     os.chdir(temp_project_dir)
 
-    with patch("openmas.deployment.generators.DockerfileGenerator") as mock_generator:
+    with (
+        patch("openmas.deployment.generators.DockerfileGenerator") as mock_generator,
+        patch("asyncio.run") as mock_asyncio_run,
+    ):
         mock_save = MagicMock()
         mock_generator.return_value.save = mock_save
+        # Make asyncio.run return immediately to avoid coroutine warnings
+        mock_asyncio_run.side_effect = lambda coro: None
 
         runner = CliRunner()
         result = runner.invoke(generate_dockerfile, ["test_agent"])

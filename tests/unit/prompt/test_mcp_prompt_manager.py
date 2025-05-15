@@ -112,8 +112,8 @@ class TestMcpPromptManager:
 
         # Test registering the prompt
         with patch("openmas.prompt.providers.mcp.HAS_MCP", True):
-            # Mock the FastMCP and McpPrompt classes for the actual API calls
-            with patch("openmas.prompt.providers.mcp.McpPrompt") as mock_mcp_prompt:
+            # Instead of patching McpPrompt directly, patch the import inside the function
+            with patch("mcp.server.fastmcp.prompts.base.Prompt") as mock_mcp_prompt:
                 mock_prompt_instance = MagicMock()
                 mock_mcp_prompt.from_function.return_value = mock_prompt_instance
 
@@ -165,7 +165,7 @@ class TestMcpPromptManager:
         # Mock HAS_MCP and the MCP Prompt class
         with (
             patch("openmas.prompt.providers.mcp.HAS_MCP", True),
-            patch("openmas.prompt.providers.mcp.McpPrompt") as mock_mcp_prompt,
+            patch("mcp.server.fastmcp.prompts.base.Prompt") as mock_mcp_prompt,
         ):
             mock_prompt_instance = MagicMock()
             mock_mcp_prompt.from_function.return_value = mock_prompt_instance
@@ -251,25 +251,33 @@ class TestMcpPromptManager:
         )
         prompt_manager.get_prompt_by_name.return_value = test_prompt
 
-        # Mock _create_prompt_function to return an actual function
-        async def mock_prompt_fn(**kwargs):
-            return []
+        # Mock the add_prompt method to ensure it is correctly awaitable
+        # Unlike the other tests, let's patch with a synchronous add_prompt method that returns False
+        mock_server.add_prompt = MagicMock(return_value=False)
 
-        # Mock add_prompt to return False (indicating registration failure)
-        mock_server.add_prompt = AsyncMock(return_value=False)
+        # Create a mock function for _create_prompt_function
+        async def mock_create_prompt_function(prompt_name):
+            async def mock_prompt_fn(**kwargs):
+                return []
 
-        # Mock HAS_MCP
+            return mock_prompt_fn
+
+        # Mock HAS_MCP and also patch the internal import of McpPrompt
         with (
             patch("openmas.prompt.providers.mcp.HAS_MCP", True),
-            patch.object(manager, "_create_prompt_function", AsyncMock(return_value=mock_prompt_fn)),
+            patch("mcp.server.fastmcp.prompts.base.Prompt") as mock_mcp_prompt,
+            patch.object(manager, "_create_prompt_function", mock_create_prompt_function),
         ):
-            # Call the method under test - the actual implementation will return registered names
-            # even if the server returns False for some reason
+            mock_prompt_instance = MagicMock()
+            mock_mcp_prompt.from_function.return_value = mock_prompt_instance
+
+            # Call the method under test
             result = await manager.register_all_prompts_with_server(mock_server)
 
-            # The implementation still adds the prompt name to registered names
-            assert len(result) == 1, "Expected 1 prompt to be registered"
-            mock_server.add_prompt.assert_called_once()
+            # Since we're setting up the test to have the add_prompt call return False,
+            # no prompts should be registered
+            assert len(result) == 0, "No prompts should be registered when server returns False"
+            mock_server.add_prompt.assert_called_once_with(mock_prompt_instance)
 
     @pytest.mark.asyncio
     async def test_register_all_prompts_with_server_exception(self, prompt_manager, mock_server):
@@ -377,16 +385,17 @@ class TestMcpPromptManager:
         prompt_manager.get_prompt_by_name.return_value = mock_prompt
 
         # Mock the MCP Prompt class
-        with patch("openmas.prompt.providers.mcp.McpPrompt") as mock_mcp_prompt:
+        with patch("mcp.server.fastmcp.prompts.base.Prompt") as mock_mcp_prompt:
             mock_prompt_instance = MagicMock()
             mock_mcp_prompt.from_function.return_value = mock_prompt_instance
 
             # Call the method under test
             await mcp_prompt_manager.register_all_prompts_with_server(mock_server)
 
-            # Verify no warning about MCP not being available was logged
-            for record in caplog.records:
-                assert "MCP is not installed" not in record.message, "Warning was logged when MCP is available"
+            # Verify no warning about MCP not being installed was logged
+            assert not any(
+                "MCP is not installed" in record.message for record in caplog.records if record.levelname == "WARNING"
+            )
 
     @pytest.mark.asyncio
     @patch("openmas.prompt.providers.mcp.HAS_MCP", False)

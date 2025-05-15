@@ -14,6 +14,10 @@ from openmas.exceptions import (
     ServiceNotFoundError,
     ValidationError,
 )
+from tests.utils.warning_filters import catch_warnings_with_filtering, ignore_coroutine_never_awaited
+
+# Apply warning filters for this module
+ignore_coroutine_never_awaited()
 
 
 class ResponseModel(BaseModel):
@@ -171,23 +175,39 @@ class TestHttpClient:
     @pytest.mark.asyncio
     async def test_send_notification_success(self, mock_httpx, communicator_config):
         """Test sending a notification successfully."""
-        mock_client = mock_httpx[1]
+        # Use the context manager to catch and filter specific warnings
+        with catch_warnings_with_filtering(["coroutine '.*' was never awaited", "unclosed"]) as recorded_warnings:
+            mock_client = mock_httpx[1]
 
-        communicator = HttpCommunicator(
-            communicator_config["agent_name"], {"test-service": communicator_config["service_urls"]["test-service"]}
-        )
+            communicator = HttpCommunicator(
+                communicator_config["agent_name"], {"test-service": communicator_config["service_urls"]["test-service"]}
+            )
 
-        # Send a notification
-        await communicator.send_notification("test-service", "test_method", {"param1": "value1"})
+            # Mock the response with proper AsyncMock for async methods
+            mock_response = mock.MagicMock()
+            mock_response.status_code = 200
+            # Make raise_for_status a regular MagicMock since HttpCommunicator.send_notification
+            # needs to handle both awaitable and non-awaitable versions
+            mock_response.raise_for_status = mock.MagicMock()
+            mock_client.post.return_value = mock_response
 
-        # Check that the client was called correctly
-        mock_client.post.assert_called_once()
-        args, kwargs = mock_client.post.call_args
-        assert args[0] == communicator_config["service_urls"]["test-service"]
-        assert "json" in kwargs
-        assert kwargs["json"]["method"] == "test_method"
-        assert kwargs["json"]["params"] == {"param1": "value1"}
-        assert "id" not in kwargs["json"]
+            # Send a notification
+            await communicator.send_notification("test-service", "test_method", {"param1": "value1"})
+
+            # Check that the client was called correctly
+            mock_client.post.assert_called_once()
+            args, kwargs = mock_client.post.call_args
+            assert args[0] == communicator_config["service_urls"]["test-service"]
+            assert "json" in kwargs
+            assert kwargs["json"]["method"] == "test_method"
+            assert kwargs["json"]["params"] == {"param1": "value1"}
+            assert "id" not in kwargs["json"]
+
+            # Verify raise_for_status was called
+            mock_response.raise_for_status.assert_called_once()
+
+            # Verify no unexpected warnings were raised
+            assert len(recorded_warnings) == 0, f"Unexpected warnings: {[str(w.message) for w in recorded_warnings]}"
 
     @pytest.mark.asyncio
     async def test_send_notification_service_not_found(self, mock_httpx, communicator_config):

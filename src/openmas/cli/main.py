@@ -1,6 +1,7 @@
 """Main CLI module for OpenMAS."""
 
 import json
+import logging
 import os
 import platform
 import sys
@@ -8,7 +9,6 @@ import traceback
 from importlib import metadata
 from pathlib import Path
 from typing import Any, Dict, Optional
-import logging
 
 import click
 import typer
@@ -21,7 +21,7 @@ from openmas.cli.project_initializer import ProjectInitializer
 from openmas.cli.prompts import prompts
 from openmas.cli.validate import validate_config
 from openmas.exceptions import ConfigurationError
-from openmas.logging import get_logger, configure_logging, set_global_log_level
+from openmas.logging import configure_logging, get_logger, set_global_log_level
 
 # Import the CLI commands from their respective modules
 # The deploy command will be added separately since it's using typer
@@ -31,34 +31,41 @@ logger = get_logger(__name__)
 
 
 # Enhanced version display for the built-in version option
-def version_callback(ctx, param, value):
+def version_callback(ctx: Optional[click.Context], param: click.Parameter, value: bool) -> None:
     # For testing purposes or direct calls, handle None ctx
     if ctx is None:
         resilient_parsing = False
     else:
-        resilient_parsing = getattr(ctx, 'resilient_parsing', False)
-    
+        resilient_parsing = getattr(ctx, "resilient_parsing", False)
+
     if not value or resilient_parsing:
         return
-    
+
     # Logging is now handled by default quietness and main() function logic
     # No need to suppress logging here anymore.
-    
+
     try:
         # Standard version info
         click.echo(f"OpenMAS, version {__version__}")
-        
+
         click.echo("\nKey Features & Integrations:")
         click.echo("  - HTTP Communicator: Enabled")
-        
+
         # Check for MCP availability
         try:
-            import mcp
-            import importlib.metadata
-            mcp_version = importlib.metadata.version('mcp')
-            click.echo("  - MCP (Model Context Protocol):")
-            click.echo(f"      - SDK Version: {mcp_version}")
-            click.echo("      - Available Communicators: mcp-sse, mcp-stdio")
+            # Try importing mcp using importlib
+            import importlib.util
+
+            mcp_spec = importlib.util.find_spec("mcp")
+            has_mcp = mcp_spec is not None
+
+            if has_mcp:
+                mcp_version = metadata.version("mcp")
+                click.echo("  - MCP (Model Context Protocol):")
+                click.echo(f"      - SDK Version: {mcp_version}")
+                click.echo("      - Available Communicators: mcp-sse, mcp-stdio")
+            else:
+                raise ImportError("Module not found")
         except ImportError:
             # MCP not available
             click.echo("  - MCP (Model Context Protocol): Not installed")
@@ -67,15 +74,20 @@ def version_callback(ctx, param, value):
             click.echo("  - MCP (Model Context Protocol):")
             click.echo("      - SDK Version: unknown")
             click.echo("      - Available Communicators: mcp-sse, mcp-stdio")
-        
+
         # Check for gRPC availability
         try:
-            import grpc
-            import importlib.metadata
-            grpc_version = importlib.metadata.version('grpcio')
-            click.echo("  - gRPC:")
-            click.echo(f"      - SDK Version: {grpc_version}")
-            click.echo("      - Available Communicators: grpc")
+            # Try importing grpc
+            grpc_spec = importlib.util.find_spec("grpc")
+            has_grpc = grpc_spec is not None
+
+            if has_grpc:
+                grpc_version = metadata.version("grpcio")
+                click.echo("  - gRPC:")
+                click.echo(f"      - SDK Version: {grpc_version}")
+                click.echo("      - Available Communicators: grpc")
+            else:
+                raise ImportError("Module not found")
         except ImportError:
             # gRPC not available
             click.echo("  - gRPC: Not installed")
@@ -84,15 +96,22 @@ def version_callback(ctx, param, value):
             click.echo("  - gRPC:")
             click.echo("      - SDK Version: unknown")
             click.echo("      - Available Communicators: grpc")
-        
+
         # Check for MQTT availability
         try:
-            import paho.mqtt
             import importlib.metadata
-            mqtt_version = importlib.metadata.version('paho-mqtt')
-            click.echo("  - MQTT:")
-            click.echo(f"      - SDK Version: {mqtt_version}")
-            click.echo("      - Available Communicators: mqtt")
+
+            # Try importing paho.mqtt in a way that doesn't trigger unused import warnings
+            mqtt_spec = importlib.util.find_spec("paho.mqtt")
+            has_mqtt = mqtt_spec is not None
+
+            if has_mqtt:
+                mqtt_version = importlib.metadata.version("paho-mqtt")
+                click.echo("  - MQTT:")
+                click.echo(f"      - SDK Version: {mqtt_version}")
+                click.echo("      - Available Communicators: mqtt")
+            else:
+                raise ImportError("Module not found")
         except ImportError:
             # MQTT not available
             click.echo("  - MQTT: Not installed")
@@ -103,8 +122,8 @@ def version_callback(ctx, param, value):
             click.echo("      - Available Communicators: mqtt")
     finally:
         # Restore previous logging level - No longer needed
-        pass # Keep finally for structure if other cleanup needed later
-    
+        pass  # Keep finally for structure if other cleanup needed later
+
     # Only exit if ctx is provided (in CLI mode)
     if ctx is not None:
         ctx.exit()
@@ -112,12 +131,12 @@ def version_callback(ctx, param, value):
 
 @click.group()
 @click.option(
-    '--version',
+    "--version",
     is_flag=True,
     callback=version_callback,
     expose_value=False,
     is_eager=True,
-    help="Show the version and exit."
+    help="Show the version and exit.",
 )
 def cli() -> None:
     """Provide CLI tools for managing OpenMAS projects."""
@@ -512,7 +531,7 @@ def info(output_json: bool = False) -> None:
     """
     # Logging is now handled by default quietness and main() function logic
     # No need to suppress logging here anymore.
-    
+
     try:
         # Gather system information
         info_data: Dict[str, Any] = {
@@ -539,19 +558,25 @@ def info(output_json: bool = False) -> None:
                 "mcp": "not installed",
                 "grpc": "not installed",
                 "mqtt": "not installed",
-            }
+            },
         }
 
         # Directly check for module availability first - this is more accurate than metadata
-        # Check for MCP 
+        # Check for MCP
         try:
-            import mcp
-            import importlib.metadata
-            mcp_version = importlib.metadata.version('mcp')
-            info_data["modules"]["mcp"] = True
-            info_data["communicators"]["mcp-sse"] = True
-            info_data["communicators"]["mcp-stdio"] = True
-            info_data["versions"]["mcp"] = mcp_version
+            import importlib.util
+
+            mcp_spec = importlib.util.find_spec("mcp")
+            has_mcp = mcp_spec is not None
+
+            if has_mcp:
+                mcp_version = metadata.version("mcp")
+                info_data["modules"]["mcp"] = True
+                info_data["communicators"]["mcp-sse"] = True
+                info_data["communicators"]["mcp-stdio"] = True
+                info_data["versions"]["mcp"] = mcp_version
+            else:
+                raise ImportError("Module not found")
         except ImportError:
             pass
         except Exception:
@@ -560,15 +585,20 @@ def info(output_json: bool = False) -> None:
             info_data["communicators"]["mcp-sse"] = True
             info_data["communicators"]["mcp-stdio"] = True
             info_data["versions"]["mcp"] = "unknown"
-        
+
         # Check for gRPC
         try:
-            import grpc
-            import importlib.metadata
-            grpc_version = importlib.metadata.version('grpcio')
-            info_data["modules"]["grpc"] = True
-            info_data["communicators"]["grpc"] = True
-            info_data["versions"]["grpc"] = grpc_version
+            # Try importing grpc
+            grpc_spec = importlib.util.find_spec("grpc")
+            has_grpc = grpc_spec is not None
+
+            if has_grpc:
+                grpc_version = metadata.version("grpcio")
+                info_data["modules"]["grpc"] = True
+                info_data["communicators"]["grpc"] = True
+                info_data["versions"]["grpc"] = grpc_version
+            else:
+                raise ImportError("Module not found")
         except ImportError:
             pass
         except Exception:
@@ -576,15 +606,22 @@ def info(output_json: bool = False) -> None:
             info_data["modules"]["grpc"] = True
             info_data["communicators"]["grpc"] = True
             info_data["versions"]["grpc"] = "unknown"
-        
+
         # Check for MQTT
         try:
-            import paho.mqtt
             import importlib.metadata
-            mqtt_version = importlib.metadata.version('paho-mqtt')
-            info_data["modules"]["mqtt"] = True
-            info_data["communicators"]["mqtt"] = True
-            info_data["versions"]["mqtt"] = mqtt_version
+
+            # Try importing paho.mqtt in a way that doesn't trigger unused import warnings
+            mqtt_spec = importlib.util.find_spec("paho.mqtt")
+            has_mqtt = mqtt_spec is not None
+
+            if has_mqtt:
+                mqtt_version = importlib.metadata.version("paho-mqtt")
+                info_data["modules"]["mqtt"] = True
+                info_data["communicators"]["mqtt"] = True
+                info_data["versions"]["mqtt"] = mqtt_version
+            else:
+                raise ImportError("Module not found")
         except ImportError:
             pass
         except Exception:
@@ -606,6 +643,7 @@ def info(output_json: bool = False) -> None:
                     # Double-check communicator registry for any others
                     try:
                         from openmas.communication.base import get_available_communicator_types
+
                         registered_types = get_available_communicator_types()
                         for comm_type in registered_types:
                             if comm_type in communicators_dict:
@@ -624,9 +662,9 @@ def info(output_json: bool = False) -> None:
             click.echo(f"OpenMAS version: {info_data['version']}")
             click.echo(f"Python version: {info_data['python_version']}")
             click.echo(f"Platform: {info_data['platform']}")
-            
+
             click.echo("\nKey Features & Integrations:")
-            
+
             # Format module information
             click.echo("  Core Components:")
             modules_dict = info_data["modules"]
@@ -634,12 +672,12 @@ def info(output_json: bool = False) -> None:
                 for module_name, is_installed in modules_dict.items():
                     status = "✓" if is_installed else "✗"
                     click.echo(f"    {module_name:8} {status}")
-            
+
             # Format communicator information
             click.echo("  Available Communicators:")
             communicators_dict = info_data["communicators"]
             versions_dict = info_data["versions"]
-            
+
             if isinstance(communicators_dict, dict):
                 # Group communicators by their type for better organization
                 grouped_communicators = {
@@ -648,12 +686,12 @@ def info(output_json: bool = False) -> None:
                     "grpc": ["grpc"] if "grpc" in communicators_dict else [],
                     "mqtt": ["mqtt"] if "mqtt" in communicators_dict else [],
                 }
-                
+
                 # Display HTTP communicator first (always available)
                 http_available = communicators_dict.get("http", False)
                 http_status = "✓" if http_available else "✗"
                 click.echo(f"    http       {http_status}")
-                
+
                 # Display MCP communicators with version if available
                 mcp_communicators = grouped_communicators["mcp"]
                 if mcp_communicators and any(communicators_dict.get(c, False) for c in mcp_communicators):
@@ -663,7 +701,7 @@ def info(output_json: bool = False) -> None:
                         comm_available = communicators_dict.get(comm_name, False)
                         comm_status = "✓" if comm_available else "✗"
                         click.echo(f"      {comm_name:10} {comm_status}")
-                
+
                 # Display gRPC communicator with version if available
                 if "grpc" in communicators_dict:
                     grpc_available = communicators_dict.get("grpc", False)
@@ -673,7 +711,7 @@ def info(output_json: bool = False) -> None:
                         click.echo("      grpc       ✓")
                     else:
                         click.echo("    grpc       ✗")
-                
+
                 # Display MQTT communicator with version if available
                 if "mqtt" in communicators_dict:
                     mqtt_available = communicators_dict.get("mqtt", False)
@@ -687,7 +725,7 @@ def info(output_json: bool = False) -> None:
             click.echo("\nFor more information, visit: https://docs.openmas.ai/")
     finally:
         # Restore previous logging level - No longer needed
-        pass # Keep finally for structure if other cleanup needed later
+        pass  # Keep finally for structure if other cleanup needed later
 
 
 def main() -> int:
@@ -730,7 +768,6 @@ def main() -> int:
             # If it's a quiet command, .env is still loaded if present, but without logging.
             # The global log level remains at the default (e.g., WARNING).
             pass
-
 
         cli()
         return 0

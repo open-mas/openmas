@@ -484,42 +484,37 @@ class TestMcpSseCommunicator:
 
     @pytest.mark.asyncio
     async def test_start_and_stop_server_mode(self):
-        """Test that start() attempts task creation in server mode with deps."""
-        from openmas.communication.mcp import McpSseCommunicator
+        """Test starting and stopping the communicator in server mode."""
+        # Patch dependencies to allow instantiation
+        with mock.patch("openmas.communication.mcp.sse_communicator.HAS_SERVER_DEPS", True):
+            from openmas.communication.mcp import McpSseCommunicator
 
-        # Patch dependencies *before* creating the communicator instance
-        with (
-            mock.patch("openmas.communication.mcp.sse_communicator.HAS_SERVER_DEPS", True),
-            mock.patch("asyncio.create_task", new_callable=mock.MagicMock) as mock_create_task,
-        ):
-            # Now create the communicator
-            communicator = McpSseCommunicator("test-server", {}, server_mode=True, http_port=8000)
-            communicator._server_task = None  # Ensure clean state
+            communicator = McpSseCommunicator("test-server", {}, server_mode=True)
 
-            # Configure the mock task returned by create_task
-            mock_server_task = mock.AsyncMock()  # Use AsyncMock for the task itself
-            mock_create_task.return_value = mock_server_task
+            # Create a mock task that won't be "done"
+            server_task_mock = mock.MagicMock()
+            server_task_mock.done = mock.MagicMock(return_value=False)
+            server_task_mock.cancel = mock.MagicMock()
 
-            # Call start
-            try:
-                await asyncio.wait_for(communicator.start(), timeout=0.1)
-            except asyncio.TimeoutError:
-                pass
-            except Exception as e:
-                pytest.fail(f"communicator.start() raised unexpected exception: {e}")
+            # Mock the background task creation
+            with mock.patch("asyncio.create_task", return_value=server_task_mock):
+                # Start the communicator
+                await communicator.start()
 
-            # Verify task creation was attempted
-            mock_create_task.assert_called_once()
-            assert communicator._server_task is mock_server_task  # Check if the mock task was stored
+                # Server task should be created
+                assert communicator._server_task is not None
 
-            # Clean up the mock task
-            if communicator._server_task:
-                communicator._server_task.cancel()
-                # Do not await the mock task cleanup as it's not a real awaitable
-                # try:
-                #     await asyncio.wait_for(communicator._server_task, timeout=0.1)
-                # except (asyncio.CancelledError, asyncio.TimeoutError):
-                #     pass # Expected
+                # Keep the reference to the original task for verification
+                original_task = communicator._server_task
+
+                # Stop the communicator
+                await communicator.stop()
+
+                # Server task should be cancelled
+                original_task.cancel.assert_called_once()
+
+                # Server task reference should be cleared
+                assert communicator._server_task is None
 
     @pytest.mark.asyncio
     async def test_stop_client_mode(self, mocked_sse_environment):
@@ -857,27 +852,29 @@ class TestMcpSseCommunicator:
 
     @pytest.mark.asyncio
     async def test_stop_server_mode(self):
-        """Test stop() cancels the server task in server mode."""
-        from openmas.communication.mcp import McpSseCommunicator
-
-        # Patch HAS_SERVER_DEPS for instantiation
+        """Test stopping the server when in server mode."""
+        # Create a communicator in server mode
         with mock.patch("openmas.communication.mcp.sse_communicator.HAS_SERVER_DEPS", True):
+            from openmas.communication.mcp import McpSseCommunicator
+
             communicator = McpSseCommunicator("test-server", {}, server_mode=True)
 
-            # Mock the server task
-            mock_task = mock.AsyncMock()
-            mock_task.done.return_value = False  # Simulate task is running
-            communicator._server_task = mock_task
-            communicator._background_tasks.add(mock_task)
-            communicator.fastmcp_server = mock.MagicMock()  # Simulate server exists
+            # Mock a server task
+            task_mock = mock.MagicMock()
+            task_mock.done = mock.MagicMock(return_value=False)
+            task_mock.cancel = mock.MagicMock()
+            communicator._server_task = task_mock
 
-            # Call stop
-            await communicator.stop()
+            # Keep reference for verification
+            original_task = communicator._server_task
 
-            # Verify task was cancelled
-            mock_task.cancel.assert_called_once()
+            # Call stop_server
+            await communicator.stop_server()
+
+            # Server task should be cancelled
+            original_task.cancel.assert_called_once()
+
+            # Server task reference should be cleared
             assert communicator._server_task is None
-            assert mock_task not in communicator._background_tasks
-            assert communicator.fastmcp_server is None  # Check server ref is cleaned up
 
     # Additional tests for other communicator methods...

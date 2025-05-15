@@ -11,6 +11,7 @@ from structlog.types import Processor
 # Flag to ensure logging is configured only once by default, or on first get_logger call
 _OPENMAS_LOGGING_CONFIGURED = False
 
+
 def configure_logging(
     log_level: Union[str, int] = logging.WARNING,
     json_format: bool = False,
@@ -58,16 +59,16 @@ def configure_logging(
     # For basicConfig, it's often simpler to let it run if not configured,
     # or manually manage handlers if re-configuration is complex.
     root_logger = logging.getLogger()
-    if not root_logger.hasHandlers(): # Configure basicConfig only if no handlers exist
+    if not root_logger.hasHandlers():  # Configure basicConfig only if no handlers exist
         logging.basicConfig(
             format="%(message)s",
             stream=sys.stdout,
-            level=cast(Union[int, str, None], level),
+            level=cast(Union[int, str], level),
         )
-    else: # If handlers exist, just set the level on the root logger and its handlers
-        root_logger.setLevel(cast(Union[int, str, None], level))
+    else:  # If handlers exist, just set the level on the root logger and its handlers
+        root_logger.setLevel(cast(Union[int, str], level))
         for handler in root_logger.handlers:
-            handler.setLevel(cast(Union[int, str, None], level))
+            handler.setLevel(cast(Union[int, str], level))
 
     _OPENMAS_LOGGING_CONFIGURED = True
 
@@ -99,11 +100,11 @@ def get_logger(name: str) -> BoundLogger:
     Returns:
         A configured logger
     """
-    global _OPENMAS_LOGGING_CONFIGURED
+    # Check if logging is already configured
     if not _OPENMAS_LOGGING_CONFIGURED:
         # If configure_logging hasn't been called explicitly yet (e.g. by cli.main),
         # call it now with default WARNING level to ensure some configuration exists
         # before any logger is used.
-        configure_logging() # Defaults to WARNING
-    
+        configure_logging()  # Defaults to WARNING
+
     return cast(BoundLogger, structlog.get_logger(name))

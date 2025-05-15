@@ -21,8 +21,9 @@ logger = logging.getLogger(__name__)
 
 
 # Type definitions for test cases
-class TestCaseBase(TypedDict, total=False):
-    """Base class for all test cases with common fields."""
+# This is NOT a test class, but a type definition for test cases
+class _TestCaseType(TypedDict, total=False):
+    """Base type definition for test case dictionaries with common fields."""
 
     expected: Dict[str, Any]
     ctx_args: Dict[str, Any]
@@ -139,7 +140,7 @@ async def test_mcp_sse_argument_extraction():
         )
 
         # Test cases for different argument formats
-        test_cases: List[TestCaseBase] = [
+        test_cases: List[_TestCaseType] = [
             # Case 1: Arguments directly in ctx.arguments
             {
                 "ctx_args": {"text": "direct text"},

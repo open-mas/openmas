@@ -4,49 +4,43 @@ This module provides integration with the Model Context Protocol (MCP) version 1
 allowing OpenMAS prompts to be used with MCP services.
 """
 
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Type
+import asyncio
+from typing import Any, Callable, Coroutine, Dict, List, Optional, TypeVar
 
-from openmas.logging import get_logger
+import structlog
+
 from openmas.prompt.base import Prompt, PromptManager, PromptMetadata
 
 # Configure logging
-logger = get_logger(__name__)
+logger = structlog.get_logger(__name__)
 
-# Check if MCP is available
+# Type for generic return values
+T = TypeVar("T")
+
+# Flag to track MCP availability
 HAS_MCP = False
+
+# Import MCP types and handle import errors
 try:
     # Import core MCP modules for version 1.7+
-    from mcp.server.fastmcp import FastMCP
-    from mcp.server.fastmcp.prompts.base import Prompt as McpPrompt
-    from mcp.types import TextContent
+    import mcp.server.fastmcp  # type: ignore[import]
+    import mcp.server.fastmcp.prompts.base  # type: ignore[import]
+    import mcp.types  # type: ignore[import]
+
+    # Define variables in a way that makes mypy happy
+    _McpPrompt = mcp.server.fastmcp.prompts.base.Prompt
+    _FastMCP = mcp.server.fastmcp.FastMCP
+    _TextContent = mcp.types.TextContent
 
     HAS_MCP = True
-    logger.info("MCP SDK 1.7+ is available and configured")
+    logger.debug("MCP imported successfully")
 except ImportError as e:
     logger.debug(f"MCP import failed: {e}")
 
-    # Define placeholder classes for type checking when MCP is not available
-    class McpPrompt:  # type: ignore
-        """Placeholder for MCP Prompt."""
-
-        @classmethod
-        def from_function(
-            cls: Type["McpPrompt"], fn: Optional[Callable] = None, name: str = "", description: str = ""
-        ) -> "McpPrompt":
-            """Placeholder for MCP Prompt.from_function."""
-            return cls()
-
-    class FastMCP:  # type: ignore
-        """Placeholder for MCP FastMCP."""
-
-        pass
-
-    class TextContent:  # type: ignore
-        """Placeholder for MCP TextContent."""
-
-        def __init__(self, type: str = "text", text: str = "") -> None:
-            self.type = type
-            self.text = text
+    # Create stub classes that will never be used at runtime (only for type checking)
+    _McpPrompt = None  # type: ignore
+    _FastMCP = None  # type: ignore
+    _TextContent = None  # type: ignore
 
 
 class McpPromptManager(PromptManager):
@@ -153,7 +147,7 @@ class McpPromptManager(PromptManager):
         # Register each prompt with the server
         for metadata in prompt_metadatas:
             # Load the prompt
-            prompt = await self.get_prompt(metadata.id)
+            prompt = await self.get_prompt_by_name(metadata.name)
             if not prompt:
                 logger.warning(f"Could not load prompt {metadata.id}")
                 continue
@@ -166,17 +160,37 @@ class McpPromptManager(PromptManager):
                     continue
 
                 # Create MCP Prompt object using the MCP SDK's interface
-                mcp_prompt = McpPrompt.from_function(
-                    fn=prompt_fn,
-                    name=metadata.name,
-                    description=metadata.description or "",
-                )
+                if HAS_MCP:
+                    # Import and use the actual MCP types
+                    from mcp.server.fastmcp.prompts.base import Prompt as McpPrompt  # type: ignore[import]
 
-                # Add the prompt to the MCP server
-                server.add_prompt(mcp_prompt)
-                # Only add to registered names if successful (no exception)
-                registered_prompt_names.append(metadata.name)
-                logger.info(f"Registered prompt {metadata.name} with MCP server")
+                    mcp_prompt = McpPrompt.from_function(  # type: ignore[attr-defined]
+                        fn=prompt_fn,
+                        name=metadata.name,
+                        description=metadata.description or "",
+                    )
+
+                    # Add the prompt to the MCP server, handling different types of add_prompt methods
+                    success = False
+                    add_prompt_method = server.add_prompt
+
+                    # Is it an awaitable?
+                    if asyncio.iscoroutinefunction(add_prompt_method):
+                        # Direct awaitable function
+                        result = await add_prompt_method(mcp_prompt)
+                        success = result is not False  # Only consider explicit False as failure
+                    else:
+                        # Regular synchronous call
+                        result = add_prompt_method(mcp_prompt)
+                        # Some implementations might return a boolean success indicator
+                        success = result is not False
+
+                    if success:
+                        # Add to registered names if successful
+                        registered_prompt_names.append(metadata.name)
+                        logger.info(f"Registered prompt {metadata.name} with MCP server")
+                    else:
+                        logger.warning(f"Failed to register prompt {metadata.name} with MCP server")
             except Exception as e:
                 logger.error(f"Error registering prompt {metadata.name}: {str(e)}")
                 # Do not add to registered_prompt_names when an exception occurs
@@ -203,6 +217,10 @@ class McpPromptManager(PromptManager):
         if not prompt:
             logger.warning(f"Prompt not found: {prompt_name}")
             return None
+
+        # Import the necessary MCP type only when needed (within the function)
+        # This ensures the import is only attempted when HAS_MCP is True
+        from mcp.types import TextContent  # type: ignore[import]
 
         # Define an async function that returns MCP-compatible message format
         async def prompt_function(**kwargs: Any) -> List[Dict[str, Any]]:

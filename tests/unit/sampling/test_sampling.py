@@ -339,7 +339,8 @@ class TestBaseSampler:
 
 
 # Create a protocol implementation for testing
-class TestSamplerImplementation(BaseSampler):
+# This is NOT a test class, but a helper implementation for testing the protocol
+class _TestSamplerImplementation(BaseSampler):
     """Concrete implementation of BaseSampler for testing."""
 
     async def sample(self, context, model=None):
@@ -352,7 +353,7 @@ class TestSamplerProtocol:
 
     def test_protocol_recognition(self):
         """Test that a class implementing the protocol is recognized."""
-        sampler = TestSamplerImplementation()
+        sampler = _TestSamplerImplementation()
         assert isinstance(sampler, SamplerProtocol)
 
     def test_protocol_non_recognition(self):
