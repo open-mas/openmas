@@ -87,7 +87,10 @@ def test_dotenv_loading_parent_dir(cli_runner, tmp_path):
 def test_no_dotenv_file(cli_runner, tmp_path):
     """Test behavior when no .env file is found."""
     with patch("openmas.cli.main.load_dotenv") as mock_load_dotenv:
-        with patch("openmas.cli.main.logger") as mock_logger:
+        # Patch get_logger in the context of openmas.cli.main
+        with patch("openmas.cli.main.get_logger") as mock_get_logger:
+            # Configure the mock for get_logger itself to return another mock (for the logger instance)
+            mock_logger_instance = mock_get_logger.return_value
             with patch("openmas.cli.main.cli"):
                 # Mock current directory
                 with patch("os.getcwd", return_value=str(tmp_path)):
@@ -101,8 +104,10 @@ def test_no_dotenv_file(cli_runner, tmp_path):
         # Check that load_dotenv was not called
         mock_load_dotenv.assert_not_called()
 
-        # Check that a debug log message was generated
-        mock_logger.debug.assert_called_once_with("No .env file found in current or parent directory.")
+        # Check that get_logger was called (implicitly, it must have been to log anything)
+        mock_get_logger.assert_called()
+        # Check that a debug log message was generated on the logger instance returned by get_logger
+        mock_logger_instance.debug.assert_called_once_with("No .env file found in current or parent directory.")
 
 
 def test_integration_with_env_vars(cli_runner, tmp_path):

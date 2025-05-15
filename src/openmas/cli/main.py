@@ -8,6 +8,7 @@ import traceback
 from importlib import metadata
 from pathlib import Path
 from typing import Any, Dict, Optional
+import logging
 
 import click
 import typer
@@ -20,7 +21,7 @@ from openmas.cli.project_initializer import ProjectInitializer
 from openmas.cli.prompts import prompts
 from openmas.cli.validate import validate_config
 from openmas.exceptions import ConfigurationError
-from openmas.logging import get_logger
+from openmas.logging import get_logger, configure_logging, set_global_log_level
 
 # Import the CLI commands from their respective modules
 # The deploy command will be added separately since it's using typer
@@ -29,8 +30,95 @@ from openmas.logging import get_logger
 logger = get_logger(__name__)
 
 
+# Enhanced version display for the built-in version option
+def version_callback(ctx, param, value):
+    # For testing purposes or direct calls, handle None ctx
+    if ctx is None:
+        resilient_parsing = False
+    else:
+        resilient_parsing = getattr(ctx, 'resilient_parsing', False)
+    
+    if not value or resilient_parsing:
+        return
+    
+    # Logging is now handled by default quietness and main() function logic
+    # No need to suppress logging here anymore.
+    
+    try:
+        # Standard version info
+        click.echo(f"OpenMAS, version {__version__}")
+        
+        click.echo("\nKey Features & Integrations:")
+        click.echo("  - HTTP Communicator: Enabled")
+        
+        # Check for MCP availability
+        try:
+            import mcp
+            import importlib.metadata
+            mcp_version = importlib.metadata.version('mcp')
+            click.echo("  - MCP (Model Context Protocol):")
+            click.echo(f"      - SDK Version: {mcp_version}")
+            click.echo("      - Available Communicators: mcp-sse, mcp-stdio")
+        except ImportError:
+            # MCP not available
+            click.echo("  - MCP (Model Context Protocol): Not installed")
+        except Exception:
+            # MCP is available but version couldn't be determined
+            click.echo("  - MCP (Model Context Protocol):")
+            click.echo("      - SDK Version: unknown")
+            click.echo("      - Available Communicators: mcp-sse, mcp-stdio")
+        
+        # Check for gRPC availability
+        try:
+            import grpc
+            import importlib.metadata
+            grpc_version = importlib.metadata.version('grpcio')
+            click.echo("  - gRPC:")
+            click.echo(f"      - SDK Version: {grpc_version}")
+            click.echo("      - Available Communicators: grpc")
+        except ImportError:
+            # gRPC not available
+            click.echo("  - gRPC: Not installed")
+        except Exception:
+            # gRPC is available but version couldn't be determined
+            click.echo("  - gRPC:")
+            click.echo("      - SDK Version: unknown")
+            click.echo("      - Available Communicators: grpc")
+        
+        # Check for MQTT availability
+        try:
+            import paho.mqtt
+            import importlib.metadata
+            mqtt_version = importlib.metadata.version('paho-mqtt')
+            click.echo("  - MQTT:")
+            click.echo(f"      - SDK Version: {mqtt_version}")
+            click.echo("      - Available Communicators: mqtt")
+        except ImportError:
+            # MQTT not available
+            click.echo("  - MQTT: Not installed")
+        except Exception:
+            # MQTT is available but version couldn't be determined
+            click.echo("  - MQTT:")
+            click.echo("      - SDK Version: unknown")
+            click.echo("      - Available Communicators: mqtt")
+    finally:
+        # Restore previous logging level - No longer needed
+        pass # Keep finally for structure if other cleanup needed later
+    
+    # Only exit if ctx is provided (in CLI mode)
+    if ctx is not None:
+        ctx.exit()
+
+
 @click.group()
-@click.version_option(version=__version__, prog_name="OpenMAS")
+@click.option(
+    '--version',
+    is_flag=True,
+    callback=version_callback,
+    expose_value=False,
+    is_eager=True,
+    help="Show the version and exit."
+)
 def cli() -> None:
     """Provide CLI tools for managing OpenMAS projects."""
     pass
@@ -422,78 +510,227 @@ def info(output_json: bool = False) -> None:
     This command displays the OpenMAS version, Python version,
     and information about installed optional modules.
     """
-    # Gather system information
-    info_data: Dict[str, Any] = {
-        "version": __version__,
-        "python_version": f"{platform.python_version()} ({platform.python_implementation()})",
-        "platform": platform.platform(),
-        "modules": {
-            # Indicate which modules are included in the base package
-            "base": True,
-            "http": True,
-            # Check if optional modules are available using version detection
-            "mcp": False,
-            "grpc": False,
-            "mqtt": False,
-        },
-    }
-
-    # Try to safely determine if optional modules are available
+    # Logging is now handled by default quietness and main() function logic
+    # No need to suppress logging here anymore.
+    
     try:
-        # Check for extras using importlib.metadata
-        dist = metadata.distribution("openmas")
-        if dist:
-            # Check extras
+        # Gather system information
+        info_data: Dict[str, Any] = {
+            "version": __version__,
+            "python_version": f"{platform.python_version()} ({platform.python_implementation()})",
+            "platform": platform.platform(),
+            "modules": {
+                # Indicate which modules are included in the base package
+                "base": True,
+                "http": True,
+                # Check if optional modules are available using version detection
+                "mcp": False,
+                "grpc": False,
+                "mqtt": False,
+            },
+            "communicators": {
+                "http": True,  # Always available
+                "mcp-sse": False,
+                "mcp-stdio": False,
+                "grpc": False,
+                "mqtt": False,
+            },
+            "versions": {
+                "mcp": "not installed",
+                "grpc": "not installed",
+                "mqtt": "not installed",
+            }
+        }
+
+        # Directly check for module availability first - this is more accurate than metadata
+        # Check for MCP 
+        try:
+            import mcp
+            import importlib.metadata
+            mcp_version = importlib.metadata.version('mcp')
+            info_data["modules"]["mcp"] = True
+            info_data["communicators"]["mcp-sse"] = True
+            info_data["communicators"]["mcp-stdio"] = True
+            info_data["versions"]["mcp"] = mcp_version
+        except ImportError:
+            pass
+        except Exception:
+            # MCP is available but version couldn't be determined
+            info_data["modules"]["mcp"] = True
+            info_data["communicators"]["mcp-sse"] = True
+            info_data["communicators"]["mcp-stdio"] = True
+            info_data["versions"]["mcp"] = "unknown"
+        
+        # Check for gRPC
+        try:
+            import grpc
+            import importlib.metadata
+            grpc_version = importlib.metadata.version('grpcio')
+            info_data["modules"]["grpc"] = True
+            info_data["communicators"]["grpc"] = True
+            info_data["versions"]["grpc"] = grpc_version
+        except ImportError:
+            pass
+        except Exception:
+            # gRPC is available but version couldn't be determined
+            info_data["modules"]["grpc"] = True
+            info_data["communicators"]["grpc"] = True
+            info_data["versions"]["grpc"] = "unknown"
+        
+        # Check for MQTT
+        try:
+            import paho.mqtt
+            import importlib.metadata
+            mqtt_version = importlib.metadata.version('paho-mqtt')
+            info_data["modules"]["mqtt"] = True
+            info_data["communicators"]["mqtt"] = True
+            info_data["versions"]["mqtt"] = mqtt_version
+        except ImportError:
+            pass
+        except Exception:
+            # MQTT is available but version couldn't be determined
+            info_data["modules"]["mqtt"] = True
+            info_data["communicators"]["mqtt"] = True
+            info_data["versions"]["mqtt"] = "unknown"
+
+        # Try to safely determine if optional modules are available via package metadata
+        # This is helpful to understand if something SHOULD be available but isn't
+        try:
+            # Check for extras using importlib.metadata
+            dist = metadata.distribution("openmas")
+            if dist:
+                # Try to validate our detection using the package metadata
+                modules_dict = info_data["modules"]
+                communicators_dict = info_data["communicators"]
+                if isinstance(modules_dict, dict) and isinstance(communicators_dict, dict):
+                    # Double-check communicator registry for any others
+                    try:
+                        from openmas.communication.base import get_available_communicator_types
+                        registered_types = get_available_communicator_types()
+                        for comm_type in registered_types:
+                            if comm_type in communicators_dict:
+                                communicators_dict[comm_type] = True
+                    except Exception:
+                        # If we can't check registry, that's fine - use what we already have
+                        pass
+        except Exception:
+            # If we can't determine extras, that's fine - use defaults
+            pass
+
+        # Output in requested format
+        if output_json:
+            click.echo(json.dumps(info_data, indent=2))
+        else:
+            click.echo(f"OpenMAS version: {info_data['version']}")
+            click.echo(f"Python version: {info_data['python_version']}")
+            click.echo(f"Platform: {info_data['platform']}")
+            
+            click.echo("\nKey Features & Integrations:")
+            
+            # Format module information
+            click.echo("  Core Components:")
             modules_dict = info_data["modules"]
             if isinstance(modules_dict, dict):
-                # Check requires_dist attribute for extras
-                requires_dist = getattr(dist, "requires_dist", []) or []
-                requires_str = " ".join(requires_dist)
+                for module_name, is_installed in modules_dict.items():
+                    status = "✓" if is_installed else "✗"
+                    click.echo(f"    {module_name:8} {status}")
+            
+            # Format communicator information
+            click.echo("  Available Communicators:")
+            communicators_dict = info_data["communicators"]
+            versions_dict = info_data["versions"]
+            
+            if isinstance(communicators_dict, dict):
+                # Group communicators by their type for better organization
+                grouped_communicators = {
+                    "http": ["http"],
+                    "mcp": [c for c in sorted(communicators_dict.keys()) if c.startswith("mcp-")],
+                    "grpc": ["grpc"] if "grpc" in communicators_dict else [],
+                    "mqtt": ["mqtt"] if "mqtt" in communicators_dict else [],
+                }
+                
+                # Display HTTP communicator first (always available)
+                http_available = communicators_dict.get("http", False)
+                http_status = "✓" if http_available else "✗"
+                click.echo(f"    http       {http_status}")
+                
+                # Display MCP communicators with version if available
+                mcp_communicators = grouped_communicators["mcp"]
+                if mcp_communicators and any(communicators_dict.get(c, False) for c in mcp_communicators):
+                    mcp_version = versions_dict.get("mcp", "unknown")
+                    click.echo(f"    MCP ({mcp_version}):")
+                    for comm_name in mcp_communicators:
+                        comm_available = communicators_dict.get(comm_name, False)
+                        comm_status = "✓" if comm_available else "✗"
+                        click.echo(f"      {comm_name:10} {comm_status}")
+                
+                # Display gRPC communicator with version if available
+                if "grpc" in communicators_dict:
+                    grpc_available = communicators_dict.get("grpc", False)
+                    if grpc_available:
+                        grpc_version = versions_dict.get("grpc", "unknown")
+                        click.echo(f"    gRPC ({grpc_version}):")
+                        click.echo("      grpc       ✓")
+                    else:
+                        click.echo("    grpc       ✗")
+                
+                # Display MQTT communicator with version if available
+                if "mqtt" in communicators_dict:
+                    mqtt_available = communicators_dict.get("mqtt", False)
+                    if mqtt_available:
+                        mqtt_version = versions_dict.get("mqtt", "unknown")
+                        click.echo(f"    MQTT ({mqtt_version}):")
+                        click.echo("      mqtt       ✓")
+                    else:
+                        click.echo("    mqtt       ✗")
 
-                if "mcp" in requires_str:
-                    modules_dict["mcp"] = True
-                if "grpc" in requires_str:
-                    modules_dict["grpc"] = True
-                if "mqtt" in requires_str:
-                    modules_dict["mqtt"] = True
-    except Exception:
-        # If we can't determine extras, that's fine - just use defaults
-        pass
-
-    # Output in requested format
-    if output_json:
-        click.echo(json.dumps(info_data, indent=2))
-    else:
-        click.echo(f"OpenMAS version: {info_data['version']}")
-        click.echo(f"Python version: {info_data['python_version']}")
-        click.echo(f"Platform: {info_data['platform']}")
-        click.echo("\nOptional modules:")
-
-        modules_dict = info_data["modules"]
-        if isinstance(modules_dict, dict):
-            for module_name, is_installed in modules_dict.items():
-                status = "✓" if is_installed else "✗"
-                click.echo(f"  {module_name:10} {status}")
-
-        click.echo("\nFor more information, visit: https://docs.openmas.ai/")
+            click.echo("\nFor more information, visit: https://docs.openmas.ai/")
+    finally:
+        # Restore previous logging level - No longer needed
+        pass # Keep finally for structure if other cleanup needed later
 
 
 def main() -> int:
     """Main entry point for the OpenMAS CLI tool."""
+    # Configure logging with default (quieter) level first
+    configure_logging()
+
     try:
-        # Load .env file if it exists in the current working directory (project root)
+        # Determine if a "quiet" command is being run to suppress .env loading logs
+        # and to prevent setting INFO level globally
+        is_quiet_command = False
+        if "--version" in sys.argv:
+            is_quiet_command = True
+        # Check if 'info' is the command being run.
+        elif len(sys.argv) > 1 and sys.argv[1] == "info":
+            is_quiet_command = True
+
+        # Load .env file if it exists
         dotenv_path = Path(os.getcwd()) / ".env"
+        alt_dotenv_path = Path(os.getcwd()).parent / ".env"
+        loaded_env_path = None
+
         if dotenv_path.exists() and dotenv_path.is_file():
             load_dotenv(dotenv_path=str(dotenv_path), override=True)
-            logger.info(f"Loaded environment variables from: {dotenv_path}")
-        else:
-            # Check common alternative: .env in parent if CWD is a subdir
-            alt_dotenv_path = Path(os.getcwd()).parent / ".env"
-            if alt_dotenv_path.exists() and alt_dotenv_path.is_file():
-                load_dotenv(dotenv_path=str(alt_dotenv_path), override=True)
-                logger.info(f"Loaded environment variables from: {alt_dotenv_path}")
+            loaded_env_path = dotenv_path
+        elif alt_dotenv_path.exists() and alt_dotenv_path.is_file():
+            load_dotenv(dotenv_path=str(alt_dotenv_path), override=True)
+            loaded_env_path = alt_dotenv_path
+
+        if not is_quiet_command:
+            # For most commands, set logging to INFO after initial configuration
+            set_global_log_level(logging.INFO)
+            if loaded_env_path:
+                # Use the local logger instance for this specific message
+                get_logger(__name__).info(f"Loaded environment variables from: {loaded_env_path}")
             else:
-                logger.debug("No .env file found in current or parent directory.")
+                # Use the local logger instance for this specific message
+                get_logger(__name__).debug("No .env file found in current or parent directory.")
+        else:
+            # If it's a quiet command, .env is still loaded if present, but without logging.
+            # The global log level remains at the default (e.g., WARNING).
+            pass
+
 
         cli()
         return 0
