@@ -35,8 +35,10 @@ def test_prepare_file_actions_default():
     assert str(project_path / "extensions" / "__init__.py") in action_paths  # type: ignore
     assert str(project_path / "tests" / "__init__.py") in action_paths  # type: ignore
 
-    # Verify content of README.md
-    assert actions[project_path / "README.md"] == "# Test Project\n\nA OpenMAS project.\n"
+    # Verify content of README.md (check for key heading and onboarding phrase)
+    readme_content = actions[project_path / "README.md"]
+    assert "# Test Project" in readme_content
+    assert "Welcome to your OpenMAS project!" in readme_content
 
     # Verify requirements.txt
     assert "openmas>=0.2.0" in actions[project_path / "requirements.txt"]

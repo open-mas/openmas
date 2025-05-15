@@ -44,7 +44,37 @@ class ProjectInitializer:
                 actions[init_file] = f'"""OpenMAS {subdir} package."""\n'
 
         # Create README.md
-        actions[self.project_path / "README.md"] = f"# {self.project_display_name}\n\nA OpenMAS project.\n"
+        actions[self.project_path / "README.md"] = f"""
+# {self.project_display_name}
+
+Welcome to your OpenMAS project!
+
+## Project Structure & Multi-Agent Patterns
+- Place your agents in the `agents/` directory. Each agent should be in its own subdirectory (e.g., `agents/sample_agent`).
+- For multi-agent systems, add more agent directories and reference them in `openmas_project.yml`.
+- Common patterns: tool provider/consumer, orchestrator/worker, etc. See [OpenMAS docs](../docs/) for more.
+
+## MCP Integration
+- To enable MCP, configure your `openmas_project.yml` with the correct communicator and endpoints.
+- See the generated agent templates and [OpenMAS MCP Guide](../docs/guides/mcp_integration.md) for details.
+
+## Dependency Management
+- All required dependencies are listed in `requirements.txt`.
+- Install with `pip install -r requirements.txt`.
+
+## Optional Dependencies
+OpenMAS supports optional communicators (MQTT, gRPC, etc.) via extras:
+- For MQTT support: `pip install openmas[mqtt]`
+- For gRPC support: `pip install openmas[grpc]`
+If you use these communicators, add the relevant line to your `requirements.txt` or install them manually.
+
+## Testing
+- Use `pytest` for unit/integration tests. See `tests/` for examples.
+
+## Further Documentation
+- See [docs/](../docs/) for API reference, guides, and advanced configuration.
+"""
+
 
         # Create dependency files based on the chosen option
         if self.poetry:
@@ -76,7 +106,18 @@ build-backend = "poetry.core.masonry.api"
 """
         else:
             # Create requirements.txt
-            actions[self.project_path / "requirements.txt"] = "openmas>=0.2.0\n"
+            actions[self.project_path / "requirements.txt"] = (
+                "openmas>=0.2.0\n"
+                "mcp>=0.1.0\n"
+                "fastapi>=0.95.0\n"
+                "uvicorn[standard]>=0.20.0\n"
+                "pytest>=7.0.0\n"
+                "\n"
+                "# Optional: Add the following if you need MQTT or gRPC communicator support\n"
+                "# openmas[mqtt]\n"
+                "# openmas[grpc]\n"
+            )
+
 
         # Create .gitignore
         gitignore_content = "__pycache__/\n*.py[cod]\n*$py.class\n.env\n.venv\nenv/\nvenv/\nENV/\nenv.bak/\nvenv.bak/\n"
@@ -106,26 +147,63 @@ build-backend = "poetry.core.masonry.api"
             # Create agent.py file with a simple agent implementation
             actions[
                 sample_agent_dir / "agent.py"
-            ] = '''"""Sample agent implementation."""
+            ] = '''"""
+Sample agent implementation for OpenMAS.
 
+This template demonstrates Dependency Injection, graceful shutdown, and best practices for testable agents.
+
+To add more agents, copy this file into a new directory under `agents/` and update `openmas_project.yml`.
+"""
+import asyncio
+import signal
 from openmas.agent import BaseAgent
 
 class Agent(BaseAgent):
-    """A simple OpenMAS agent."""
+    """A robust, testable OpenMAS agent with graceful shutdown."""
+
+    def __init__(self, shutdown_event: asyncio.Event = None, **kwargs):
+        super().__init__(**kwargs)
+        self.shutdown_event = shutdown_event or asyncio.Event()
 
     async def setup(self) -> None:
-        """Set up the agent."""
+        """Set up the agent. Inject dependencies here for testability."""
         self.logger.info("Setting up sample agent")
+        # Example: self.db = kwargs.get('db')
 
     async def run(self) -> None:
-        """Run the agent."""
+        """Run the agent main loop. Supports graceful shutdown and testability."""
         self.logger.info("Sample agent is running")
-        # Implement your agent logic here
-        await self.wait_for_shutdown()
+        try:
+            while not self.shutdown_event.is_set():
+                # Agent logic here
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            self.logger.info("Run loop cancelled")
+        except Exception as e:
+            self.logger.error(f"Agent encountered an error: {e}")
+            raise
 
     async def shutdown(self) -> None:
-        """Shut down the agent."""
+        """Shut down the agent gracefully."""
         self.logger.info("Shutting down sample agent")
+        self.shutdown_event.set()
+
+# Graceful shutdown handler for standalone runs
+def _handle_signals(agent):
+    loop = asyncio.get_event_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, lambda: asyncio.create_task(agent.shutdown()))
+
+# Example main for running the agent standalone (for testing)
+if __name__ == "__main__":
+    shutdown_event = asyncio.Event()
+    agent = Agent(shutdown_event=shutdown_event)
+    _handle_signals(agent)
+    asyncio.run(agent.setup())
+    try:
+        asyncio.run(agent.run())
+    finally:
+        asyncio.run(agent.shutdown())
 '''
 
             # Add the sample agent to the project config
@@ -143,30 +221,69 @@ class Agent(BaseAgent):
                 # Create agent.py file
                 actions[
                     agent_dir / "agent.py"
-                ] = """'''MCP Server Agent.'''
+                ] = '''"""
+MCP Server Agent template for OpenMAS.
 
+- Demonstrates Dependency Injection, graceful shutdown, and health check endpoint.
+- See OpenMAS docs for more on MCP integration and agent patterns.
+"""
 import asyncio
+import signal
+from fastapi import FastAPI
 from openmas.agent import BaseAgent
 
 class McpServerAgent(BaseAgent):
-    '''MCP Server agent implementation.'''
+    def __init__(self, shutdown_event: asyncio.Event = None, **kwargs):
+        super().__init__(**kwargs)
+        self.shutdown_event = shutdown_event or asyncio.Event()
+        self.app = FastAPI()
+        self._setup_routes()
+
+    def _setup_routes(self):
+        @self.app.get("/health")
+        async def health():
+            return {"status": "ok"}
 
     async def setup(self) -> None:
-        '''Set up the MCP server.'''
-        # Setup your MCP server here
-        pass
+        """Set up the MCP server. Inject dependencies here."""
+        self.logger.info("Setting up MCP server agent")
+        # Setup code here
 
     async def run(self) -> None:
-        '''Run the MCP server.'''
-        # Run your MCP server here
-        while True:
-            await asyncio.sleep(1)
+        """Run the MCP server. Supports graceful shutdown."""
+        self.logger.info("MCP server agent is running")
+        try:
+            while not self.shutdown_event.is_set():
+                # MCP server logic here
+                await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            self.logger.info("Run loop cancelled")
+        except Exception as e:
+            self.logger.error(f"MCP server encountered an error: {e}")
+            raise
 
     async def shutdown(self) -> None:
-        '''Shut down the MCP server.'''
-        # Shutdown your MCP server here
-        pass
-"""
+        """Shut down the MCP server gracefully."""
+        self.logger.info("Shutting down MCP server agent")
+        self.shutdown_event.set()
+
+# Graceful shutdown handler for standalone runs
+def _handle_signals(agent):
+    loop = asyncio.get_event_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, lambda: asyncio.create_task(agent.shutdown()))
+
+# Example main for running the agent standalone (for testing)
+if __name__ == "__main__":
+    shutdown_event = asyncio.Event()
+    agent = McpServerAgent(shutdown_event=shutdown_event)
+    _handle_signals(agent)
+    asyncio.run(agent.setup())
+    try:
+        asyncio.run(agent.run())
+    finally:
+        asyncio.run(agent.shutdown())
+'''
 
                 # Create openmas.deploy.yaml file
                 actions[

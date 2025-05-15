@@ -13,11 +13,14 @@ Run this example using tox from the project root:
 
 ```bash
 # From the openmas/ directory
-tox -e example-00a-hello-single
+tox -e example-00-hello-agent-00-single
 ```
 
 The example runs the agent without any communicators, focusing purely on the
 most basic agent lifecycle.
+
+> **Note:** You may see warnings from `openmas validate` about missing `shared` and `extensions` directories. These are not required for this minimal example and can be safely ignored.
+
 
 ## Learning Goals
 
