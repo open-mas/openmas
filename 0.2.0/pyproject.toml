@@ -1,0 +1,147 @@
+[tool.poetry]
+name = "openmas"
+version = "0.2.3"
+description = "OpenMAS: Easily Build Smart Multi-Agent Systems"
+authors = ["Wilson Urdaneta <wilson.urdaneta@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+packages = [{include = "openmas", from = "src"}]
+homepage = "https://openmas.ai"
+repository = "https://github.com/openmas-ai/openmas"
+documentation = "https://docs.openmas.ai"
+keywords = ["multi-agent-systems", "mas", "agent", "ai", "mcp", "model-context-protocol", "framework"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
+[tool.poetry.scripts]
+openmas = "openmas.cli:main"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pydantic = "^2.5.0"
+httpx = ">=0.25.0"
+structlog = "^23.2.0"
+fastapi = "^0.115.12"
+pyyaml = "^6.0.1"
+typer = "^0.15.2"
+python-dotenv = "^1.1.0"
+python-chess = "^1.999"
+aiohttp = "^3.11.18"
+httpx-sse = "^0.4.0"
+uvicorn = "^0.34.2"
+filelock = "^3.18.0"
+# Optional dependencies
+mcp = "1.7.1"
+grpcio = { version = "^1.71.0", optional = true }
+grpcio-tools = { version = "^1.71.0", optional = true }
+protobuf = { version = ">=5.26.1,<6.0.0", optional = true }
+paho-mqtt = { version = "^1.6.1", optional = true }
+tqdm = { version = "^4.66.1", optional = true }
+tomli = "^2.2.1"
+
+[tool.poetry.extras]
+mcp = ["mcp"]
+grpc = ["grpcio", "grpcio-tools", "protobuf"]
+mqtt = ["paho-mqtt"]
+tqdm = ["tqdm"]
+all = ["mcp", "grpcio", "grpcio-tools", "protobuf", "paho-mqtt", "tqdm"]
+
+[tool.poetry.group.dev.dependencies]
+# Testing
+pytest = "^7.4.0"
+pytest-asyncio = "^0.21.1"
+pytest-cov = "^4.1.0"
+pytest-timeout = "^2.3.1"
+pytest-mock = "^3.14.0"
+# Linting and formatting
+black = "==25.1.0"
+isort = "==6.0.1"
+flake8 = "==7.2.0"
+mypy = "==1.15.0"
+# Type stubs
+types-requests = "^2.31.0.2"
+types-pyyaml = "^6.0.12.20250402"
+types-setuptools = "^79.0.0.20250422"
+types-paho-mqtt = "^1.6.0.6"
+types-filelock = "^3.2.7"
+# Note: tomli doesn't have type stubs available, so we use inline type ignores
+# Dev tooling
+tox = "^4.25.0"
+pre-commit = "^4.2.0"
+build = "^1.0.3"
+# Documentation
+mkdocs = "==1.6.1"
+mkdocs-material = "==9.6.12"
+mkdocstrings = {version = "==0.29.1", extras = ["python"]}
+pymdown-extensions = "==10.15"
+mkdocs-include-markdown-plugin = "==7.1.5"
+types-tqdm = "^4.67.0.20250417"
+grpcio-tools = "^1.71.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+exclude = '''
+/( \
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 120
+skip_glob = ["*/.tox/*"] # Exclude .tox directory
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+
+[tool.pytest]
+testpaths = ["tests"]
+norecursedirs = ["tests/backup", "model-context-protocol-examples"]
+python_files = "test_*.py"
+asyncio_mode = "auto"
+markers = [
+    "grpc: marks tests that require grpc dependencies",
+    "mqtt: marks tests that require mqtt dependencies",
+    "mcp: marks tests that require mcp dependencies",
+    "integration: marks integration tests"
+]
+
+[tool.pre_commit]
+hooks = [
+    "trailing-whitespace",
+    "end-of-file-fixer",
+    "check-yaml",
+    "check-toml",
+    "black",
+    "isort",
+    "flake8",
+    "mypy",
+    "pytest"
+]

@@ -1,22 +1,90 @@
-"""OpenMAS agent module."""
+"""
+OpenMAS Agent Framework
 
-from openmas.agent.base import BaseAgent
-from openmas.agent.bdi import BdiAgent
-from openmas.agent.mcp import McpAgent, mcp_prompt, mcp_resource, mcp_tool
-from openmas.agent.mcp_client import McpClientAgent
-from openmas.agent.mcp_prompt import PromptMcpAgent
-from openmas.agent.mcp_server import McpServerAgent
-from openmas.agent.spade_bdi_agent import SpadeBdiAgent
+This module provides the core agent framework for OpenMAS, including:
+- Base Agent class with SIMF integration
+- Agent factory for creating and configuring agents
+- Protocol adapter interfaces
+- State management interfaces
+- Exception classes
 
+Based on specifications in:
+- refactoring_work/planning/TASK_basic_agent_framework_implementation.md
+"""
+
+# Core agent classes
+from .base_agent import (
+    Agent,
+    AgentConfig,
+    IMessageHandler,
+    IAgentStateManager,
+    IProtocolAdapter,
+)
+
+# Specialized agent implementations
+from .mcp_agent import (
+    MCPAgent,
+    create_mcp_agent_from_config,
+)
+
+# Factory functions and classes
+from .factory import (
+    AgentFactory,
+    ConfigLoader,
+    default_factory,
+    create_agent_from_config,
+    create_agent_from_file,
+    create_simple_agent,
+    register_agent_type,
+    register_protocol_adapter,
+)
+
+# Exceptions
+from .exceptions import (
+    AgentError,
+    AgentConfigurationError,
+    AgentCreationError,
+    AgentLifecycleError,
+    AgentMessageError,
+    AgentCapabilityError,
+    AgentSessionError,
+    AgentStateError,
+    AgentProtocolError,
+)
+
+# Define what gets exported when using "from openmas.agent import *"
 __all__ = [
-    "BaseAgent",
-    "BdiAgent",
-    "McpAgent",
-    "McpClientAgent",
-    "McpServerAgent",
-    "PromptMcpAgent",
-    "SpadeBdiAgent",
-    "mcp_tool",
-    "mcp_prompt",
-    "mcp_resource",
+    # Core classes
+    "Agent",
+    "AgentConfig",
+    "IMessageHandler", 
+    "IAgentStateManager",
+    "IProtocolAdapter",
+    
+    # Specialized implementations
+    "MCPAgent",
+    
+    # Factory
+    "AgentFactory",
+    "ConfigLoader",
+    "default_factory",
+    
+    # Convenience functions
+    "create_agent_from_config",
+    "create_agent_from_file",
+    "create_simple_agent",
+    "create_mcp_agent_from_config",
+    "register_agent_type",
+    "register_protocol_adapter",
+    
+    # Exceptions
+    "AgentError",
+    "AgentConfigurationError", 
+    "AgentCreationError",
+    "AgentLifecycleError",
+    "AgentMessageError",
+    "AgentCapabilityError",
+    "AgentSessionError",
+    "AgentStateError",
+    "AgentProtocolError",
 ]

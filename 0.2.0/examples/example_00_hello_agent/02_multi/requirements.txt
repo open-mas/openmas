@@ -1,0 +1,9 @@
+openmas>=0.2.0
+mcp>=0.1.0
+fastapi>=0.95.0
+uvicorn[standard]>=0.20.0
+pytest>=7.0.0
+
+# Optional: Add the following if you need MQTT or gRPC communicator support
+# openmas[mqtt]
+# openmas[grpc]

@@ -1,0 +1,23 @@
+name: examples/00_hello_agent/02_multi
+version: 0.1.0
+agents:
+  sender: agents/sender
+  receiver: agents/receiver
+shared_paths:
+- shared
+extension_paths:
+- extensions
+default_config:
+  log_level: INFO
+  communicator_type: http
+  # Defining specific ports for each agent to avoid conflicts
+  communicator_options:
+    sender:
+      http_port: 8001
+    receiver:
+      http_port: 8002
+  # Mapping agent names to their base URLs for HTTP communication
+  service_urls:
+    sender: http://localhost:8001
+    receiver: http://localhost:8002
+dependencies: []

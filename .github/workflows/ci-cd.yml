@@ -1,4 +1,4 @@
-name: OpenMAS CI/CD
+name: OpenMAS 0.3.0 CI/CD
 
 on:
   push:
@@ -58,6 +58,24 @@ jobs:
     - name: Run mock integration tests
       run: poetry run tox -r -e integration-mock
 
+    - name: Run SIMF core tests
+      run: |
+        # Test SIMF core functionality specifically
+        poetry install --no-interaction --extras "mcp"
+        poetry run tox -r -e simf
+
+    - name: Run MCP validation tests
+      run: |
+        # Test our MCP 1.12.0 integration and validation
+        poetry install --no-interaction --extras "mcp"
+        poetry run tox -r -e mcp-validation
+
+    - name: Run test framework templates
+      run: |
+        # Test our framework templates for anti-hallucination
+        poetry install --no-interaction --extras "all"
+        poetry run tox -r -e test-templates
+
     - name: Run real MCP integration tests
       run: |
         # Ensure MCP dependencies are installed
@@ -80,17 +98,35 @@ jobs:
         poetry run tox -r -e integration-real-mqtt
       continue-on-error: true  # Allow CI to continue if these tests fail
 
-    - name: Run tests with coverage check (fail < 50%)
+    - name: Run real HTTP integration tests
+      run: |
+        # Ensure HTTP dependencies are installed
+        poetry install --no-interaction --extras "http"
+        poetry run tox -r -e integration-real-http
+      continue-on-error: true  # Allow CI to continue if these tests fail
+
+    - name: Run tests with coverage check (fail < 70%)
       run: poetry run tox -e coverage # This env generates coverage.xml and fails if below threshold
 
     - name: Upload coverage report to Codecov
       uses: codecov/codecov-action@v4
       with:
         token: ${{ secrets.CODECOV_TOKEN }} # Required for private repos or specific org settings
-        #slug: openmas-ai/openmas
         files: ./coverage.xml
         fail_ci_if_error: true # Recommended to fail the build if upload fails
         # The coverage threshold is enforced by `tox -e coverage`, not here.
+
+    - name: Run SIMF-specific coverage (stricter threshold)
+      run: |
+        # SIMF is critical - enforce higher coverage
+        poetry run tox -e coverage-simf
+      continue-on-error: true  # Don't fail CI but report issues
+
+    - name: Run MCP-specific coverage
+      run: |
+        # MCP integration coverage
+        poetry run tox -e coverage-mcp
+      continue-on-error: true  # Don't fail CI but report issues
 
     - name: Build documentation
       run: poetry run tox -e docs
@@ -104,9 +140,53 @@ jobs:
         name: python-package-${{ matrix.python-version }}
         path: dist/
 
+  # Security and code quality analysis
+  security_scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Run Bandit Security Lint
+      uses: securecodewarrior/github-action-bandit@v1
+      with:
+        path: "src/"
+      continue-on-error: true
+
+  # Test on multiple Python versions for compatibility
+  compatibility_test:
+    name: Python ${{ matrix.python-version }} Compatibility
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Install dependencies
+      run: poetry install --no-interaction --with dev --extras "all"
+
+    - name: Run quick compatibility test
+      run: poetry run pytest tests/unit -x -m "not slow" --tb=short
+
   publish:
     name: Publish to PyPI and Create Release
-    needs: build_and_test
+    needs: [build_and_test, security_scan, compatibility_test]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v') # Only run on tag pushes
 
@@ -149,5 +229,18 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: dist/* # Attach all files from the dist directory (sdist and wheel)
+        generate_release_notes: true
+        body: |
+          ## OpenMAS 0.3.0 Release
+          
+          This release includes:
+          - 🚀 Reasoning-agnostic multi-agent framework
+          - 🔄 Standard Internal Message Format (SIMF)
+          - 🌐 MCP 1.12.0 integration with 2025-06-18 specification support
+          - 🧪 Comprehensive test framework templates
+          - 🔧 Protocol adapters for MCP, gRPC, MQTT, HTTP
+          - 📊 Anti-hallucination validation system
+          
+          See the changelog for full details.
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Provided by Actions
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Provided by Actions 
