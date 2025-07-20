@@ -1,8 +1,8 @@
 # OpenMAS MCP Protocol Adapter
 
-**Status**: ✅ **COMPLETE** (2024-12-28)  
-**Phase**: Phase 2 - MCP Implementation  
-**Version**: OpenMAS 0.3.0  
+**Status**: ✅ **COMPLETE** (2024-12-28)
+**Phase**: Phase 2 - MCP Implementation
+**Version**: OpenMAS 0.3.0
 
 ## Overview
 
@@ -62,7 +62,7 @@ The adapter provides complete bidirectional translation:
 - `tools/call` → `MessageType.TOOL_INVOCATION`
 - `tools/list` → `MessageType.CAPABILITY_INVOCATION`
 - `resources/read` → `MessageType.CAPABILITY_INVOCATION`
-- `result` → `MessageType.TOOL_RESULT` 
+- `result` → `MessageType.TOOL_RESULT`
 - `error` → `MessageType.ERROR_MESSAGE`
 
 ### SIMF → MCP
@@ -128,4 +128,4 @@ translator = MCPMessageTranslator('test')
 
 ---
 
-**Designed following OpenMAS 0.3.0 principles**: Reasoning Agnosticism, Protocol Independence, Type Safety, Anti-Hallucination 
+**Designed following OpenMAS 0.3.0 principles**: Reasoning Agnosticism, Protocol Independence, Type Safety, Anti-Hallucination

@@ -6,10 +6,10 @@ protocols, enabling OpenMAS agents to communicate across different transports
 while maintaining consistency through SIMF translation.
 """
 
-from .mcp import MCPProtocolAdapter, MCPConfig, MCPTransportType
+from .mcp import MCPConfig, MCPProtocolAdapter, MCPTransportType
 
 __all__ = [
     "MCPProtocolAdapter",
-    "MCPConfig", 
+    "MCPConfig",
     "MCPTransportType",
 ]

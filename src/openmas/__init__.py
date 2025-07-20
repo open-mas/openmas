@@ -20,4 +20,4 @@ __author__ = "OpenMAS Contributors"
 __all__ = [
     "__version__",
     "__author__",
-] 
+]

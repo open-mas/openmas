@@ -1,22 +1,24 @@
 """
 OpenMAS MCP Protocol Adapter
 
-This module provides protocol adapter implementation for the Model Context Protocol (MCP),
-enabling OpenMAS agents to communicate using MCP over various transports including
-stdio and Server-Sent Events (SSE).
+This module provides protocol adapter implementation for the Model Context
+Protocol (MCP), enabling OpenMAS agents to communicate using MCP over various
+transports including stdio.
 """
 
-from .adapter import MCPProtocolAdapter
+from .adapter import (
+    MCPProtocolAdapter,
+)
 from .config import MCPConfig, MCPTransportType
-from .exceptions import MCPError, MCPConnectionError, MCPMessageError
+from .exceptions import MCPConnectionError, MCPError, MCPMessageError
 from .message_translator import MCPMessageTranslator
 
 __all__ = [
     "MCPProtocolAdapter",
-    "MCPConfig", 
+    "MCPConfig",
     "MCPTransportType",
     "MCPError",
-    "MCPConnectionError", 
+    "MCPConnectionError",
     "MCPMessageError",
     "MCPMessageTranslator",
-] 
+]

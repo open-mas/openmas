@@ -6,79 +6,69 @@ Message Format, enabling type-safe message handling across all protocol adapters
 and reasoning engines.
 """
 
-from .models import (
-    # Core message structure
-    SIMFMessage,
-    SIMFMetadata,
-    
-    # Enums
-    MessageType,
-    PayloadType,
-    MessageFlowDirection,
-    AssetType,
-    InvocationStatus,
-    
-    # Payload models
-    BasePayload,
-    TextContentPayload,
-    StructuredDataContentPayload,
+from .models import (  # Core message structure; Enums; Payload models;;
+    # Factory functions
     AssetReferenceContentPayload,
-    MultiPartContentPayload,
+    AssetType,
+    BasePayload,
+    EventContentPayload,
     InvocationContentPayload,
     InvocationResultContentPayload,
-    StreamContextContentPayload,
+    InvocationStatus,
     KnowledgeRepresentationContentPayload,
-    EventContentPayload,
+    MessageFlowDirection,
+    MessageType,
+    MultiPartContentPayload,
+    PayloadType,
     PayloadUnion,
-    
-    # Factory functions
-    create_text_message,
-    create_structured_data_message,
+    SIMFMessage,
+    SIMFMetadata,
+    StreamContextContentPayload,
+    StructuredDataContentPayload,
+    TextContentPayload,
     create_asset_reference_message,
-    create_multipart_message,
-    create_invocation_message,
-    create_invocation_result_message,
     create_error_message,
     create_event_message,
+    create_invocation_message,
+    create_invocation_result_message,
+    create_multipart_message,
+    create_structured_data_message,
+    create_text_message,
 )
-
+from .serialization import (
+    SerializationError,
+    SerializationFormat,
+    SIMFSerializer,
+    deserialize_simf_message,
+    is_simf_message,
+    message_from_binary,
+    message_from_json,
+    message_to_binary,
+    message_to_json,
+    serialize_simf_message,
+)
 from .validation import (
     SIMFValidator,
     ValidationError,
-    ValidationResult,
     ValidationIssue,
+    ValidationResult,
     validate_simf_message,
-)
-
-from .serialization import (
-    SIMFSerializer,
-    SerializationError,
-    SerializationFormat,
-    serialize_simf_message,
-    deserialize_simf_message,
-    message_to_json,
-    message_from_json,
-    message_to_binary,
-    message_from_binary,
-    is_simf_message,
 )
 
 __all__ = [
     # Core models
     "SIMFMessage",
     "SIMFMetadata",
-    
     # Enums
-    "MessageType", 
+    "MessageType",
     "PayloadType",
     "MessageFlowDirection",
     "AssetType",
     "InvocationStatus",
-    
     # Payload models
     "BasePayload",
     "TextContentPayload",
-    "StructuredDataContentPayload", 
+    "StructuredDataContentPayload",
     "AssetReferenceContentPayload",
     "MultiPartContentPayload",
     "InvocationContentPayload",
@@ -87,24 +77,22 @@ __all__ = [
     "KnowledgeRepresentationContentPayload",
     "EventContentPayload",
     "PayloadUnion",
-    
     # Factory functions
     "create_text_message",
     "create_structured_data_message",
-    "create_asset_reference_message", 
+    "create_asset_reference_message",
     "create_multipart_message",
     "create_invocation_message",
     "create_invocation_result_message",
     "create_error_message",
     "create_event_message",
-    
     # Utilities
     "SIMFValidator",
     "ValidationError",
     "ValidationResult",
     "ValidationIssue",
     "validate_simf_message",
-    "SIMFSerializer", 
+    "SIMFSerializer",
     "SerializationError",
     "SerializationFormat",
     "serialize_simf_message",
@@ -114,4 +102,4 @@ __all__ = [
     "message_to_binary",
     "message_from_binary",
     "is_simf_message",
-] 
+]

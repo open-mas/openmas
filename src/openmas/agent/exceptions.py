@@ -11,11 +11,11 @@ Based on specifications in:
 
 class AgentError(Exception):
     """Base exception for all agent-related errors."""
-    
+
     def __init__(self, message: str, agent_id: str = None, details: dict = None):
         """
         Initialize the exception.
-        
+
         Args:
             message: Error message
             agent_id: ID of the agent where the error occurred (optional)
@@ -24,7 +24,7 @@ class AgentError(Exception):
         super().__init__(message)
         self.agent_id = agent_id
         self.details = details or {}
-    
+
     def __str__(self):
         """String representation of the error."""
         base_message = super().__str__()
@@ -35,26 +35,35 @@ class AgentError(Exception):
 
 class AgentConfigurationError(AgentError):
     """Raised when agent configuration is invalid or cannot be loaded."""
+
     pass
 
 
 class AgentCreationError(AgentError):
     """Raised when agent creation fails."""
+
     pass
 
 
 class AgentLifecycleError(AgentError):
     """Raised when agent lifecycle operations (start/stop) fail."""
+
     pass
 
 
 class AgentMessageError(AgentError):
     """Raised when message handling fails."""
-    
-    def __init__(self, message: str, agent_id: str = None, message_id: str = None, details: dict = None):
+
+    def __init__(
+        self,
+        message: str,
+        agent_id: str = None,
+        message_id: str = None,
+        details: dict = None,
+    ):
         """
         Initialize the exception.
-        
+
         Args:
             message: Error message
             agent_id: ID of the agent where the error occurred (optional)
@@ -63,7 +72,7 @@ class AgentMessageError(AgentError):
         """
         super().__init__(message, agent_id, details)
         self.message_id = message_id
-    
+
     def __str__(self):
         """String representation of the error."""
         base_message = super().__str__()
@@ -74,11 +83,17 @@ class AgentMessageError(AgentError):
 
 class AgentCapabilityError(AgentError):
     """Raised when capability operations fail."""
-    
-    def __init__(self, message: str, agent_id: str = None, capability_name: str = None, details: dict = None):
+
+    def __init__(
+        self,
+        message: str,
+        agent_id: str = None,
+        capability_name: str = None,
+        details: dict = None,
+    ):
         """
         Initialize the exception.
-        
+
         Args:
             message: Error message
             agent_id: ID of the agent where the error occurred (optional)
@@ -87,7 +102,7 @@ class AgentCapabilityError(AgentError):
         """
         super().__init__(message, agent_id, details)
         self.capability_name = capability_name
-    
+
     def __str__(self):
         """String representation of the error."""
         base_message = super().__str__()
@@ -98,11 +113,17 @@ class AgentCapabilityError(AgentError):
 
 class AgentSessionError(AgentError):
     """Raised when session operations fail."""
-    
-    def __init__(self, message: str, agent_id: str = None, session_id: str = None, details: dict = None):
+
+    def __init__(
+        self,
+        message: str,
+        agent_id: str = None,
+        session_id: str = None,
+        details: dict = None,
+    ):
         """
         Initialize the exception.
-        
+
         Args:
             message: Error message
             agent_id: ID of the agent where the error occurred (optional)
@@ -111,7 +132,7 @@ class AgentSessionError(AgentError):
         """
         super().__init__(message, agent_id, details)
         self.session_id = session_id
-    
+
     def __str__(self):
         """String representation of the error."""
         base_message = super().__str__()
@@ -122,11 +143,17 @@ class AgentSessionError(AgentError):
 
 class AgentStateError(AgentError):
     """Raised when state management operations fail."""
-    
-    def __init__(self, message: str, agent_id: str = None, state_key: str = None, details: dict = None):
+
+    def __init__(
+        self,
+        message: str,
+        agent_id: str = None,
+        state_key: str = None,
+        details: dict = None,
+    ):
         """
         Initialize the exception.
-        
+
         Args:
             message: Error message
             agent_id: ID of the agent where the error occurred (optional)
@@ -135,7 +162,7 @@ class AgentStateError(AgentError):
         """
         super().__init__(message, agent_id, details)
         self.state_key = state_key
-    
+
     def __str__(self):
         """String representation of the error."""
         base_message = super().__str__()
@@ -146,11 +173,17 @@ class AgentStateError(AgentError):
 
 class AgentProtocolError(AgentError):
     """Raised when protocol adapter operations fail."""
-    
-    def __init__(self, message: str, agent_id: str = None, protocol_name: str = None, details: dict = None):
+
+    def __init__(
+        self,
+        message: str,
+        agent_id: str = None,
+        protocol_name: str = None,
+        details: dict = None,
+    ):
         """
         Initialize the exception.
-        
+
         Args:
             message: Error message
             agent_id: ID of the agent where the error occurred (optional)
@@ -159,10 +192,10 @@ class AgentProtocolError(AgentError):
         """
         super().__init__(message, agent_id, details)
         self.protocol_name = protocol_name
-    
+
     def __str__(self):
         """String representation of the error."""
         base_message = super().__str__()
         if self.protocol_name:
             base_message = f"{base_message} (Protocol: {self.protocol_name})"
-        return base_message 
+        return base_message
