@@ -128,7 +128,7 @@ See the `agents.[agent_id].reasoning` section in the [Unified Configuration Sche
                 description: "Available plans"
                 items:
                   type: object
-      
+
       # Security configuration
       security:
         type: object
@@ -159,7 +159,7 @@ See the `agents.[agent_id].reasoning` section in the [Unified Configuration Sche
                   type: array
                   items:
                     type: string
-      
+
       # Knowledge management configuration
       knowledge_management_config:
         type: object
@@ -198,7 +198,7 @@ See the `agents.[agent_id].reasoning` section in the [Unified Configuration Sche
           integration_options:
             type: object
             description: "Additional options for how the reasoning engine integrates with knowledge bases"
-      
+
       # Observability configuration
       observability:
         type: object
@@ -234,20 +234,20 @@ agents:
   assistant_agent:
     class: "agents.assistant.AssistantAgent"
     type: "assistant"
-    
+
     # Protocol configuration
     protocols:
       - type: "a2a-http"
         enabled: true
         options:
           base_url: "http://localhost:8000"
-      
+
       - type: "mcp-sse"
         enabled: true
         options:
           server_mode: true
           http_port: 8080
-    
+
     # Capabilities
     capabilities:
       definitions:
@@ -265,7 +265,7 @@ agents:
               answer:
                 type: "string"
                 description: "The answer to the question"
-    
+
     # Reasoning configuration (the "brain")
     reasoning:
       approach: "llm"
@@ -276,7 +276,7 @@ agents:
         temperature: 0.7
         system_prompt: "You are a helpful assistant that answers user questions."
         tools_enabled: true
-        
+
     # Knowledge management configuration
     knowledge_management_config:
       enabled: true
@@ -300,7 +300,7 @@ agents:
   monitoring_agent:
     class: "agents.monitoring.MonitoringAgent"
     type: "tool"
-    
+
     # Protocol configuration
     protocols:
       - type: "mqtt"
@@ -308,7 +308,7 @@ agents:
         options:
           broker_url: "mqtt://localhost:1883"
           topic_prefix: "system/monitoring"
-    
+
     # Capabilities
     capabilities:
       definitions:
@@ -328,7 +328,7 @@ agents:
                 type: "object"
                 additionalProperties:
                   type: "string"
-    
+
     # Reasoning configuration
     reasoning:
       approach: "rule_based"
@@ -346,14 +346,14 @@ agents:
   autonomous_agent:
     class: "agents.autonomous.AutonomousAgent"
     type: "autonomous"
-    
+
     # Protocol configuration
     protocols:
       - type: "http"
         enabled: true
         options:
           port: 8080
-    
+
     # Capabilities
     capabilities:
       definitions:
@@ -382,7 +382,7 @@ agents:
                   properties:
                     latitude: { type: "number" }
                     longitude: { type: "number" }
-    
+
     # Reasoning configuration
     reasoning:
       approach: "bdi"
@@ -408,14 +408,14 @@ agents:
   hybrid_agent:
     class: "agents.hybrid.HybridAgent"
     type: "collaborative"
-    
+
     # Protocol configuration
     protocols:
       - type: "a2a-http"
         enabled: true
       - type: "grpc"
         enabled: true
-    
+
     # Capabilities
     capabilities:
       definitions:
@@ -439,7 +439,7 @@ agents:
                   type: "object"
               summary:
                 type: "string"
-    
+
     # Reasoning configuration
     reasoning:
       approach: "hybrid"
@@ -456,7 +456,7 @@ agents:
         plans:
           - name: "analyze_numeric_data"
           - name: "analyze_text_data"
-    
+
     # Knowledge management configuration
     knowledge_management_config:
       enabled: true

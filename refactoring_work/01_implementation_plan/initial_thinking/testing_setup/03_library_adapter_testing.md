@@ -12,12 +12,12 @@ Before implementing any adapter, always verify the actual API of the library:
   ```python
   # Inspect package metadata
   !pip show [LIBRARY_NAME]
-  
+
   # Inspect modules and interfaces
   import [LIBRARY_NAME]
   dir([LIBRARY_NAME])
   help([LIBRARY_NAME].[CLASS_OR_FUNCTION])
-  
+
   # View source code for deeper understanding
   import inspect
   print(inspect.getsource([LIBRARY_NAME].[CLASS_OR_FUNCTION]))
@@ -69,31 +69,31 @@ class LibraryServiceInterface(Protocol):
 # Create the adapter
 class ConcreteLibraryAdapter:
     """Adapter for [LIBRARY_NAME] version [VERSION]."""
-    
+
     def __init__(self, library_client: Any):
         """
         Initialize the adapter with the library client.
-        
+
         Args:
             library_client: The actual library client instance
-            
-        Note: 
+
+        Note:
             Verified with [LIBRARY_NAME] version [VERSION] on [DATE]
         """
         self.client = library_client
-        
+
     def operation1(self, param1: str) -> dict[str, Any]:
         """
         Perform operation1 using the library.
-        
+
         Maps to: library_client.some_actual_method(param1)
-        
+
         Args:
             param1: The parameter required by the library
-            
+
         Returns:
             Dictionary result from the library call
-            
+
         Raises:
             OpenMASAdapterError: If the library operation fails
         """
@@ -105,7 +105,7 @@ class ConcreteLibraryAdapter:
         except LibrarySpecificError as e:
             # Translate to OpenMAS exceptions
             raise OpenMASAdapterError(f"Operation failed: {e}")
-            
+
     def _transform_result(self, raw_result: Any) -> dict[str, Any]:
         """Transform library-specific result to adapter interface format."""
         # Transformation logic here
@@ -126,13 +126,13 @@ class LibraryAdapterFactory:
         """Create an adapter instance based on configuration."""
         if "mock" in config and config["mock"]:
             return MockLibraryAdapter()
-        
+
         # Create the real client with verified API
         real_client = RealLibrary.Client(
             api_key=config["api_key"],
             endpoint=config["endpoint"]
         )
-        
+
         return ConcreteLibraryAdapter(real_client)
 ```
 
@@ -142,12 +142,12 @@ class AgentWithLibraryDependency:
     def __init__(self, library_service: LibraryServiceInterface):
         """
         Initialize with a library service.
-        
+
         Args:
             library_service: Any implementation of LibraryServiceInterface
         """
         self.library_service = library_service
-    
+
     def perform_operation(self, param: str) -> dict[str, Any]:
         """Use the injected service to perform operations."""
         return self.library_service.operation1(param)
@@ -159,20 +159,20 @@ from dependency_injector import containers, providers
 
 class Container(containers.DeclarativeContainer):
     config = providers.Configuration()
-    
+
     # Library client with real implementation
     library_client = providers.Factory(
         RealLibrary.Client,
         api_key=config.api_key,
         endpoint=config.endpoint
     )
-    
+
     # Adapter with injected client
     library_adapter = providers.Factory(
         ConcreteLibraryAdapter,
         library_client=library_client
     )
-    
+
     # Service that uses the adapter
     agent_service = providers.Factory(
         AgentWithLibraryDependency,
@@ -199,14 +199,14 @@ class TestLibraryIntegration:
             endpoint="test_endpoint"
         )
         return ConcreteLibraryAdapter(real_client)
-    
+
     def test_operation1_integration(self, real_adapter):
         """Test operation1 with the real library."""
         # This is an integration test against the real library
         result = real_adapter.operation1("test_param")
         assert "key" in result
         assert isinstance(result["key"], str)
-    
+
     def test_error_handling_integration(self, real_adapter):
         """Test error handling with the real library."""
         # Test with input that should cause an error
@@ -221,19 +221,19 @@ class TestLibraryAdapter:
         # Configure mock based on verified API behavior
         mock.some_actual_method.return_value = MagicMock(value="test_value")
         return mock
-    
+
     @pytest.fixture
     def adapter(self, mock_client):
         """Create adapter with mock client."""
         return ConcreteLibraryAdapter(mock_client)
-    
+
     def test_operation1_calls_correct_method(self, adapter, mock_client):
         """Test that operation1 calls the correct library method."""
         result = adapter.operation1("test_param")
-        
+
         # Verify the correct library method was called
         mock_client.some_actual_method.assert_called_once_with("test_param")
-        
+
         # Verify result transformation
         assert result == {"key": "test_value"}
 ```
@@ -260,35 +260,35 @@ import warnings
 from packaging import version
 
 class VersionCompatibilityChecker:
-    def __init__(self, library_name: str, 
+    def __init__(self, library_name: str,
                  min_version: str, max_version: str = None):
         self.library_name = library_name
         self.min_version = version.parse(min_version)
         self.max_version = version.parse(max_version) if max_version else None
-        
+
     def check(self) -> bool:
         """Check if the installed library is compatible."""
         try:
             current_version = version.parse(
                 importlib.metadata.version(self.library_name)
             )
-            
+
             if current_version < self.min_version:
                 warnings.warn(
                     f"{self.library_name} version {current_version} is older than "
                     f"the minimum supported version {self.min_version}."
                 )
                 return False
-                
+
             if self.max_version and current_version > self.max_version:
                 warnings.warn(
                     f"{self.library_name} version {current_version} is newer than "
                     f"the maximum tested version {self.max_version}. "
                     f"Some features may not work as expected."
                 )
-                
+
             return True
-                
+
         except importlib.metadata.PackageNotFoundError:
             warnings.warn(f"{self.library_name} is not installed.")
             return False

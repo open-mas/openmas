@@ -41,23 +41,23 @@ All protocol adapters implement a common interface to ensure consistency:
 ```python
 class ProtocolAdapter:
     """Base class for protocol adapters."""
-    
+
     def __init__(self, integration, config):
         self.integration = integration
         self.config = config
-        
+
     async def initialize(self, context):
         """Initialize the protocol adapter."""
         self.context = context
-        
+
     async def adapt_request(self, request):
         """Adapt a generic request to protocol-specific format."""
         raise NotImplementedError
-        
+
     async def adapt_response(self, response):
         """Adapt a protocol-specific response to generic format."""
         raise NotImplementedError
-        
+
     async def adapt_error(self, error):
         """Adapt an error to protocol-specific format."""
         raise NotImplementedError
@@ -70,12 +70,12 @@ The A2A protocol adapter translates between OpenMAS integrations and the Google 
 ```python
 class A2AProtocolAdapter(ProtocolAdapter):
     """Adapter for Google A2A protocol."""
-    
+
     def __init__(self, integration, config):
         super().__init__(integration, config)
         self.message_format = config.get("message_format", "json")
         self.response_handling = config.get("response_handling", "sync")
-        
+
     async def adapt_request(self, request):
         """Adapt request for A2A protocol."""
         # A2A uses a specific format for tool calls
@@ -95,9 +95,9 @@ class A2AProtocolAdapter(ProtocolAdapter):
                 "timestamp": datetime.now().isoformat()
             }
         }
-        
+
         return adapted_request
-        
+
     async def adapt_response(self, response):
         """Adapt response from A2A protocol."""
         # A2A uses a specific format for tool responses
@@ -122,9 +122,9 @@ class A2AProtocolAdapter(ProtocolAdapter):
                 "data": response,
                 "metadata": {}
             }
-            
+
         return adapted_response
-        
+
     def _convert_to_a2a_parameters(self, parameters):
         """Convert generic parameters to A2A format."""
         # A2A expects parameters in a specific format
@@ -141,18 +141,18 @@ The Model Context Protocol (MCP) adapter translates between OpenMAS integrations
 ```python
 class MCPProtocolAdapter(ProtocolAdapter):
     """Adapter for Model Context Protocol."""
-    
+
     def __init__(self, integration, config):
         super().__init__(integration, config)
         self.tool_name = config.get("tool_name", integration.id)
         self.result_format = config.get("result_format", "structured")
-        
+
     async def adapt_request(self, request):
         """Adapt request for MCP."""
         # MCP uses a resource-oriented approach
         resource_name = f"tools/{self.tool_name}"
         operation = request.get("operation", "default")
-        
+
         adapted_request = {
             "resource": resource_name,
             "operation": operation,
@@ -162,9 +162,9 @@ class MCPProtocolAdapter(ProtocolAdapter):
                 "timestamp": datetime.now().isoformat()
             }
         }
-        
+
         return adapted_request
-        
+
     async def adapt_response(self, response):
         """Adapt response from MCP."""
         # MCP responses have a specific structure
@@ -196,7 +196,7 @@ class MCPProtocolAdapter(ProtocolAdapter):
                 "data": response,
                 "metadata": {}
             }
-            
+
         return adapted_response
 ```
 
@@ -207,17 +207,17 @@ The HTTP protocol adapter translates between OpenMAS integrations and HTTP reque
 ```python
 class HTTPProtocolAdapter(ProtocolAdapter):
     """Adapter for HTTP protocol."""
-    
+
     def __init__(self, integration, config):
         super().__init__(integration, config)
         self.base_path = config.get("base_path", f"/api/integrations/{integration.id}")
         self.response_format = config.get("response_format", "json")
-        
+
     async def adapt_request(self, request):
         """Adapt request for HTTP."""
         operation = request.get("operation", "default")
         path = f"{self.base_path}/{operation}"
-        
+
         adapted_request = {
             "method": request.get("method", "POST"),
             "path": path,
@@ -228,18 +228,18 @@ class HTTPProtocolAdapter(ProtocolAdapter):
             },
             "body": request.get("parameters", {})
         }
-        
+
         # Add authentication if available
         auth_headers = await self._get_auth_headers()
         if auth_headers:
             adapted_request["headers"].update(auth_headers)
-            
+
         return adapted_request
-        
+
     async def adapt_response(self, response):
         """Adapt response from HTTP."""
         status_code = response.get("status_code", 500)
-        
+
         if 200 <= status_code < 300:
             adapted_response = {
                 "status": "success",
@@ -261,9 +261,9 @@ class HTTPProtocolAdapter(ProtocolAdapter):
                     "headers": response.get("headers", {})
                 }
             }
-            
+
         return adapted_response
-        
+
     async def _get_auth_headers(self):
         """Get authentication headers."""
         # Implementation depends on authentication strategy
@@ -281,17 +281,17 @@ integrations:
     # Core integration configuration
     config:
       base_url: "https://api.example.com/v1"
-    
+
     # Protocol-specific adaptations
     protocol_adaptations:
       a2a:
         message_format: "json"
         response_handling: "async"
-        
+
       mcp:
         tool_name: "example_api_tool"
         result_format: "structured"
-        
+
       http:
         base_path: "/api/tools/example_api"
         response_format: "json"

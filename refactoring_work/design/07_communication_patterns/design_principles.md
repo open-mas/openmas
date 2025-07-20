@@ -54,21 +54,21 @@ The Pattern Registry maintains the catalog of available communication patterns:
 ```python
 class PatternRegistry:
     """Registry of available communication patterns."""
-    
+
     def __init__(self):
         """Initialize the pattern registry."""
         self.patterns = {}
-        
+
     def register_pattern(self, pattern_type, pattern_class):
         """Register a pattern implementation."""
         self.patterns[pattern_type] = pattern_class
-        
+
     def get_pattern(self, pattern_type):
         """Get a pattern implementation by type."""
         if pattern_type not in self.patterns:
             raise ValueError(f"Unknown pattern type: {pattern_type}")
         return self.patterns[pattern_type]
-        
+
     def list_patterns(self):
         """List all available patterns."""
         return list(self.patterns.keys())
@@ -81,31 +81,31 @@ The Pattern Factory creates pattern instances from configuration:
 ```python
 class PatternFactory:
     """Factory for creating pattern instances."""
-    
+
     def __init__(self, registry, communicator_factory):
         """Initialize the pattern factory."""
         self.registry = registry
         self.communicator_factory = communicator_factory
-        
+
     def create_pattern(self, config, agent_context):
         """Create a pattern instance from configuration."""
         pattern_type = config.get("type")
         pattern_options = config.get("options", {})
-        
+
         # Get the pattern class from the registry
         pattern_class = self.registry.get_pattern(pattern_type)
-        
+
         # Create the pattern instance
         pattern = pattern_class(pattern_options, agent_context)
-        
+
         # Set up protocol adapters
         protocol_adaptations = config.get("protocol_adaptations", {})
         for protocol, adaptation_config in protocol_adaptations.items():
             adapter = self._create_protocol_adapter(protocol, adaptation_config)
             pattern.register_protocol_adapter(protocol, adapter)
-            
+
         return pattern
-        
+
     def _create_protocol_adapter(self, protocol, config):
         """Create a protocol adapter for a pattern."""
         adapter_class = self._get_adapter_class(protocol)
@@ -119,32 +119,32 @@ The Pattern base class defines the common interface for all patterns:
 ```python
 class Pattern:
     """Base class for communication patterns."""
-    
+
     def __init__(self, options, agent_context):
         """Initialize the pattern."""
         self.options = options
         self.agent_context = agent_context
         self.protocol_adapters = {}
-        
+
     def register_protocol_adapter(self, protocol, adapter):
         """Register a protocol adapter."""
         self.protocol_adapters[protocol] = adapter
-        
+
     def get_protocol_adapter(self, protocol):
         """Get the adapter for a specific protocol."""
         if protocol not in self.protocol_adapters:
             raise ValueError(f"No adapter registered for protocol: {protocol}")
         return self.protocol_adapters[protocol]
-        
+
     async def validate_message(self, message):
         """Validate that a message conforms to this pattern."""
         raise NotImplementedError("Subclasses must implement validate_message")
-        
+
     async def process_incoming(self, message, protocol):
         """Process an incoming message according to this pattern."""
         adapter = self.get_protocol_adapter(protocol)
         return await adapter.process_incoming(message, self)
-        
+
     async def prepare_outgoing(self, message, protocol):
         """Prepare an outgoing message according to this pattern."""
         adapter = self.get_protocol_adapter(protocol)
@@ -158,15 +158,15 @@ The Protocol Adapter adapts patterns to specific protocols:
 ```python
 class ProtocolAdapter:
     """Adapts a pattern to a specific protocol."""
-    
+
     def __init__(self, config):
         """Initialize the adapter."""
         self.config = config
-        
+
     async def process_incoming(self, message, pattern):
         """Process an incoming message."""
         raise NotImplementedError("Subclasses must implement process_incoming")
-        
+
     async def prepare_outgoing(self, message, pattern):
         """Prepare an outgoing message."""
         raise NotImplementedError("Subclasses must implement prepare_outgoing")
@@ -307,7 +307,7 @@ communication_patterns:
         use_streaming: false
       http:
         method: "POST"
-  
+
   publish_subscribe:
     options:
       delivery_guarantee: "at_least_once"

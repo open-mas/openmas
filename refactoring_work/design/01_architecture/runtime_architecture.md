@@ -21,33 +21,33 @@ The foundation of the OpenMAS execution environment:
 ```python
 class OpenMASRuntime:
     """The core OpenMAS runtime environment."""
-    
+
     def __init__(self, config=None):
         self.config = config or load_default_config()
         self.components = {}
         self.resources = ResourceManager(self.config.resources)
         self.lifecycle = LifecycleManager()
         self.error_handler = ErrorBoundaryHandler()
-    
+
     async def initialize(self):
         """Initialize the runtime environment."""
         await self.resources.initialize()
         await self.lifecycle.initialize()
-        
+
         # Initialize core components
         for component_config in self.config.components:
             component = create_component(component_config)
             self.components[component.id] = component
             await self.lifecycle.register(component)
-    
+
     async def start(self):
         """Start the runtime environment."""
         await self.lifecycle.transition_all("start")
-    
+
     async def stop(self):
         """Stop the runtime environment."""
         await self.lifecycle.transition_all("stop")
-    
+
     async def shutdown(self):
         """Shutdown the runtime environment."""
         await self.lifecycle.transition_all("shutdown")
@@ -67,48 +67,48 @@ The component framework for OpenMAS:
 ```python
 class Component(ABC):
     """Base class for all OpenMAS components."""
-    
+
     def __init__(self, config):
         self.id = config.id
         self.config = config
         self.dependencies = {}
         self.state = ComponentState.CREATED
-    
+
     async def initialize(self, dependency_resolver):
         """Initialize the component."""
         self.state = ComponentState.INITIALIZING
-        
+
         # Resolve dependencies
         for dep_name, dep_config in self.config.dependencies.items():
             self.dependencies[dep_name] = await dependency_resolver.resolve(
                 dep_config.component_type, dep_config.config
             )
-        
+
         await self._initialize_internal()
         self.state = ComponentState.INITIALIZED
-    
+
     @abstractmethod
     async def _initialize_internal(self):
         """Internal initialization logic."""
         pass
-    
+
     async def start(self):
         """Start the component."""
         self.state = ComponentState.STARTING
         await self._start_internal()
         self.state = ComponentState.RUNNING
-    
+
     @abstractmethod
     async def _start_internal(self):
         """Internal start logic."""
         pass
-    
+
     async def stop(self):
         """Stop the component."""
         self.state = ComponentState.STOPPING
         await self._stop_internal()
         self.state = ComponentState.STOPPED
-    
+
     @abstractmethod
     async def _stop_internal(self):
         """Internal stop logic."""
@@ -128,13 +128,13 @@ The concurrency approach used in OpenMAS:
 ```python
 class TaskManager:
     """Manages concurrency in OpenMAS."""
-    
+
     def __init__(self, config):
         self.config = config
         self.worker_pool = WorkerPool(config.worker_count)
         self.task_queue = TaskQueue(config.queue_size)
         self.running_tasks = {}
-    
+
     async def schedule(self, coroutine, priority=0):
         """Schedule a task for execution."""
         task_id = generate_id()
@@ -142,20 +142,20 @@ class TaskManager:
         await self.task_queue.push(task)
         self.running_tasks[task_id] = task
         return task_id
-    
+
     async def wait(self, task_id, timeout=None):
         """Wait for a task to complete."""
         if task_id not in self.running_tasks:
             raise TaskNotFoundError(f"Task {task_id} not found")
-        
+
         task = self.running_tasks[task_id]
         return await task.wait(timeout)
-    
+
     async def cancel(self, task_id):
         """Cancel a task."""
         if task_id not in self.running_tasks:
             raise TaskNotFoundError(f"Task {task_id} not found")
-        
+
         task = self.running_tasks[task_id]
         await task.cancel()
         del self.running_tasks[task_id]

@@ -125,7 +125,7 @@ services:
     environment:
       - OPENMAS_ENV=development
     command: bash -c "cd /app/code && python -m openmas.tools.dev_server"
-    
+
   a2a-agent:
     build:
       context: .
@@ -139,7 +139,7 @@ services:
       - "8001:8000"
     depends_on:
       - dev-environment
-      
+
   mcp-agent:
     build:
       context: .

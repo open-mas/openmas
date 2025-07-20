@@ -236,33 +236,33 @@ class WeatherAgent(Agent):
             "port": 8080,
             "cors_origins": ["https://example.com"]
         })
-        
+
         # Register routes
         self.http_server.route("GET", "/weather/{location}", self.get_weather)
         self.http_server.route("POST", "/forecast", self.get_forecast)
-    
+
     async def get_weather(self, request):
         location = request.path_params.get("location")
         units = request.query_params.get("units", "celsius")
-        
+
         # Get weather data
         weather_data = await self.weather_service.get_current(location, units)
-        
+
         # Return as HTTP response
         return {
             "status": 200,
             "content_type": "application/json",
             "body": weather_data
         }
-    
+
     async def get_forecast(self, request):
         data = await request.json()
         location = data.get("location")
         days = data.get("days", 5)
-        
+
         # Get forecast data
         forecast = await self.weather_service.get_forecast(location, days)
-        
+
         # Return as HTTP response
         return {
             "status": 200,
@@ -289,28 +289,28 @@ class ClientAgent(Agent):
             },
             "timeout_ms": 5000
         })
-    
+
     async def get_weather(self, location):
         # Make HTTP GET request
         response = await self.http_client.get(
             f"/weather/{location}",
             params={"units": "celsius"}
         )
-        
+
         # Check status and return data
         if response.status == 200:
             return response.json()
         else:
             self.log.error(f"Failed to get weather: {response.text}")
             raise Exception(f"Weather API error: {response.status}")
-    
+
     async def submit_feedback(self, feedback_data):
         # Make HTTP POST request
         response = await self.http_client.post(
             "/feedback",
             json=feedback_data
         )
-        
+
         return response.status == 201
 ```
 

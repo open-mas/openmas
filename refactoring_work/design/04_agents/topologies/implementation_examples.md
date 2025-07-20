@@ -17,38 +17,38 @@ class TravelCoordinator(Agent):
         # Set up topology manager with orchestrator role
         self.topology_manager = TopologyManager(self)
         await self.topology_manager.assume_role(OrchestratorRole())
-        
+
         # Register worker relationships
         await self.topology_manager.register_worker("flight_search_agent")
         await self.topology_manager.register_worker("hotel_search_agent")
         await self.topology_manager.register_worker("activity_search_agent")
-        
+
         # Set up task delegation capability
         self.add_capability("task_delegation", self.delegate_task)
         self.add_capability("result_aggregation", self.aggregate_results)
-    
+
     async def delegate_task(self, task_data):
         # Determine which worker should handle this task
         worker = self.topology_manager.select_worker(task_data)
-        
+
         # Delegate task to selected worker
         result = await self.topology_manager.send_request(
-            worker, 
-            "task_execution", 
+            worker,
+            "task_execution",
             task_data
         )
         return result
-    
+
     async def aggregate_results(self, results):
         # Process and combine results from multiple workers
         aggregated_result = {
             "status": "completed",
             "data": {}
         }
-        
+
         for worker_id, result in results.items():
             aggregated_result["data"][worker_id] = result
-        
+
         return aggregated_result
 ```
 
@@ -63,14 +63,14 @@ class FlightSearchAgent(Agent):
         # Set up topology manager with worker role
         self.topology_manager = TopologyManager(self)
         await self.topology_manager.assume_role(WorkerRole())
-        
+
         # Register with orchestrator
         await self.topology_manager.register_with_orchestrator("travel_coordinator")
-        
+
         # Set up task execution capability
         self.add_capability("task_execution", self.execute_task)
         self.add_capability("status_reporting", self.report_status)
-    
+
     async def execute_task(self, task_data):
         # Implement specialized flight search logic
         flight_options = await self._search_flights(
@@ -78,12 +78,12 @@ class FlightSearchAgent(Agent):
             task_data["destination"],
             task_data["date"]
         )
-        
+
         return {
             "status": "completed",
             "flights": flight_options
         }
-    
+
     async def report_status(self):
         # Report current status to orchestrator
         status = {
@@ -91,13 +91,13 @@ class FlightSearchAgent(Agent):
             "load": self.current_load,
             "capabilities": self.get_capabilities()
         }
-        
+
         await self.topology_manager.send_event(
             "travel_coordinator",
             "status_update",
             status
         )
-        
+
     async def _search_flights(self, origin, destination, date):
         # Implementation-specific flight search logic
         # This could use any reasoning approach (rule-based, LLM, etc.)
@@ -117,20 +117,20 @@ class EnterpriseCoordinator(Agent):
         # Set up topology manager with root role
         self.topology_manager = TopologyManager(self)
         await self.topology_manager.assume_role(RootRole())
-        
+
         # Register domain coordinators
         await self.topology_manager.register_subordinate("sales_coordinator")
         await self.topology_manager.register_subordinate("support_coordinator")
         await self.topology_manager.register_subordinate("logistics_coordinator")
-        
+
         # Set up strategic planning capability
         self.add_capability("strategic_planning", self.create_strategic_plan)
         self.add_capability("domain_coordination", self.coordinate_domains)
-    
+
     async def create_strategic_plan(self, requirements):
         # Create and distribute strategic plan to domain coordinators
         plan = self._generate_plan(requirements)
-        
+
         # Distribute plan components to appropriate domains
         for domain, domain_plan in plan.items():
             coordinator = self.topology_manager.get_subordinate(f"{domain}_coordinator")
@@ -139,9 +139,9 @@ class EnterpriseCoordinator(Agent):
                 "implement_plan",
                 domain_plan
             )
-        
+
         return {"status": "plan_distributed", "plan_id": plan["id"]}
-    
+
     async def coordinate_domains(self, coordination_task):
         # Coordinate activities across multiple domains
         # Implementation would vary based on reasoning approach
@@ -161,30 +161,30 @@ class DataProcessingPeer(Agent):
         # Set up topology manager with peer role
         self.topology_manager = TopologyManager(self)
         await self.topology_manager.assume_role(PeerRole())
-        
+
         # Discover other peers
         discovered_peers = await self.topology_manager.discover_peers()
-        
+
         # Register capabilities that other peers can use
         self.add_capability("data_transformation", self.transform_data)
         self.add_capability("data_validation", self.validate_data)
-        
+
         # Establish connections with relevant peers
         for peer in discovered_peers:
             if self._is_relevant_peer(peer):
                 await self.topology_manager.establish_peer_connection(peer)
-    
+
     async def transform_data(self, data):
         # Implement data transformation logic
         transformed_data = self._apply_transformation(data)
-        
+
         # If needed, collaborate with other peers
         if self._needs_additional_processing(transformed_data):
             # Find peer with required capability
             processing_peer = await self.topology_manager.find_peer_with_capability(
                 "advanced_processing"
             )
-            
+
             if processing_peer:
                 result = await self.topology_manager.send_request(
                     processing_peer,
@@ -192,9 +192,9 @@ class DataProcessingPeer(Agent):
                     transformed_data
                 )
                 return result
-        
+
         return transformed_data
-    
+
     async def _apply_transformation(self, data):
         # Implementation-specific transformation logic
         # This demonstrates reasoning agnosticism - could use any approach
@@ -218,19 +218,19 @@ class A2AOrchestratorAgent(Agent):
         # Set up topology with A2A protocol adapter
         self.protocol_adapter = A2AAdapter(self)
         self.topology_manager = TopologyManager(
-            self, 
+            self,
             protocol_adapter=self.protocol_adapter
         )
-        
+
         # A2A-specific topology setup
         await self.topology_manager.assume_role("orchestrator")
-        
+
         # A2A uses agent cards for discovery
         await self.protocol_adapter.publish_agent_card({
             "role": "orchestrator",
             "capabilities": ["task_delegation", "result_aggregation"]
         })
-        
+
         # Register workers through A2A directory
         workers = await self.protocol_adapter.discover_agents_by_role("worker")
         for worker in workers:
@@ -250,13 +250,13 @@ class MCPWorkerAgent(Agent):
         # Set up topology with MCP protocol adapter
         self.protocol_adapter = MCPAdapter(self)
         self.topology_manager = TopologyManager(
-            self, 
+            self,
             protocol_adapter=self.protocol_adapter
         )
-        
+
         # MCP-specific topology setup
         await self.topology_manager.assume_role("worker")
-        
+
         # MCP uses tools for capabilities
         await self.protocol_adapter.register_tool(
             "task_execution",
@@ -269,7 +269,7 @@ class MCPWorkerAgent(Agent):
                 }
             }
         )
-        
+
         # Register with orchestrator
         orchestrator = await self.protocol_adapter.discover_resource_by_role("orchestrator")
         await self.topology_manager.register_with_orchestrator(orchestrator.resource_id)

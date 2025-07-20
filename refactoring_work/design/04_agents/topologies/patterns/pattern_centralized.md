@@ -84,13 +84,13 @@ agents:
         relationship_type: "orchestrator_to_worker"
       - agent_id: "hotel_search"
         relationship_type: "orchestrator_to_worker"
-  
+
   flight_search:
     role: "worker"
     relationships:
       - agent_id: "travel_coordinator"
         relationship_type: "worker_to_orchestrator"
-  
+
   hotel_search:
     role: "worker"
     relationships:

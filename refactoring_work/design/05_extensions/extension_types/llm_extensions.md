@@ -93,25 +93,25 @@ from typing import Dict, List, Any, AsyncGenerator
 
 class OpenAIProviderExtension(LLMProviderExtension):
     """Extension that integrates with OpenAI's API."""
-    
+
     extension_type = "llm_provider"
     extension_name = "openai"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         options = config.get("options", {})
-        
+
         # Extract configuration
         self.api_key = options.get("api_key") or os.environ.get("OPENAI_API_KEY")
         self.base_url = options.get("base_url", "https://api.openai.com/v1")
         self.default_model = options.get("default_model", "gpt-4o")
         self.timeout = options.get("timeout_ms", 30000) / 1000.0  # Convert to seconds
-        
+
         # Set up HTTP session
         self.session = None
         self.encoder = None
-    
+
     async def initialize(self):
         """Initialize the extension."""
         self.session = aiohttp.ClientSession()
@@ -121,40 +121,40 @@ class OpenAIProviderExtension(LLMProviderExtension):
             self.encoder = tiktoken.encoding_for_model(model_name)
         except Exception as e:
             self.logger.warning(f"Failed to initialize tokenizer: {e}")
-        
+
         self.initialized = True
-    
+
     def validate_config(self):
         """Validate the extension configuration."""
         if not self.api_key:
             raise ValueError("OpenAI provider requires an API key")
-    
+
     async def generate_completion(self, prompt, options=None):
         """Generate a completion from OpenAI."""
         if not self.initialized:
             await self.initialize()
-        
+
         options = options or {}
         model = options.get("model", self.default_model)
         temperature = options.get("temperature", 0.7)
         max_tokens = options.get("max_tokens", 1000)
-        
+
         # Prepare the API request
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
-        
+
         # Support both string prompts and message arrays
         messages = prompt if isinstance(prompt, list) else [{"role": "user", "content": prompt}]
-        
+
         payload = {
             "model": model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": max_tokens
         }
-        
+
         try:
             async with self.session.post(
                 f"{self.base_url}/chat/completions",
@@ -165,9 +165,9 @@ class OpenAIProviderExtension(LLMProviderExtension):
                 if response.status != 200:
                     error_text = await response.text()
                     raise Exception(f"OpenAI API error ({response.status}): {error_text}")
-                
+
                 result = await response.json()
-                
+
                 # Extract and return the response
                 return {
                     "text": result["choices"][0]["message"]["content"],
@@ -177,26 +177,26 @@ class OpenAIProviderExtension(LLMProviderExtension):
         except Exception as e:
             self.logger.error(f"Error generating completion: {e}")
             raise
-    
+
     async def stream_completion(self, prompt, options=None):
         """Stream a completion from OpenAI."""
         if not self.initialized:
             await self.initialize()
-        
+
         options = options or {}
         model = options.get("model", self.default_model)
         temperature = options.get("temperature", 0.7)
         max_tokens = options.get("max_tokens", 1000)
-        
+
         # Prepare the API request
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
-        
+
         # Support both string prompts and message arrays
         messages = prompt if isinstance(prompt, list) else [{"role": "user", "content": prompt}]
-        
+
         payload = {
             "model": model,
             "messages": messages,
@@ -204,7 +204,7 @@ class OpenAIProviderExtension(LLMProviderExtension):
             "max_tokens": max_tokens,
             "stream": True
         }
-        
+
         try:
             async with self.session.post(
                 f"{self.base_url}/chat/completions",
@@ -215,7 +215,7 @@ class OpenAIProviderExtension(LLMProviderExtension):
                 if response.status != 200:
                     error_text = await response.text()
                     raise Exception(f"OpenAI API error ({response.status}): {error_text}")
-                
+
                 # Process the streaming response
                 buffer = ""
                 async for line in response.content:
@@ -234,7 +234,7 @@ class OpenAIProviderExtension(LLMProviderExtension):
                                     }
                         except json.JSONDecodeError:
                             pass
-                
+
                 # Yield the final complete response
                 yield {
                     "text": buffer,
@@ -244,26 +244,26 @@ class OpenAIProviderExtension(LLMProviderExtension):
         except Exception as e:
             self.logger.error(f"Error streaming completion: {e}")
             raise
-    
+
     async def generate_embedding(self, text, options=None):
         """Generate embeddings for text."""
         if not self.initialized:
             await self.initialize()
-        
+
         options = options or {}
         model = options.get("embedding_model", "text-embedding-3-small")
-        
+
         # Prepare the API request
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
-        
+
         payload = {
             "model": model,
             "input": text
         }
-        
+
         try:
             async with self.session.post(
                 f"{self.base_url}/embeddings",
@@ -274,9 +274,9 @@ class OpenAIProviderExtension(LLMProviderExtension):
                 if response.status != 200:
                     error_text = await response.text()
                     raise Exception(f"OpenAI API error ({response.status}): {error_text}")
-                
+
                 result = await response.json()
-                
+
                 # Extract and return the embeddings
                 return {
                     "embedding": result["data"][0]["embedding"],
@@ -286,7 +286,7 @@ class OpenAIProviderExtension(LLMProviderExtension):
         except Exception as e:
             self.logger.error(f"Error generating embedding: {e}")
             raise
-    
+
     def get_token_count(self, text):
         """Count tokens in text."""
         if self.encoder:
@@ -294,7 +294,7 @@ class OpenAIProviderExtension(LLMProviderExtension):
         else:
             # Fallback approximation
             return len(text.split()) * 1.3
-    
+
     def get_model_info(self):
         """Get information about available models."""
         return {

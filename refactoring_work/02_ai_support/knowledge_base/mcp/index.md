@@ -103,7 +103,7 @@ async with ClientSession() as session:
             "role": "user",
             "content": "Hello, can you help me with a task?"
         }
-        
+
         async for event in connection.completion([prompt]):
             if event.type == "content":
-                print(event.content.text, end="", flush=True) 
+                print(event.content.text, end="", flush=True)

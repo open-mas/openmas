@@ -40,22 +40,22 @@ sequenceDiagram
     participant AgentFramework as Agent Framework
     participant ReasoningEngine as Reasoning Engine
     participant KRRSystem as KR&R System
-    
+
     Note over ExternalSystem,KRRSystem: Inbound Message Flow
-    
+
     ExternalSystem->>ProtocolAdapter: Protocol-specific message (A2A, MCP, HTTP, etc.)
     ProtocolAdapter->>ProtocolAdapter: to_internal_format()
     ProtocolAdapter->>AgentFramework: Standard Internal Message Format
     AgentFramework->>AgentFramework: Process message metadata
     AgentFramework->>ReasoningEngine: SIMF message
-    
+
     opt Knowledge Access
         ReasoningEngine->>KRRSystem: Query via IKnowledgeBase
         KRRSystem-->>ReasoningEngine: Knowledge results
     end
-    
+
     Note over ExternalSystem,KRRSystem: Outbound Message Flow
-    
+
     ReasoningEngine->>AgentFramework: SIMF response
     AgentFramework->>AgentFramework: Process response metadata
     AgentFramework->>ProtocolAdapter: Standard Internal Message Format
@@ -473,14 +473,14 @@ def a2a_to_internal_format(a2a_message):
         "message_type": "MULTI_PART_MESSAGE" if len(a2a_message.get("parts", [])) > 1 else "PLAIN_TEXT_MESSAGE",
         "metadata": a2a_message.get("metadata", {})
     }
-    
+
     # Handle parts
     parts = a2a_message.get("parts", [])
     if len(parts) == 1:
         # Single part - direct mapping
         part = parts[0]
         content_type = part.get("content_type")
-        
+
         if content_type == "text/plain":
             internal_message["payload"] = {
                 "payload_type": "text_content",
@@ -504,7 +504,7 @@ def a2a_to_internal_format(a2a_message):
         internal_parts = []
         for part in parts:
             content_type = part.get("content_type")
-            
+
             if content_type == "text/plain":
                 internal_parts.append({
                     "payload_type": "text_content",
@@ -523,12 +523,12 @@ def a2a_to_internal_format(a2a_message):
                     "mime_type": content_type
                 })
             # ... [similar mappings for other content types]
-        
+
         internal_message["payload"] = {
             "payload_type": "multi_part_content",
             "parts": internal_parts
         }
-    
+
     return internal_message
 ```
 
@@ -550,13 +550,13 @@ def mcp_to_internal_format(mcp_message):
         "message_flow_direction": "inbound",
         "metadata": {}
     }
-    
+
     # Determine message type and payload
     if "tool_calls" in mcp_message:
         # Tool call
         internal_message["message_type"] = "TOOL_INVOCATION"
         tool_call = mcp_message["tool_calls"][0]  # Assuming single tool call
-        
+
         internal_message["payload"] = {
             "payload_type": "invocation_content",
             "invocation_name": tool_call.get("name", ""),
@@ -569,7 +569,7 @@ def mcp_to_internal_format(mcp_message):
             "payload_type": "text_content",
             "text": mcp_message.get("content", "")
         }
-    
+
     # Handle resources
     if "resources" in mcp_message:
         # If we have resources but already set a text payload, convert to multi-part
@@ -579,7 +579,7 @@ def mcp_to_internal_format(mcp_message):
                 "payload_type": "text_content",
                 "text": text_content
             }]
-            
+
             # Add resources as parts
             for resource in mcp_message["resources"]:
                 resource_part = {
@@ -589,13 +589,13 @@ def mcp_to_internal_format(mcp_message):
                     "mime_type": resource.get("mime_type", "application/octet-stream")
                 }
                 parts.append(resource_part)
-            
+
             internal_message["payload"] = {
                 "payload_type": "multi_part_content",
                 "parts": parts
             }
             internal_message["message_type"] = "MULTI_PART_MESSAGE"
-    
+
     return internal_message
 ```
 

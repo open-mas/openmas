@@ -101,7 +101,7 @@ class WeatherAgent(Agent):
     def setup(self):
         # Register HTTP routes
         self.register_routes(server)
-    
+
     @route("GET", "/weather/{city}")
     async def get_weather(self, request):
         city = request.path_params["city"]
@@ -111,7 +111,7 @@ class WeatherAgent(Agent):
             "conditions": weather_data["conditions"],
             "forecast": weather_data["forecast"]
         }
-    
+
     @route("POST", "/alerts/subscribe")
     async def subscribe_alerts(self, request):
         data = await request.json()
@@ -139,18 +139,18 @@ Examples of HTTP with different reasoning types:
 class LLMWeatherAgent(Agent):
     async def setup(self):
         self.register_routes(server)
-    
+
     @route("POST", "/answer")
     async def answer_question(self, request):
         # Parse request
         data = await request.json()
         question = data["question"]
-        
+
         # LLM reasoning
         response = await self.llm.generate(
             prompt=f"Answer this weather-related question: {question}"
         )
-        
+
         # Return LLM response as HTTP response
         return {
             "answer": response.text,
@@ -164,23 +164,23 @@ class LLMWeatherAgent(Agent):
 class RuleBasedWeatherAgent(Agent):
     async def setup(self):
         self.register_routes(server)
-        
+
         # Define weather forecast rules
         self.rule_engine.add_rules([
             "IF temperature > 30 AND humidity > 70% THEN forecast = 'Hot and humid'",
             "IF temperature > 30 AND humidity < 30% THEN forecast = 'Hot and dry'",
             "IF temperature < 10 AND precipitation > 0 THEN forecast = 'Cold and wet'"
         ])
-    
+
     @route("GET", "/forecast/{city}")
     async def get_forecast(self, request):
         # Get weather data
         city = request.path_params["city"]
         weather_data = await self.fetch_weather_data(city)
-        
+
         # Apply rules to determine forecast
         forecast = self.rule_engine.evaluate(weather_data)
-        
+
         # Return rule-based forecast
         return {
             "city": city,

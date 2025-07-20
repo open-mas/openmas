@@ -144,14 +144,14 @@ class LLMAgent(Agent):
         # Register MCP tools accessible to this agent
         self.register_tool("weather_tool")
         self.register_tool("calculator_tool")
-        
+
     async def process_request(self, user_request):
         # LLM reasoning with MCP tool access
         response = await self.llm.generate(
             prompt=user_request,
             tools=self.get_registered_tools()
         )
-        
+
         # Handle any tool calls from the LLM
         if response.tool_calls:
             tool_results = []
@@ -161,7 +161,7 @@ class LLMAgent(Agent):
                     tool_call.parameters
                 )
                 tool_results.append(result)
-                
+
             # Continue reasoning with tool results
             final_response = await self.llm.generate(
                 prompt=user_request,
@@ -169,7 +169,7 @@ class LLMAgent(Agent):
                 tool_results=tool_results
             )
             return final_response.text
-        
+
         return response.text
 ```
 
@@ -181,21 +181,21 @@ class RuleBasedAgent(Agent):
         # Register the same MCP tools
         self.register_tool("weather_tool")
         self.register_tool("calculator_tool")
-        
+
         # Define rules for tool usage
         self.rule_engine.add_rule(
             "IF request contains 'weather' AND request contains a location THEN use weather_tool"
         )
-        
+
     async def process_request(self, user_request):
         # Rule-based reasoning to determine tools
         tool_decisions = self.rule_engine.evaluate_request(user_request)
-        
+
         # Execute tools based on rule decisions
         results = {}
         for tool, params in tool_decisions.items():
             results[tool] = await self.execute_tool(tool, params)
-            
+
         # Generate response based on results
         return self.template_engine.render("response_template", results)
 ```

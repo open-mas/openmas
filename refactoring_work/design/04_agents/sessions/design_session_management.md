@@ -63,27 +63,27 @@ The session management system uses the following configuration schema, which is 
 sessions:
   # Global session management configuration
   enabled: boolean (optional, default=true)
-  
+
   # Storage configuration
   storage:
     type: string (memory | file | database | redis)
     # Memory storage
     expiration: integer (optional, seconds)
-    
+
     # File storage
     directory: string (optional)
     format: string (optional, json | pickle | yaml)
-    
+
     # Database storage
     connection_string: string (optional)
     table_name: string (optional)
-    
+
     # Redis storage
     host: string (optional)
     port: integer (optional)
     db: integer (optional)
     prefix: string (optional)
-  
+
   # Context management
   context:
     max_history_items: integer (optional, default=50)
@@ -93,7 +93,7 @@ sessions:
       preserve_system_messages: boolean (optional, default=true)
       preserve_last_n_exchanges: integer (optional, default=5)
       summarization_prompt: string (optional)
-  
+
   # Protocol-specific session configuration
   protocol_sessions:
     # A2A task session configuration
@@ -105,7 +105,7 @@ sessions:
         cleanup_interval: integer (optional, default=300)
         log_transitions: boolean (optional, default=true)
         allow_custom_states: boolean (optional, default=false)
-    
+
     # MCP session configuration
     mcp:
       enabled: boolean (optional, default=true)
@@ -113,7 +113,7 @@ sessions:
       session_id_header: string (optional)
       persistence:
         ttl_seconds: integer (optional, default=3600)
-  
+
   # Message and artifact storage
   message_storage:
     store_messages: boolean (optional, default=true)
@@ -122,7 +122,7 @@ sessions:
       location: string (optional, default=./artifacts)
       inline_threshold_kb: integer (optional, default=64)
       retention_policy: string (optional, session | permanent | custom)
-  
+
   # User identification
   user_identification:
     enabled: boolean (optional, default=true)
@@ -130,7 +130,7 @@ sessions:
     auth:
       provider: string (optional)
       claims: object (optional)
-  
+
   # Multi-agent session configuration
   multi_agent:
     enabled: boolean (optional, default=false)
@@ -140,7 +140,7 @@ sessions:
     coordination:
       orchestrator: string (optional)
       synchronization: string (optional, eventual | strict)
-  
+
   # Analytics configuration
   analytics:
     enabled: boolean (optional, default=false)
@@ -350,7 +350,7 @@ agents:
     # Agent configuration
     module: "agents.example"
     class: "ExampleAgent"
-    
+
     # Agent-specific session configuration
     sessions:
       context:
@@ -374,18 +374,18 @@ The SessionManager provides centralized session management:
 ```python
 class SessionManager:
     """Central manager for all sessions."""
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         self.config = config
         self.storage = self._create_storage(config.get("storage", {}))
         self.context_manager = ContextManager(config.get("context", {}))
         self.analytics = SessionAnalytics(config.get("analytics", {})) if config.get("analytics", {}).get("enabled", False) else None
-    
+
     def _create_storage(self, storage_config):
         """Create the appropriate storage backend."""
         storage_type = storage_config.get("type", "memory")
-        
+
         if storage_type == "memory":
             return MemoryStorage(storage_config)
         elif storage_type == "file":
@@ -396,14 +396,14 @@ class SessionManager:
             return RedisStorage(storage_config)
         else:
             raise ValueError(f"Unknown storage type: {storage_type}")
-    
+
     async def get_session(self, session_id):
         """Get a session by ID, creating if it doesn't exist."""
         session = await self.storage.get(session_id)
         if not session:
             session = await self.create_session(session_id)
         return session
-    
+
     async def create_session(self, session_id, metadata=None):
         """Create a new session."""
         session = {
@@ -415,13 +415,13 @@ class SessionManager:
             "state": {}
         }
         await self.storage.set(session_id, session)
-        
+
         # Track analytics if enabled
         if self.analytics:
             await self.analytics.track_event("session_start", session_id)
-            
+
         return session
-    
+
     async def update_session(self, session_id, update_fn):
         """Update a session using an update function."""
         session = await self.get_session(session_id)
@@ -429,54 +429,54 @@ class SessionManager:
         updated_session["last_accessed"] = datetime.now().isoformat()
         await self.storage.set(session_id, updated_session)
         return updated_session
-    
+
     async def add_message(self, session_id, message):
         """Add a message to a session's history."""
         async def _add_message(session):
             if "history" not in session:
                 session["history"] = []
-                
+
             session["history"].append({
                 "timestamp": datetime.now().isoformat(),
                 "message": message
             })
-            
+
             # Apply context management
             session["history"] = await self.context_manager.prune_history(session["history"])
-            
+
             return session
-        
+
         session = await self.update_session(session_id, _add_message)
-        
+
         # Track analytics if enabled
         if self.analytics:
             message_type = message.get("role", "unknown")
             await self.analytics.track_event(f"{message_type}_message", session_id)
-            
+
         return session
-    
+
     async def set_state(self, session_id, key, value):
         """Set a state value in the session."""
         async def _set_state(session):
             if "state" not in session:
                 session["state"] = {}
-                
+
             session["state"][key] = value
             return session
-        
+
         return await self.update_session(session_id, _set_state)
-    
+
     async def get_state(self, session_id, key, default=None):
         """Get a state value from the session."""
         session = await self.get_session(session_id)
         return session.get("state", {}).get(key, default)
-    
+
     async def end_session(self, session_id):
         """End a session."""
         # Track analytics if enabled
         if self.analytics:
             await self.analytics.track_event("session_end", session_id)
-            
+
         return await self.storage.delete(session_id)
 ```
 
@@ -487,7 +487,7 @@ Context management is implemented with a dedicated component:
 ```python
 class ContextManager:
     """Manages conversation context and history."""
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         self.config = config
@@ -495,12 +495,12 @@ class ContextManager:
         self.max_tokens = config.get("max_tokens", 4000)
         self.strategy = config.get("pruning_strategy", "selective")
         self.pruning_config = config.get("pruning_config", {})
-    
+
     async def prune_history(self, history):
         """Prune history based on configured strategy."""
         if len(history) <= self.max_history_items:
             return history
-            
+
         if self.strategy == "truncate":
             return history[-self.max_history_items:]
         elif self.strategy == "summarize":
@@ -510,17 +510,17 @@ class ContextManager:
         else:
             # Default to truncation
             return history[-self.max_history_items:]
-    
+
     async def _summarize_history(self, history):
         """Summarize older parts of history."""
         # Implementation of history summarization
         pass
-    
+
     async def _selective_prune(self, history):
         """Selectively prune less important messages."""
         # Implementation of selective pruning
         pass
-    
+
     async def get_token_count(self, history):
         """Estimate token count for history."""
         # Implementation of token counting

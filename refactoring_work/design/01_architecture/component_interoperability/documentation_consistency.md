@@ -82,7 +82,7 @@ All documents adhere to the following standards:
 
 All documents appropriately address these key OpenMAS principles:
 
-1. **Reasoning Agnosticism**: 
+1. **Reasoning Agnosticism**:
    - Clear separation between agent communication ("body") and reasoning ("brain")
    - Support for multiple reasoning approaches (rule-based, BDI, LLM-based, hybrid)
    - Consistent interfaces regardless of underlying reasoning implementation
@@ -108,7 +108,7 @@ All documents appropriately address these key OpenMAS principles:
 
 The following issues were identified and addressed to ensure documentation consistency:
 
-1. **Terminology Alignment**: 
+1. **Terminology Alignment**:
    - Standardized terms for "Protocol Layer" vs "Protocol System"
    - Consistent naming of "Communication Pattern Engine" across all documents
    - Unified terminology for "Observability System" components
@@ -128,14 +128,14 @@ The following issues were identified and addressed to ensure documentation consi
 # Method signature example
 def authenticate_request(request: ProtocolRequest, auth_context: AuthContext) -> AuthenticationResult:
     """Authenticate an incoming request.
-    
+
     Args:
         request: ProtocolRequest - The incoming protocol request containing credentials
         auth_context: AuthContext - Additional context for authentication decisions
-        
+
     Returns:
         AuthenticationResult - Authentication outcome with principal information
-        
+
     Raises:
         AuthenticationError - If authentication fails due to invalid credentials
     """

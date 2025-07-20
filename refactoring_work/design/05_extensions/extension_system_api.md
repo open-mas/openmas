@@ -53,143 +53,143 @@ from datetime import datetime
 class IExtensionRegistry(ABC):
     """
     Core interface for the Extension Registry.
-    
+
     Provides extension registration, discovery, and metadata management
     while maintaining type safety and validation across all extension types.
     """
-    
+
     @abstractmethod
     async def register_extension(self, extension: 'ExtensionDefinition') -> None:
         """
         Register a new extension with the registry.
-        
+
         Args:
             extension: Complete extension definition including metadata and entry point
-            
+
         Raises:
             ExtensionRegistrationError: If extension registration fails
             ExtensionConfigError: If extension definition is invalid
             ExtensionError: If extension name conflicts with existing extension
         """
         pass
-    
+
     @abstractmethod
     async def unregister_extension(self, extension_name: str) -> None:
         """
         Unregister an extension from the registry.
-        
+
         Args:
             extension_name: Name of the extension to unregister
-            
+
         Raises:
             ExtensionNotFoundError: If extension does not exist
             ExtensionError: If extension has active instances
         """
         pass
-    
+
     @abstractmethod
     async def discover_extensions(self) -> None:
         """
         Discover available extensions from all configured sources.
-        
+
         Discovers extensions from:
         - Built-in extensions (shipped with OpenMAS)
         - Package-based extensions (via Python entry points)
         - Directory-based extensions (local extension directories)
-        
+
         Raises:
             ExtensionDiscoveryError: If discovery process fails
         """
         pass
-    
+
     @abstractmethod
     async def get_available_extensions(
-        self, 
+        self,
         extension_type: Optional[str] = None
     ) -> List['ExtensionInfo']:
         """
         Get list of all registered extensions, optionally filtered by type.
-        
+
         Args:
             extension_type: Optional filter by extension type
-            
+
         Returns:
             List of ExtensionInfo objects describing available extensions
         """
         pass
-    
+
     @abstractmethod
     async def get_extension_definition(self, extension_name: str) -> 'ExtensionDefinition':
         """
         Get the complete definition for a specific extension.
-        
+
         Args:
             extension_name: Name of the extension to retrieve
-            
+
         Returns:
             ExtensionDefinition with complete extension specification
-            
+
         Raises:
             ExtensionNotFoundError: If extension does not exist
         """
         pass
-    
+
     @abstractmethod
     def supports_extension_type(self, extension_type: str) -> bool:
         """
         Check if a specific extension type is supported.
-        
+
         Args:
             extension_type: Extension type to check (e.g., "agent", "communicator")
-            
+
         Returns:
             True if extension type is supported, False otherwise
         """
         pass
-    
+
     @abstractmethod
     async def validate_extension_dependencies(
-        self, 
+        self,
         extension_name: str
     ) -> 'ValidationResult':
         """
         Validate that all dependencies for an extension are satisfied.
-        
+
         Args:
             extension_name: Name of the extension to validate
-            
+
         Returns:
             ValidationResult indicating if dependencies are satisfied
-            
+
         Raises:
             ExtensionNotFoundError: If extension does not exist
         """
         pass
-    
+
     @abstractmethod
     async def get_extension_dependency_graph(self) -> Dict[str, List[str]]:
         """
         Get the dependency graph for all registered extensions.
-        
+
         Returns:
             Dictionary mapping extension names to their dependencies
         """
         pass
-    
+
     @abstractmethod
     async def resolve_loading_order(
-        self, 
+        self,
         extension_names: List[str]
     ) -> List[str]:
         """
         Resolve the correct loading order for a set of extensions.
-        
+
         Args:
             extension_names: List of extension names to order
-            
+
         Returns:
             List of extension names in dependency-resolved order
-            
+
         Raises:
             ExtensionDependencyError: If circular dependencies are detected
         """
@@ -204,123 +204,123 @@ Interface for extension loading and lifecycle management:
 class IExtensionLoader(ABC):
     """
     Interface for extension loading and lifecycle management.
-    
+
     Handles the instantiation, configuration, and lifecycle of extension
     instances while managing dependencies and ensuring proper initialization order.
     """
-    
+
     @abstractmethod
     async def load_extension(
-        self, 
-        extension_name: str, 
+        self,
+        extension_name: str,
         config: 'ExtensionConfig'
     ) -> 'IExtension':
         """
         Load an extension instance with the given configuration.
-        
+
         Args:
             extension_name: Name of the extension to load
             config: Configuration for the extension instance
-            
+
         Returns:
             IExtension instance ready for use
-            
+
         Raises:
             ExtensionNotFoundError: If extension is not registered
             ExtensionConfigError: If configuration is invalid
             ExtensionLoadError: If extension loading fails
         """
         pass
-    
+
     @abstractmethod
     async def unload_extension(self, extension_id: str) -> None:
         """
         Unload a specific extension instance.
-        
+
         Args:
             extension_id: Unique identifier of the extension instance
-            
+
         Raises:
             ExtensionNotFoundError: If extension instance does not exist
             ExtensionError: If extension cannot be safely unloaded
         """
         pass
-    
+
     @abstractmethod
     async def reload_extension(self, extension_id: str) -> None:
         """
         Reload a specific extension instance with its current configuration.
-        
+
         Args:
             extension_id: Unique identifier of the extension instance
-            
+
         Raises:
             ExtensionNotFoundError: If extension instance does not exist
             ExtensionLoadError: If extension reload fails
         """
         pass
-    
+
     @abstractmethod
     async def get_loaded_extensions(self) -> List['ExtensionInstanceInfo']:
         """
         Get list of all currently loaded extension instances.
-        
+
         Returns:
             List of ExtensionInstanceInfo objects for loaded instances
         """
         pass
-    
+
     @abstractmethod
     async def get_extension_status(self, extension_id: str) -> 'ExtensionStatus':
         """
         Get the current status of a specific extension instance.
-        
+
         Args:
             extension_id: Unique identifier of the extension instance
-            
+
         Returns:
             ExtensionStatus with current state information
-            
+
         Raises:
             ExtensionNotFoundError: If extension instance does not exist
         """
         pass
-    
+
     @abstractmethod
     async def validate_extension_config(
-        self, 
-        extension_name: str, 
+        self,
+        extension_name: str,
         config: 'ExtensionConfig'
     ) -> 'ValidationResult':
         """
         Validate extension configuration without loading the extension.
-        
+
         Args:
             extension_name: Name of the extension to validate config for
             config: Configuration to validate
-            
+
         Returns:
             ValidationResult indicating if config is valid
-            
+
         Raises:
             ExtensionNotFoundError: If extension is not registered
         """
         pass
-    
+
     @abstractmethod
     async def load_extensions_batch(
-        self, 
+        self,
         extensions: List[tuple[str, 'ExtensionConfig']]
     ) -> List['IExtension']:
         """
         Load multiple extensions in dependency-resolved order.
-        
+
         Args:
             extensions: List of (extension_name, config) tuples to load
-            
+
         Returns:
             List of loaded IExtension instances in loading order
-            
+
         Raises:
             ExtensionDependencyError: If dependencies cannot be resolved
             ExtensionLoadError: If any extension fails to load
@@ -336,81 +336,81 @@ class IExtensionLoader(ABC):
 class IExtension(ABC):
     """
     Base interface for all OpenMAS extensions.
-    
+
     Provides common lifecycle methods and metadata access that all
     extension types must implement for consistent management.
     """
-    
+
     @property
     @abstractmethod
     def extension_id(self) -> str:
         """Unique identifier for this extension instance."""
         pass
-    
+
     @property
     @abstractmethod
     def extension_name(self) -> str:
         """Name of the extension this instance implements."""
         pass
-    
+
     @property
     @abstractmethod
     def extension_type(self) -> str:
         """Type of extension (e.g., 'agent', 'communicator')."""
         pass
-    
+
     @abstractmethod
     async def initialize(self, config: 'ExtensionConfig') -> None:
         """
         Initialize the extension with the given configuration.
-        
+
         Args:
             config: Extension configuration
-            
+
         Raises:
             ExtensionConfigError: If configuration is invalid
             ExtensionError: If initialization fails
         """
         pass
-    
+
     @abstractmethod
     async def shutdown(self) -> None:
         """
         Gracefully shutdown the extension and release resources.
-        
+
         Raises:
             ExtensionError: If shutdown fails
         """
         pass
-    
+
     @abstractmethod
     async def get_metadata(self) -> 'ExtensionMetadata':
         """
         Get metadata about this extension instance.
-        
+
         Returns:
             ExtensionMetadata with instance information
         """
         pass
-    
+
     @abstractmethod
     async def validate_config(self, config: 'ExtensionConfig') -> 'ValidationResult':
         """
         Validate a configuration for this extension type.
-        
+
         Args:
             config: Configuration to validate
-            
+
         Returns:
             ValidationResult indicating if config is valid
         """
         pass
-    
+
     @abstractmethod
     async def get_health_status(self) -> Dict[str, Any]:
         """
         Get health status information for this extension instance.
-        
+
         Returns:
             Dictionary containing health status information
         """
@@ -422,17 +422,17 @@ class IExtension(ABC):
 ```python
 class IAgentExtension(IExtension):
     """Interface for agent enhancement extensions."""
-    
+
     @abstractmethod
     async def enhance_agent(self, agent: 'Agent') -> None:
         """
         Enhance an agent with additional capabilities.
-        
+
         Args:
             agent: The agent instance to enhance
         """
         pass
-    
+
     @abstractmethod
     async def get_provided_capabilities(self) -> List[str]:
         """Get list of capabilities this extension provides."""
@@ -441,20 +441,20 @@ class IAgentExtension(IExtension):
 
 class ICommunicatorExtension(IExtension):
     """Interface for communication protocol extensions."""
-    
+
     @abstractmethod
     async def create_communicator(self, agent_config: Dict[str, Any]) -> 'Communicator':
         """
         Create a communicator instance for an agent.
-        
+
         Args:
             agent_config: Agent configuration dictionary
-            
+
         Returns:
             Communicator instance for the agent
         """
         pass
-    
+
     @abstractmethod
     def get_supported_protocols(self) -> List[str]:
         """Get list of protocols supported by this extension."""
@@ -463,25 +463,25 @@ class ICommunicatorExtension(IExtension):
 
 class IAssetExtension(IExtension):
     """Interface for asset management extensions."""
-    
+
     @abstractmethod
     async def provide_asset(
-        self, 
-        asset_id: str, 
+        self,
+        asset_id: str,
         context: Optional[Dict[str, Any]] = None
     ) -> Any:
         """
         Provide an asset by its identifier.
-        
+
         Args:
             asset_id: Unique identifier for the asset
             context: Optional context for asset retrieval
-            
+
         Returns:
             The requested asset
         """
         pass
-    
+
     @abstractmethod
     def get_supported_asset_types(self) -> List[str]:
         """Get list of asset types supported by this extension."""
@@ -490,33 +490,33 @@ class IAssetExtension(IExtension):
 
 class IPromptExtension(IExtension):
     """Interface for prompt management extensions."""
-    
+
     @abstractmethod
     async def get_template(self, template_id: str) -> str:
         """
         Get a prompt template by identifier.
-        
+
         Args:
             template_id: Unique identifier for the template
-            
+
         Returns:
             The prompt template string
         """
         pass
-    
+
     @abstractmethod
     async def render_template(
-        self, 
-        template_id: str, 
+        self,
+        template_id: str,
         context: Dict[str, Any]
     ) -> str:
         """
         Render a template with the given context.
-        
+
         Args:
             template_id: Template identifier
             context: Context variables for rendering
-            
+
         Returns:
             Rendered prompt string
         """
@@ -525,38 +525,38 @@ class IPromptExtension(IExtension):
 
 class ILLMExtension(IExtension):
     """Interface for language model integration extensions."""
-    
+
     @abstractmethod
     async def generate_completion(
-        self, 
-        prompt: str, 
+        self,
+        prompt: str,
         options: Dict[str, Any]
     ) -> str:
         """
         Generate a completion from the language model.
-        
+
         Args:
             prompt: Input prompt
             options: Generation options
-            
+
         Returns:
             Generated completion
         """
         pass
-    
+
     @abstractmethod
     async def generate_embedding(
-        self, 
-        text: str, 
+        self,
+        text: str,
         options: Dict[str, Any]
     ) -> List[float]:
         """
         Generate embeddings for text.
-        
+
         Args:
             text: Text to embed
             options: Embedding options
-            
+
         Returns:
             Embedding vector
         """
@@ -565,20 +565,20 @@ class ILLMExtension(IExtension):
 
 class IReasoningExtension(IExtension):
     """Interface for reasoning approach extensions."""
-    
+
     @abstractmethod
     async def create_reasoner(self, agent_config: Dict[str, Any]) -> 'Reasoner':
         """
         Create a reasoner instance for an agent.
-        
+
         Args:
             agent_config: Agent configuration dictionary
-            
+
         Returns:
             Reasoner instance
         """
         pass
-    
+
     @abstractmethod
     def get_reasoning_capabilities(self) -> List[str]:
         """Get list of reasoning capabilities provided."""
@@ -587,27 +587,27 @@ class IReasoningExtension(IExtension):
 
 class IProtocolAdapterExtension(IExtension):
     """Interface for protocol adaptation extensions."""
-    
+
     @abstractmethod
     async def adapt_message(
-        self, 
-        message: Any, 
-        source_protocol: str, 
+        self,
+        message: Any,
+        source_protocol: str,
         target_protocol: str
     ) -> Any:
         """
         Adapt a message between protocols.
-        
+
         Args:
             message: Message to adapt
             source_protocol: Source protocol identifier
             target_protocol: Target protocol identifier
-            
+
         Returns:
             Adapted message
         """
         pass
-    
+
     @abstractmethod
     def get_supported_protocol_pairs(self) -> List[tuple[str, str]]:
         """Get list of supported (source, target) protocol pairs."""
@@ -616,27 +616,27 @@ class IProtocolAdapterExtension(IExtension):
 
 class IToolExtension(IExtension):
     """Interface for tool capability extensions."""
-    
+
     @abstractmethod
     async def execute_tool(
-        self, 
-        tool_name: str, 
-        parameters: Dict[str, Any], 
+        self,
+        tool_name: str,
+        parameters: Dict[str, Any],
         context: Dict[str, Any]
     ) -> Any:
         """
         Execute a tool with given parameters.
-        
+
         Args:
             tool_name: Name of the tool to execute
             parameters: Tool parameters
             context: Execution context
-            
+
         Returns:
             Tool execution result
         """
         pass
-    
+
     @abstractmethod
     def get_tool_schemas(self) -> Dict[str, Dict[str, Any]]:
         """Get schemas for all tools provided by this extension."""
@@ -679,19 +679,19 @@ class ExtensionState(str, Enum):
 
 class ExtensionDependency(BaseModel):
     """Specification of an extension dependency."""
-    
+
     name: str = Field(description="Name of the required extension")
-    
+
     version_constraint: str = Field(
         description="Version constraint (e.g., '>=1.0.0', '~=1.2.0')",
         default="*"
     )
-    
+
     optional: bool = Field(
         description="Whether this dependency is optional",
         default=False
     )
-    
+
     extension_type: Optional[ExtensionType] = Field(
         description="Required extension type",
         default=None
@@ -700,7 +700,7 @@ class ExtensionDependency(BaseModel):
 class ExtensionDefinition(BaseModel):
     """
     Complete definition of an extension.
-    
+
     This model represents an extension specification that can be
     registered with the Extension Registry.
     """
@@ -708,57 +708,57 @@ class ExtensionDefinition(BaseModel):
         description="Unique identifier for the extension",
         pattern=r"^[a-z][a-z0-9_]*$"  # Snake case extension names
     )
-    
+
     version: str = Field(
         description="Extension version following semantic versioning",
         pattern=r"^\d+\.\d+\.\d+$"
     )
-    
+
     extension_type: ExtensionType = Field(
         description="Type of extension"
     )
-    
+
     description: str = Field(
         description="Human-readable description of the extension"
     )
-    
+
     author: str = Field(
         description="Extension author or organization"
     )
-    
+
     license: str = Field(
         description="Extension license (e.g., 'MIT', 'Apache-2.0')"
     )
-    
+
     dependencies: List[ExtensionDependency] = Field(
         description="List of extension dependencies",
         default_factory=list
     )
-    
+
     supported_protocols: List[str] = Field(
         description="List of protocols this extension supports",
         default_factory=lambda: ["*"]  # Default to all protocols
     )
-    
+
     entry_point: str = Field(
         description="Fully qualified Python class implementing the extension"
     )
-    
+
     config_schema: Dict[str, Any] = Field(
         description="JSON schema for extension configuration",
         default_factory=dict
     )
-    
+
     metadata: Dict[str, Any] = Field(
         description="Additional extension metadata",
         default_factory=dict
     )
-    
+
     minimum_openmas_version: str = Field(
         description="Minimum required OpenMAS version",
         default="0.3.0"
     )
-    
+
     class Config:
         json_schema_extra = {
             "example": {
@@ -784,40 +784,40 @@ class ExtensionDefinition(BaseModel):
 class ExtensionConfig(BaseModel):
     """
     Configuration for an extension instance.
-    
+
     This model contains all the information needed to configure
     a specific extension instance.
     """
     extension_name: str = Field(
         description="Name of the extension to configure"
     )
-    
+
     enabled: bool = Field(
         description="Whether this extension is enabled",
         default=True
     )
-    
+
     priority: int = Field(
         description="Extension loading/execution priority (higher = earlier)",
         default=50,
         ge=0, le=100
     )
-    
+
     options: Dict[str, Any] = Field(
         description="Extension-specific configuration options",
         default_factory=dict
     )
-    
+
     protocol_options: Dict[str, Dict[str, Any]] = Field(
         description="Protocol-specific configuration options",
         default_factory=dict
     )
-    
+
     environment: Dict[str, str] = Field(
         description="Environment variables for the extension",
         default_factory=dict
     )
-    
+
     metadata: Dict[str, Any] = Field(
         description="Additional configuration metadata",
         default_factory=dict
@@ -825,42 +825,42 @@ class ExtensionConfig(BaseModel):
 
 class ExtensionStatus(BaseModel):
     """Runtime status information for an extension instance."""
-    
+
     extension_id: str = Field(description="Unique instance identifier")
-    
+
     extension_name: str = Field(description="Extension name")
-    
+
     extension_type: ExtensionType = Field(description="Extension type")
-    
+
     status: ExtensionState = Field(description="Current extension state")
-    
+
     loaded_at: datetime = Field(description="When extension was loaded")
-    
+
     last_activity: Optional[datetime] = Field(
         description="Last activity timestamp",
         default=None
     )
-    
+
     error_count: int = Field(
         description="Number of errors encountered",
         default=0,
         ge=0
     )
-    
+
     last_error: Optional[str] = Field(
         description="Last error message",
         default=None
     )
-    
+
     current_config: ExtensionConfig = Field(
         description="Current extension configuration"
     )
-    
+
     health_status: Dict[str, Any] = Field(
         description="Health status information",
         default_factory=dict
     )
-    
+
     metadata: Dict[str, Any] = Field(
         description="Instance-specific metadata",
         default_factory=dict
@@ -872,7 +872,7 @@ class ExtensionStatus(BaseModel):
 ```python
 class ExtensionInfo(BaseModel):
     """Summary information about a registered extension."""
-    
+
     name: str = Field(description="Extension name")
     version: str = Field(description="Extension version")
     extension_type: ExtensionType = Field(description="Extension type")
@@ -885,7 +885,7 @@ class ExtensionInfo(BaseModel):
 
 class ExtensionInstanceInfo(BaseModel):
     """Summary information about an extension instance."""
-    
+
     extension_id: str = Field(description="Extension instance identifier")
     extension_name: str = Field(description="Extension name")
     extension_type: ExtensionType = Field(description="Extension type")
@@ -896,7 +896,7 @@ class ExtensionInstanceInfo(BaseModel):
 
 class ExtensionMetadata(BaseModel):
     """Detailed metadata for an extension instance."""
-    
+
     extension_id: str = Field(description="Extension instance identifier")
     extension_name: str = Field(description="Extension name")
     extension_type: ExtensionType = Field(description="Extension type")
@@ -909,24 +909,24 @@ class ExtensionMetadata(BaseModel):
 
 class ValidationResult(BaseModel):
     """Result of extension configuration or dependency validation."""
-    
+
     valid: bool = Field(description="Whether validation passed")
-    
+
     errors: List[str] = Field(
         description="Validation error messages",
         default_factory=list
     )
-    
+
     warnings: List[str] = Field(
         description="Validation warning messages",
         default_factory=list
     )
-    
+
     validated_config: Optional[Dict[str, Any]] = Field(
         description="Validated and normalized configuration",
         default=None
     )
-    
+
     dependency_resolution: Optional[List[str]] = Field(
         description="Resolved dependency loading order",
         default=None
@@ -938,7 +938,7 @@ class ValidationResult(BaseModel):
 ```python
 class ExtensionError(Exception):
     """Base exception for extension-related errors."""
-    
+
     def __init__(self, message: str, extension_name: Optional[str] = None, **kwargs):
         super().__init__(message)
         self.extension_name = extension_name
@@ -950,14 +950,14 @@ class ExtensionNotFoundError(ExtensionError):
 
 class ExtensionConfigError(ExtensionError):
     """Raised when extension configuration is invalid."""
-    
+
     def __init__(self, message: str, config_errors: List[str] = None, **kwargs):
         super().__init__(message, **kwargs)
         self.config_errors = config_errors or []
 
 class ExtensionLoadError(ExtensionError):
     """Raised when extension loading fails."""
-    
+
     def __init__(self, message: str, load_stage: str = "unknown", **kwargs):
         super().__init__(message, **kwargs)
         self.load_stage = load_stage
@@ -968,7 +968,7 @@ class ExtensionRegistrationError(ExtensionError):
 
 class ExtensionDependencyError(ExtensionError):
     """Raised when extension dependencies cannot be resolved."""
-    
+
     def __init__(self, message: str, dependency_chain: List[str] = None, **kwargs):
         super().__init__(message, **kwargs)
         self.dependency_chain = dependency_chain or []
@@ -979,7 +979,7 @@ class ExtensionDiscoveryError(ExtensionError):
 
 class ExtensionVersionError(ExtensionError):
     """Raised when extension version constraints cannot be satisfied."""
-    
+
     def __init__(self, message: str, required_version: str = None, available_version: str = None, **kwargs):
         super().__init__(message, **kwargs)
         self.required_version = required_version
@@ -997,7 +997,7 @@ The Extension System supports three discovery mechanisms:
 # Extensions that ship with OpenMAS core
 BUILTIN_EXTENSIONS = [
     "openmas.extensions.basic_agent_extension",
-    "openmas.extensions.http_communicator_extension", 
+    "openmas.extensions.http_communicator_extension",
     "openmas.extensions.file_asset_extension"
 ]
 
@@ -1014,7 +1014,7 @@ setup(
     },
 )
 
-# Directory-based Discovery  
+# Directory-based Discovery
 # Local extensions in configured directories
 EXTENSION_DIRECTORIES = [
     "extensions/",
@@ -1029,7 +1029,7 @@ EXTENSION_DIRECTORIES = [
 async def resolve_dependencies(extensions: List[str]) -> List[str]:
     """
     Resolve extension dependencies and return loading order.
-    
+
     Uses topological sorting with cycle detection.
     """
     # 1. Build dependency graph
@@ -1037,40 +1037,40 @@ async def resolve_dependencies(extensions: List[str]) -> List[str]:
     for ext_name in extensions:
         definition = await registry.get_extension_definition(ext_name)
         graph[ext_name] = [dep.name for dep in definition.dependencies if not dep.optional]
-    
+
     # 2. Detect circular dependencies
     def has_cycle(node, visited, rec_stack):
         visited[node] = True
         rec_stack[node] = True
-        
+
         for neighbor in graph.get(node, []):
             if not visited.get(neighbor, False):
                 if has_cycle(neighbor, visited, rec_stack):
                     return True
             elif rec_stack.get(neighbor, False):
                 return True
-                
+
         rec_stack[node] = False
         return False
-    
+
     # 3. Topological sort for loading order
     def topological_sort():
         visited = {}
         stack = []
-        
+
         def dfs(node):
             visited[node] = True
             for neighbor in graph.get(node, []):
                 if not visited.get(neighbor, False):
                     dfs(neighbor)
             stack.append(node)
-        
+
         for node in extensions:
             if not visited.get(node, False):
                 dfs(node)
-                
+
         return stack[::-1]  # Reverse for correct order
-    
+
     return topological_sort()
 ```
 
@@ -1086,7 +1086,7 @@ class CustomProtocolAdapter(IProtocolAdapterExtension):
         if source_protocol == "custom" and target_protocol == "mcp":
             return self._convert_custom_to_mcp(message)
         # ... other adaptations
-        
+
     def get_supported_protocol_pairs(self):
         return [("custom", "mcp"), ("custom", "a2a")]
 ```
@@ -1111,9 +1111,9 @@ class MessageProcessingExtension(IAgentExtension):
         # Process SIMF message
         if message.payload.payload_type == "invocation_content":
             # Handle tool invocation
-            result = await self._execute_tool(message.payload.invocation_name, 
+            result = await self._execute_tool(message.payload.invocation_name,
                                               message.payload.arguments)
-            
+
             # Return SIMF response
             return InternalMessageFormat(
                 message_id=str(uuid.uuid4()),
@@ -1140,7 +1140,7 @@ class MessageProcessingExtension(IAgentExtension):
 # Register a custom extension
 extension_def = ExtensionDefinition(
     name="weather_tool",
-    version="1.0.0", 
+    version="1.0.0",
     extension_type=ExtensionType.TOOL,
     description="Provides weather information tools",
     author="OpenMAS Community",
@@ -1210,7 +1210,7 @@ print(f"Extension status: {status.status}")
 # Load multiple extensions with automatic dependency resolution
 extensions_to_load = [
     ("weather_tool", weather_config),
-    ("translation_tool", translation_config), 
+    ("translation_tool", translation_config),
     ("database_agent", db_agent_config)
 ]
 
@@ -1230,38 +1230,38 @@ from openmas.extensions import IToolExtension, ExtensionConfig, ValidationResult
 
 class WeatherToolExtension(IToolExtension):
     """Example tool extension implementation."""
-    
+
     def __init__(self):
         self._extension_id = str(uuid.uuid4())
         self._api_key = None
         self._default_units = "metric"
-    
+
     @property
     def extension_id(self) -> str:
         return self._extension_id
-        
-    @property  
+
+    @property
     def extension_name(self) -> str:
         return "weather_tool"
-        
+
     @property
     def extension_type(self) -> str:
         return "tool"
-    
+
     async def initialize(self, config: ExtensionConfig) -> None:
         """Initialize the weather tool extension."""
         self._api_key = config.options.get("api_key")
         self._default_units = config.options.get("default_units", "metric")
-        
+
         if not self._api_key:
             raise ExtensionConfigError("api_key is required")
-    
+
     async def execute_tool(self, tool_name: str, parameters: Dict[str, Any], context: Dict[str, Any]) -> Any:
         """Execute a weather tool."""
         if tool_name == "get_weather":
             location = parameters.get("location")
             units = parameters.get("units", self._default_units)
-            
+
             # Call weather API
             weather_data = await self._fetch_weather(location, units)
             return {
@@ -1272,7 +1272,7 @@ class WeatherToolExtension(IToolExtension):
             }
         else:
             raise ValueError(f"Unknown tool: {tool_name}")
-    
+
     def get_tool_schemas(self) -> Dict[str, Dict[str, Any]]:
         """Get schemas for weather tools."""
         return {
@@ -1286,7 +1286,7 @@ class WeatherToolExtension(IToolExtension):
                             "description": "Location to get weather for"
                         },
                         "units": {
-                            "type": "string", 
+                            "type": "string",
                             "enum": ["metric", "imperial"],
                             "description": "Temperature units"
                         }
@@ -1295,7 +1295,7 @@ class WeatherToolExtension(IToolExtension):
                 }
             }
         }
-    
+
     async def _fetch_weather(self, location: str, units: str) -> Dict[str, Any]:
         """Fetch weather data from API."""
         # Implementation details...
@@ -1304,4 +1304,4 @@ class WeatherToolExtension(IToolExtension):
 
 ---
 
-This Extension System API provides a comprehensive foundation for building a pluggable architecture in OpenMAS while maintaining the core principles of protocol independence, reasoning agnosticism, and SIMF compatibility. 
+This Extension System API provides a comprehensive foundation for building a pluggable architecture in OpenMAS while maintaining the core principles of protocol independence, reasoning agnosticism, and SIMF compatibility.

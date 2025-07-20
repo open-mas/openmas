@@ -16,7 +16,7 @@ properties:
     type: string
     description: "The type of prompt"
     enum: ["system", "user", "assistant", "function", "etc"]
-  
+
   # Content configuration
   content:
     type: object
@@ -25,19 +25,19 @@ properties:
       template:
         type: string
         description: "Prompt template"
-      
+
       template_format:
         type: string
         description: "Template format"
         enum: ["text", "jinja2", "handlebars", "etc"]
-      
+
       variables:
         type: object
         description: "Template variables"
         # Variable-specific properties
     required:
       - template
-  
+
   # Metadata
   metadata:
     type: object
@@ -93,4 +93,4 @@ required:
 ## Usage Examples
 ```python
 # Example prompt configuration and usage
-``` 
+```

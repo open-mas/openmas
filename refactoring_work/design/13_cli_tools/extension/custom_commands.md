@@ -28,29 +28,29 @@ from openmas.cli.command import BaseCommand
 
 class MyCustomCommand(BaseCommand):
     """My custom command that does something useful."""
-    
+
     name = "my-command"
     description = "Performs a custom operation"
-    
+
     def configure_parser(self, parser):
         """Configure the argument parser."""
         parser.add_argument("--option", help="An option for my command")
         parser.add_argument("target", help="The target to operate on")
-        
+
     def execute(self, args, config):
         """Execute the command with the given arguments and configuration."""
         # Access arguments
         target = args.target
         option = args.option
-        
+
         # Access configuration
         protocol = config.get("cli.default_protocol", "a2a")
-        
+
         # Command implementation
         self.console.print(f"Executing custom command on {target} with {protocol} protocol")
-        
+
         # Perform operations...
-        
+
         return 0  # Return success code
 ```
 
@@ -65,7 +65,7 @@ from my_extension.commands.my_command import MyCustomCommand
 
 class MyExtensionPlugin(CLIPlugin):
     """Plugin that registers my custom commands."""
-    
+
     def get_commands(self):
         """Return the commands provided by this plugin."""
         return [MyCustomCommand()]
@@ -107,21 +107,21 @@ from openmas.cli.command import ProtocolCommand
 
 class MyA2ACommand(ProtocolCommand):
     """A command specific to the A2A protocol."""
-    
+
     name = "a2a-specific"
     description = "Performs A2A-specific operations"
     protocol = "a2a"  # Specifies this command only works with A2A
-    
+
     def configure_parser(self, parser):
         parser.add_argument("agent", help="The agent to operate on")
-        
+
     def execute(self, args, config):
         # Access the A2A protocol handler
         a2a_handler = self.get_protocol_handler()
-        
+
         # Use protocol-specific features
         a2a_handler.generate_agent_card(args.agent)
-        
+
         return 0
 ```
 
@@ -134,23 +134,23 @@ from openmas.cli.command import ReasoningCommand
 
 class BDICommand(ReasoningCommand):
     """A command for BDI reasoning operations."""
-    
+
     name = "bdi-update"
     description = "Updates beliefs, desires, or intentions"
     reasoning_approach = "bdi"  # Specifies this command is for BDI reasoning
-    
+
     def configure_parser(self, parser):
         parser.add_argument("--belief", help="Belief to update")
         parser.add_argument("agent", help="The agent to operate on")
-        
+
     def execute(self, args, config):
         # Access the BDI reasoning engine
         bdi_engine = self.get_reasoning_engine()
-        
+
         # Perform reasoning-specific operations
         if args.belief:
             bdi_engine.update_belief(args.agent, args.belief)
-        
+
         return 0
 ```
 
@@ -163,27 +163,27 @@ from openmas.cli.command import BaseCommand
 
 class AgnosticCommand(BaseCommand):
     """A command that works with any protocol and reasoning approach."""
-    
+
     name = "agnostic-command"
     description = "Works across protocols and reasoning approaches"
-    
+
     def configure_parser(self, parser):
         parser.add_argument("--protocol", help="Override the protocol to use")
         parser.add_argument("--reasoning", help="Override the reasoning approach")
         parser.add_argument("agent", help="The agent to operate on")
-        
+
     def execute(self, args, config):
         # Get the protocol handler based on args or config
         protocol_name = args.protocol or config.get("cli.default_protocol")
         protocol_handler = self.get_protocol_handler(protocol_name)
-        
+
         # Get the reasoning engine based on args or config
         reasoning_name = args.reasoning or config.get("cli.default_reasoning")
         reasoning_engine = self.get_reasoning_engine(reasoning_name)
-        
+
         # Perform protocol and reasoning agnostic operations
         # This maintains separation between communication and reasoning
-        
+
         return 0
 ```
 
@@ -200,10 +200,10 @@ from my_extension.commands.cmd2 import Command2
 
 class MyCommandGroup(CommandGroup):
     """A group of related commands."""
-    
+
     name = "my-group"
     description = "Commands for my extension"
-    
+
     def get_commands(self):
         return [Command1(), Command2()]
 ```
@@ -217,13 +217,13 @@ from openmas.cli.hook import CommandHook
 
 class MyPreCommandHook(CommandHook):
     """Hook that runs before command execution."""
-    
+
     def pre_execute(self, command, args, config):
         print(f"About to execute: {command.name}")
-        
+
 class MyPostCommandHook(CommandHook):
     """Hook that runs after command execution."""
-    
+
     def post_execute(self, command, args, config, result):
         print(f"Executed {command.name} with result: {result}")
 ```
@@ -245,7 +245,7 @@ from openmas.cli.testing import CommandTestCase
 
 class TestMyCommand(CommandTestCase):
     """Tests for my custom command."""
-    
+
     def test_basic_execution(self):
         """Test basic command execution."""
         result = self.run_command("my-command", ["--option", "value", "target"])
@@ -262,11 +262,11 @@ from openmas.cli.config import validate_config_access
 
 class MyCompliantCommand(BaseCommand):
     """A command that complies with the unified schema."""
-    
+
     def execute(self, args, config):
         # This validates that the configuration path exists in the schema
         validate_config_access(config, "agents.my_agent.capabilities")
-        
+
         # Proceed with command execution...
         return 0
 ```

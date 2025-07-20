@@ -83,19 +83,19 @@ The component has this expected interface:
 ```python
 class ConfigLoader:
     """Loads and validates configuration for OpenMAS."""
-    
+
     def __init__(self, config_path: Optional[str] = None):
         """Initialize the config loader."""
-        
+
     async def load_config(self) -> ProjectConfig:
         """Load and validate configuration."""
-        
+
     def _load_yaml_file(self, file_path: str) -> Dict[str, Any]:
         """Load a YAML file."""
-        
+
     def _merge_configurations(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """Deep merge two configuration dictionaries."""
-        
+
     def _apply_environment_variables(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Apply environment variable overrides to configuration."""
 ```
@@ -106,15 +106,15 @@ The component uses these Pydantic schemas:
 ```python
 class ProjectConfig(BaseModel):
     """Top-level project configuration."""
-    
+
     project_name: str = Field(..., description="Name of the OpenMAS project")
     version: str = Field("0.1.0", description="Version of the project")
     description: Optional[str] = Field(None, description="Project description")
     agent_configs: Dict[str, AgentConfig] = Field(default_factory=dict, description="Configuration for agents")
     global_config: GlobalConfig = Field(default_factory=GlobalConfig, description="Global configuration settings")
-    
+
     class Config:
         extra = "forbid"
 ```
 
-[Rest of prompt follows...] 
+[Rest of prompt follows...]

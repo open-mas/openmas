@@ -51,14 +51,14 @@ agents:
     capabilities:
       - id: "messaging"
         type: "messaging"
-    
+
   - id: "user_agent"
     name: "User Agent"
     type: "user"
     capabilities:
       - id: "messaging"
         type: "messaging"
-      
+
   - id: "tool_agent"
     name: "Tool Agent"
     type: "tool"
@@ -158,18 +158,18 @@ supervisor:
   name: "multi_agent_supervisor"
   host: "localhost"
   port: 8000
-  
+
 agents:
   - id: "agent1"
     name: "Assistant Agent"
     config_path: "./configs/assistant_agent.yaml"
     autostart: true
-    
+
   - id: "agent2"
     name: "User Agent"
     config_path: "./configs/user_agent.yaml"
     autostart: true
-    
+
   - id: "agent3"
     name: "Tool Agent"
     config_path: "./configs/tool_agent.yaml"
@@ -211,7 +211,7 @@ communication:
 
 ```yaml
 communication:
-  protocol: "mcp"  # or "a2a" 
+  protocol: "mcp"  # or "a2a"
   transport: "websocket"
   settings:
     host: "localhost"
@@ -242,12 +242,12 @@ observability:
       - type: "console"
       - type: "file"
         path: "logs/agent.log"
-        
+
   tracing:
     enabled: true
     exporter:
       type: "console"
-      
+
   metrics:
     enabled: true
     exporters:

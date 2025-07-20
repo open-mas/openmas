@@ -100,26 +100,26 @@ from typing import Dict, List, Any, Optional
 
 class A2AMCPAdapterExtension(ProtocolAdapterExtension):
     """Extension that adapts between A2A and MCP protocols."""
-    
+
     extension_type = "protocol_adapter"
     extension_name = "a2a_mcp_adapter"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         options = config.get("options", {})
-        
+
         # Extract configuration
         self.source_protocol = options.get("source_protocol")
         self.target_protocol = options.get("target_protocol")
         self.mapping_rules = options.get("mapping_rules", {})
         self.default_behavior = options.get("default_behavior", "pass_through")
-        
+
         # Extract specific mapping rules
         self.capability_mappings = self._process_capability_mappings()
         self.message_type_mappings = self._process_message_type_mappings()
         self.resource_mappings = self._process_resource_mappings()
-    
+
     def _process_capability_mappings(self):
         """Process capability mapping rules."""
         mappings = {}
@@ -129,7 +129,7 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
             if source and target:
                 mappings[source] = target
         return mappings
-    
+
     def _process_message_type_mappings(self):
         """Process message type mapping rules."""
         mappings = {}
@@ -139,7 +139,7 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
             if source and target:
                 mappings[source] = target
         return mappings
-    
+
     def _process_resource_mappings(self):
         """Process resource mapping rules."""
         mappings = {}
@@ -149,7 +149,7 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
             if source and target:
                 mappings[source] = target
         return mappings
-    
+
     def validate_config(self):
         """Validate the extension configuration."""
         options = self.config.get("options", {})
@@ -157,54 +157,54 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
             raise ValueError("Protocol adapter requires 'source_protocol' in options")
         if not options.get("target_protocol"):
             raise ValueError("Protocol adapter requires 'target_protocol' in options")
-    
+
     def get_supported_protocols(self):
         """Get protocols supported by this adapter."""
         return [self.source_protocol, self.target_protocol]
-    
+
     async def to_internal_format(self, message, context=None):
         """Convert a protocol-specific message to SIMF."""
         context = context or {}
         protocol = context.get("protocol")
-        
+
         # Handle A2A to SIMF conversion
         if protocol == "a2a":
             return self._a2a_to_internal(message)
-        
+
         # Handle MCP to SIMF conversion
         elif protocol == "mcp":
             return self._mcp_to_internal(message)
-        
+
         # Unsupported protocol
         else:
             raise ValueError(f"Unsupported source protocol: {protocol}")
-    
+
     async def from_internal_format(self, internal_message, target_protocol, context=None):
         """Convert a SIMF message to a target protocol format."""
         context = context or {}
-        
+
         # Handle SIMF to A2A conversion
         if target_protocol == "a2a":
             return self._internal_to_a2a(internal_message, context)
-        
+
         # Handle SIMF to MCP conversion
         elif target_protocol == "mcp":
             return self._internal_to_mcp(internal_message, context)
-        
+
         # Unsupported protocol
         else:
             raise ValueError(f"Unsupported target protocol: {target_protocol}")
-    
+
     def _a2a_to_internal(self, message):
         """Convert A2A message to internal format."""
         # Extract core message properties
         message_id = message.get("id", str(uuid.uuid4()))
         message_type = self._map_message_type(message.get("type"), "a2a", "internal")
-        
+
         # Extract content based on message type
         content = message.get("content", {})
         parts = message.get("parts", [])
-        
+
         # Build the internal message
         internal_message = {
             "id": message_id,
@@ -217,28 +217,28 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
             },
             "metadata": message.get("metadata", {})
         }
-        
+
         # Handle multi-part messages
         if parts and message_type == "multipart":
             internal_message["payload"] = {
                 "type": "multipart",
                 "parts": []
             }
-            
+
             for part in parts:
                 internal_part = {
                     "type": part.get("type"),
                     "data": part.get("data")
                 }
                 internal_message["payload"]["parts"].append(internal_part)
-        
+
         return internal_message
-    
+
     def _mcp_to_internal(self, message):
         """Convert MCP message to internal format."""
         # Extract core message properties
         message_id = message.get("message_id", str(uuid.uuid4()))
-        
+
         # Determine message type based on content
         if "tool_calls" in message:
             message_type = "tool_call"
@@ -246,10 +246,10 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
             message_type = "multipart"
         else:
             message_type = "text"
-        
+
         # Map to internal message type
         internal_message_type = self._map_message_type(message_type, "mcp", "internal")
-        
+
         # Build the internal message
         internal_message = {
             "id": message_id,
@@ -261,7 +261,7 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
                 "name": message.get("name")
             }
         }
-        
+
         # Handle different payload types
         if message_type == "text":
             internal_message["payload"] = {
@@ -273,12 +273,12 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
             for content_part in message.get("content", []):
                 part_type = content_part.get("type")
                 part_data = content_part.get("text") if part_type == "text" else content_part.get("image_url")
-                
+
                 parts.append({
                     "type": part_type,
                     "data": part_data
                 })
-            
+
             internal_message["payload"] = {
                 "type": "multipart",
                 "parts": parts
@@ -291,24 +291,24 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
                     "tool_name": tool_call.get("function", {}).get("name"),
                     "parameters": json.loads(tool_call.get("function", {}).get("arguments", "{}"))
                 })
-            
+
             internal_message["payload"] = {
                 "type": "tool_call",
                 "tools": tool_calls
             }
-        
+
         return internal_message
-    
+
     def _internal_to_a2a(self, internal_message, context):
         """Convert internal format to A2A message."""
         # Extract core message properties
         message_id = internal_message.get("id")
         internal_type = internal_message.get("message_type")
         payload = internal_message.get("payload", {})
-        
+
         # Map to A2A message type
         a2a_message_type = self._map_message_type(internal_type, "internal", "a2a")
-        
+
         # Build the A2A message
         a2a_message = {
             "id": message_id,
@@ -316,13 +316,13 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
             "type": a2a_message_type,
             "metadata": internal_message.get("metadata", {})
         }
-        
+
         # Handle different payload types
         payload_type = payload.get("type")
-        
+
         if payload_type == "text":
             a2a_message["content"] = payload.get("data", "")
-        
+
         elif payload_type == "multipart":
             parts = []
             for part in payload.get("parts", []):
@@ -330,23 +330,23 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
                     "type": part.get("type"),
                     "data": part.get("data")
                 })
-            
+
             a2a_message["parts"] = parts
-        
+
         elif payload_type == "tool_call":
             # Convert to A2A's action format
             tool_calls = payload.get("tools", [])
             if tool_calls:
                 a2a_message["actions"] = []
-                
+
                 for tool_call in tool_calls:
                     a2a_message["actions"].append({
                         "name": tool_call.get("tool_name"),
                         "parameters": tool_call.get("parameters", {})
                     })
-        
+
         return a2a_message
-    
+
     def _internal_to_mcp(self, internal_message, context):
         """Convert internal format to MCP message."""
         # Extract core message properties
@@ -354,31 +354,31 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
         internal_type = internal_message.get("message_type")
         payload = internal_message.get("payload", {})
         metadata = internal_message.get("metadata", {})
-        
+
         # Map to MCP message type
         mcp_message_type = self._map_message_type(internal_type, "internal", "mcp")
-        
+
         # Build the MCP message
         mcp_message = {
             "message_id": message_id,
             "created_at": internal_message.get("timestamp"),
             "role": metadata.get("role", "assistant"),
         }
-        
+
         if "name" in metadata:
             mcp_message["name"] = metadata["name"]
-        
+
         # Handle different payload types
         payload_type = payload.get("type")
-        
+
         if payload_type == "text":
             mcp_message["content"] = payload.get("data", "")
-        
+
         elif payload_type == "multipart":
             content_parts = []
             for part in payload.get("parts", []):
                 part_type = part.get("type")
-                
+
                 if part_type == "text":
                     content_parts.append({
                         "type": "text",
@@ -389,15 +389,15 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
                         "type": "image_url",
                         "image_url": part.get("data")
                     })
-            
+
             mcp_message["content"] = content_parts
-        
+
         elif payload_type == "tool_call":
             # Convert to MCP's function calling format
             tool_calls = payload.get("tools", [])
             if tool_calls:
                 mcp_message["tool_calls"] = []
-                
+
                 for i, tool_call in enumerate(tool_calls):
                     mcp_message["tool_calls"].append({
                         "id": tool_call.get("tool_id", f"call_{i}"),
@@ -407,19 +407,19 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
                             "arguments": json.dumps(tool_call.get("parameters", {}))
                         }
                     })
-        
+
         return mcp_message
-    
+
     def _map_message_type(self, message_type, source_protocol, target_protocol):
         """Map message type between protocols."""
         # Define the mapping key
         mapping_key = f"{source_protocol}:{message_type}"
-        
+
         # Check if we have a mapping for this message type
         for mapping in self.mapping_rules.get("message_types", []):
             if f"{source_protocol}:{mapping['source']}" == mapping_key:
                 return mapping["target"]
-        
+
         # Default mappings for common types
         default_mappings = {
             "a2a:text": "text",
@@ -432,25 +432,25 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
             "internal:multipart": "multipart",
             "internal:tool_call": "function" if target_protocol == "mcp" else "action"
         }
-        
+
         if mapping_key in default_mappings:
             return default_mappings[mapping_key]
-        
+
         # If no mapping found, return original or raise exception based on default behavior
         if self.default_behavior == "pass_through":
             return message_type
         else:
             raise ValueError(f"No mapping found for message type: {mapping_key}")
-    
+
     def map_capability(self, capability, source_protocol, target_protocol):
         """Map a capability between protocols."""
         # Check capability mappings
         mapping_key = f"{source_protocol}:{capability}"
-        
+
         for mapping in self.mapping_rules.get("capabilities", []):
             if f"{source_protocol}:{mapping['source']}" == mapping_key:
                 return mapping["target"]
-        
+
         # Default mappings for common capabilities
         default_mappings = {
             "a2a:text_generation": "text_generation",
@@ -460,16 +460,16 @@ class A2AMCPAdapterExtension(ProtocolAdapterExtension):
             "mcp:function_calling": "tool_use",
             "mcp:image_generation": "image_generation"
         }
-        
+
         if mapping_key in default_mappings:
             return default_mappings[mapping_key]
-        
+
         # If no mapping found, return original or raise exception based on default behavior
         if self.default_behavior == "pass_through":
             return capability
         else:
             raise ValueError(f"No mapping found for capability: {mapping_key}")
-    
+
     def map_resource(self, resource, source_protocol, target_protocol):
         """Map a resource between protocols."""
         # Implementation for resource mapping

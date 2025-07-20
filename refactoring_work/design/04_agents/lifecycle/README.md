@@ -57,18 +57,18 @@ class WeatherAgent(Agent):
         # Register capabilities
         self.register_capability("get_weather")
         self.register_capability("subscribe_alerts")
-        
+
         # Initialize external services
         self.weather_service = await WeatherService.create(
             api_key=self.config.get_credential("weather_api_key")
         )
-        
+
         # Load resources
         self.weather_model = await self.asset_manager.load_model("weather_prediction")
-        
+
         # Set up protocol handlers
         self.register_protocol_handlers()
-        
+
         # Initialize reasoning components
         await self.init_reasoning()
 ```
@@ -109,13 +109,13 @@ await agent.shutdown(cleanup_resources=True)
 class DataProcessingAgent(Agent):
     async def cleanup(self):
         await super().cleanup()
-        
+
         # Close database connections
         await self.db_client.close()
-        
+
         # Save state
         await self.save_state()
-        
+
         # Release resources
         await self.resource_manager.release_all()
 ```
@@ -131,16 +131,16 @@ class A2AAgent(Agent):
     async def setup(self):
         # Register with A2A protocol
         self.a2a = await self.get_protocol("a2a-http")
-        
+
         # Register agent card
         await self.a2a.register_agent_card({
             "name": self.agent_id,
             "description": "A2A-enabled agent"
         })
-        
+
         # Register discovery endpoint
         await self.a2a.enable_discovery(well_known_path="/.well-known/agent.json")
-    
+
     async def cleanup(self):
         # Deregister from discovery
         await self.a2a.disable_discovery()
@@ -154,14 +154,14 @@ class MCPAgent(Agent):
     async def setup(self):
         # Register with MCP protocol
         self.mcp = await self.get_protocol("mcp-sse")
-        
+
         # Register tools
         await self.mcp.register_tools(self.capabilities.to_tools())
-        
+
         # Start MCP server if in server mode
         if self.config.get("protocols.mcp.options.server_mode", False):
             await self.mcp.start_server()
-    
+
     async def cleanup(self):
         # Stop MCP server if running
         if self.mcp.server_running:
@@ -182,17 +182,17 @@ class LLMAgent(Agent):
         provider = self.config.get("reasoning.llm.provider")
         model = self.config.get("reasoning.llm.model")
         self.llm = await self.llm_manager.create_llm(provider, model)
-        
+
         # Set up prompt templates
         self.prompt_template = await self.prompt_manager.load_template(
             "main_prompt"
         )
-        
+
         # Initialize memory
         self.memory = await self.create_memory(
             type=self.config.get("reasoning.llm.memory_type", "buffer")
         )
-    
+
     async def cleanup(self):
         # Save conversation memory if needed
         if self.config.get("reasoning.llm.save_memory", False):
@@ -208,14 +208,14 @@ class RuleBasedAgent(Agent):
         # Load rule engine
         engine_type = self.config.get("reasoning.rule_based.engine", "standard")
         self.rule_engine = self.create_rule_engine(engine_type)
-        
+
         # Load rules
         rules_file = self.config.get("reasoning.rule_based.rules_file")
         await self.rule_engine.load_rules(rules_file)
-        
+
         # Initialize fact base
         self.fact_base = self.rule_engine.create_fact_base()
-    
+
     async def cleanup(self):
         # Save fact base state if needed
         if self.config.get("reasoning.rule_based.save_facts", False):
@@ -231,20 +231,20 @@ class BDIAgent(Agent):
         # Initialize belief base
         belief_base_type = self.config.get("reasoning.bdi.belief_base.type")
         self.belief_base = self.create_belief_base(belief_base_type)
-        
+
         # Initialize desire set
         self.desire_set = self.create_desire_set()
         for desire in self.config.get("reasoning.bdi.desires", []):
             self.desire_set.add_desire(desire["name"], priority=desire.get("priority", 1))
-        
+
         # Initialize plan library
         self.plan_library = self.create_plan_library()
         for plan in self.config.get("reasoning.bdi.plans", []):
             self.plan_library.add_plan(plan["name"], triggers=plan.get("triggers", []))
-        
+
         # Initialize intention structure
         self.intention_structure = self.create_intention_structure()
-    
+
     async def cleanup(self):
         # Save belief base if needed
         if self.config.get("reasoning.bdi.save_beliefs", False):
@@ -265,15 +265,15 @@ class MonitoredAgent(Agent):
         self.on_event("agent:stopping", self.handle_stopping)
         self.on_event("agent:stopped", self.handle_stopped)
         self.on_event("agent:error", self.handle_error)
-        
+
         # Register capability-related events
         self.on_event("capability:invoked", self.handle_capability_invoked)
         self.on_event("capability:completed", self.handle_capability_completed)
         self.on_event("capability:failed", self.handle_capability_failed)
-    
+
     async def handle_starting(self, event):
         self.logger.info(f"Agent {self.agent_id} is starting")
-    
+
     async def handle_error(self, event):
         self.logger.error(f"Agent {self.agent_id} encountered an error: {event.error}")
         # Notify monitoring system
@@ -296,7 +296,7 @@ agents:
       max_restarts: 3
       shutdown_timeout: 30
       startup_order: 1
-    
+
     # Health check configuration
     health_check:
       enabled: true

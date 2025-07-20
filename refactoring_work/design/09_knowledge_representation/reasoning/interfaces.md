@@ -25,27 +25,27 @@ The base interface implemented by all reasoning engines:
 ```python
 class IReasoner(ABC):
     """Base interface for all reasoning components."""
-    
+
     @abstractmethod
     async def setup(self, agent: Agent) -> None:
         """Initialize the reasoning component."""
         pass
-    
+
     @abstractmethod
     async def reason(self, percept: Any) -> ReasoningResult:
         """Perform reasoning based on the given percept."""
         pass
-    
+
     @abstractmethod
     async def update_knowledge(self, knowledge: Any) -> None:
         """Update the internal knowledge of the reasoner."""
         pass
-    
+
     @abstractmethod
     async def query_knowledge(self, query: Any) -> Any:
         """Query the internal knowledge base."""
         pass
-    
+
     @abstractmethod
     async def cleanup(self) -> None:
         """Clean up resources used by the reasoner."""
@@ -59,22 +59,22 @@ Interface for reasoning strategies that orchestrate multiple reasoning approache
 ```python
 class IReasoningStrategy(ABC):
     """Interface for reasoning strategies."""
-    
+
     @abstractmethod
     async def setup(self, agent: Agent) -> None:
         """Initialize the reasoning strategy."""
         pass
-    
+
     @abstractmethod
     async def select_reasoners(self, percept: Any) -> List[IReasoner]:
         """Select reasoners to use for the given percept."""
         pass
-    
+
     @abstractmethod
     async def combine_results(self, results: List[ReasoningResult]) -> ReasoningResult:
         """Combine results from multiple reasoners."""
         pass
-    
+
     @abstractmethod
     async def handle_conflict(self, conflicting_results: List[ReasoningResult]) -> ReasoningResult:
         """Resolve conflicts between results."""
@@ -98,22 +98,22 @@ Interface for symbolic reasoning engines:
 ```python
 class ISymbolicReasoner(IReasoner):
     """Interface for symbolic reasoning engines."""
-    
+
     @abstractmethod
     async def add_rule(self, rule: Rule) -> None:
         """Add a rule to the symbolic reasoner."""
         pass
-    
+
     @abstractmethod
     async def add_fact(self, fact: Fact) -> None:
         """Add a fact to the symbolic reasoner."""
         pass
-    
+
     @abstractmethod
     async def infer(self, query: Query) -> InferenceResult:
         """Perform inference based on the given query."""
         pass
-    
+
     @abstractmethod
     async def explain(self, result: InferenceResult) -> Explanation:
         """Explain how an inference result was derived."""
@@ -127,22 +127,22 @@ Interface for LLM-based reasoning:
 ```python
 class ILLMReasoner(IReasoner):
     """Interface for LLM-based reasoning."""
-    
+
     @abstractmethod
     async def get_prompt(self, context: Any) -> Prompt:
         """Generate a prompt based on the given context."""
         pass
-    
+
     @abstractmethod
     async def parse_response(self, response: Any) -> ReasoningResult:
         """Parse an LLM response into a reasoning result."""
         pass
-    
+
     @abstractmethod
     async def augment_context(self, context: Any) -> Any:
         """Augment reasoning context with additional knowledge."""
         pass
-    
+
     @abstractmethod
     async def verify_result(self, result: ReasoningResult) -> VerificationResult:
         """Verify an LLM-generated reasoning result."""
@@ -174,7 +174,7 @@ agent:
       rules:
         - name: "example_rule"
           condition: "condition_expr"
-  
+
   # Knowledge management configuration
   knowledge_management_config:
     enabled: true

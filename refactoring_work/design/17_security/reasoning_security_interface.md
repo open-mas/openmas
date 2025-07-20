@@ -27,36 +27,36 @@ The RSI is defined as an abstract interface that all security-aware reasoning en
 ```python
 class ReasoningSecurityInterface:
     """Interface for reasoning engines to interact with the security system."""
-    
+
     def get_current_principal(self) -> SecurityPrincipalInfo:
         """
         Returns information about the authenticated principal for the current agent request context.
-        
+
         Returns:
             SecurityPrincipalInfo: A structured object containing information about the authenticated principal
-        
+
         Raises:
             SecurityContextError: If no security context is available for the current request
         """
         pass
-    
+
     def check_permission(
-        self, 
-        action: str, 
-        resource_identifier: str, 
+        self,
+        action: str,
+        resource_identifier: str,
         context: Optional[Dict] = None
     ) -> AuthZResult:
         """
         Checks if the current principal has permission to perform the specified action on the specified resource.
-        
+
         Args:
             action: The action to check permission for (e.g., "read", "write", "execute")
             resource_identifier: The identifier of the resource to check permission for
             context: Optional additional context for the permission check
-            
+
         Returns:
             AuthZResult: The result of the authorization check
-            
+
         Raises:
             SecurityContextError: If no security context is available for the current request
             InvalidActionError: If the specified action is not recognized
@@ -70,7 +70,7 @@ class ReasoningSecurityInterface:
 ```python
 class SecurityPrincipalInfo:
     """Information about an authenticated security principal."""
-    
+
     id: str  # Unique identifier for the principal
     type: str  # Type of principal (e.g., "user", "agent", "service")
     name: Optional[str]  # Human-readable name
@@ -79,12 +79,12 @@ class SecurityPrincipalInfo:
     authentication_time: datetime  # When the principal was authenticated
     authentication_method: str  # Method used to authenticate the principal
     issuer: Optional[str]  # Entity that issued the authentication
-    
+
     # Additional methods may be provided to query specific aspects of the principal
     def has_role(self, role: str) -> bool:
         """Check if the principal has the specified role."""
         return role in self.roles
-    
+
     def get_attribute(self, name: str, default: Any = None) -> Any:
         """Get the value of a specific attribute."""
         return self.attributes.get(name, default)
@@ -95,12 +95,12 @@ class SecurityPrincipalInfo:
 ```python
 class AuthZResult:
     """Result of an authorization check."""
-    
+
     allowed: bool  # Whether the action is allowed
     reason: str  # Reason for the decision
     decision_factors: Dict[str, Any]  # Factors that influenced the decision
     timestamp: datetime  # When the decision was made
-    
+
     def is_allowed(self) -> bool:
         """Check if the action is allowed."""
         return self.allowed
@@ -116,36 +116,36 @@ sequenceDiagram
     participant AgentFramework as Agent Framework
     participant ReasoningEngine as Reasoning Engine
     participant SecuritySystem as Security System
-    
+
     Note over ProtocolLayer,SecuritySystem: Initial Authentication & Authorization
-    
+
     ProtocolLayer->>AgentFramework: Incoming Request (with auth credentials)
     AgentFramework->>SecuritySystem: authenticate()
     SecuritySystem-->>AgentFramework: AuthenticationResult (SecurityPrincipalInfo)
     AgentFramework->>SecuritySystem: authorize(agent/capability)
     SecuritySystem-->>AgentFramework: AuthorizationResult
-    
+
     Note over AgentFramework,ReasoningEngine: Pass request and security context
     AgentFramework->>ReasoningEngine: SIMF message + SecurityContext
-    
+
     Note over ReasoningEngine,SecuritySystem: Reasoning Security Interface (RSI) Usage
-    
+
     ReasoningEngine->>SecuritySystem: RSI.get_current_principal()
     SecuritySystem-->>ReasoningEngine: SecurityPrincipalInfo
-    
+
     Note right of ReasoningEngine: During execution,<br/>engine needs to check<br/>if user can access<br/>specific resource
-    
+
     ReasoningEngine->>SecuritySystem: RSI.check_permission("read", "resource_id")
     SecuritySystem-->>ReasoningEngine: AuthZResult
-    
+
     Note right of ReasoningEngine: Conditionally execute<br/>based on permission result
-    
+
     alt Permission Granted
         ReasoningEngine->>ReasoningEngine: Access protected functionality
     else Permission Denied
         ReasoningEngine->>ReasoningEngine: Handle access denial gracefully
     end
-    
+
     ReasoningEngine-->>AgentFramework: SIMF response
     AgentFramework-->>ProtocolLayer: Protocol-specific response
 ```
@@ -196,13 +196,13 @@ An LLM-based reasoning engine can use the RSI to check if the current principal 
 def decide_action(self, context):
     # Get the current principal
     principal = self.rsi.get_current_principal()
-    
+
     # Log the principal for traceability
     self.logger.info(f"Processing request for principal: {principal.id} ({principal.type})")
-    
+
     # Determine what tools might be useful for this request
     potential_tools = self.tool_selector.select_tools(context.request)
-    
+
     # Filter tools based on permissions
     allowed_tools = []
     for tool in potential_tools:
@@ -212,12 +212,12 @@ def decide_action(self, context):
             resource_identifier=f"tool:{tool.id}",
             context={"request_context": context.metadata}
         )
-        
+
         if result.is_allowed():
             allowed_tools.append(tool)
         else:
             self.logger.warning(f"Principal {principal.id} denied access to tool {tool.id}: {result.reason}")
-    
+
     # Proceed with reasoning using only the allowed tools
     response = self.llm.generate_response(context.request, allowed_tools=allowed_tools)
     return response
@@ -230,14 +230,14 @@ A BDI (Belief-Desire-Intention) reasoning engine can use the RSI to check if the
 ```python
 def update_beliefs(self, new_perceptions):
     principal = self.rsi.get_current_principal()
-    
+
     updated_beliefs = {}
-    
+
     # For each perception, check if related knowledge can be accessed
     for perception in new_perceptions:
         # Determine what knowledge domains are relevant to this perception
         relevant_domains = self.knowledge_mapper.map_perception_to_domains(perception)
-        
+
         for domain in relevant_domains:
             # Check if the principal has permission to access this knowledge domain
             result = self.rsi.check_permission(
@@ -245,14 +245,14 @@ def update_beliefs(self, new_perceptions):
                 resource_identifier=f"knowledge_domain:{domain}",
                 context={"perception_type": perception.type}
             )
-            
+
             if result.is_allowed():
                 # Access the knowledge and update beliefs
                 knowledge = self.knowledge_base.query(domain, perception.query)
                 updated_beliefs[domain] = self.belief_updater.integrate(perception, knowledge)
             else:
                 self.logger.warning(f"Knowledge access denied: {result.reason}")
-    
+
     return updated_beliefs
 ```
 
@@ -263,10 +263,10 @@ A rule-based reasoning engine can use the RSI to check if the current principal 
 ```python
 def apply_rules(self, facts):
     principal = self.rsi.get_current_principal()
-    
+
     # Apply rules to determine possible actions
     possible_actions = self.rule_engine.evaluate(facts)
-    
+
     # Filter actions based on permissions
     authorized_actions = []
     for action in possible_actions:
@@ -276,10 +276,10 @@ def apply_rules(self, facts):
             resource_identifier=f"action:{action.type}",
             context={"action_parameters": action.parameters}
         )
-        
+
         if result.is_allowed():
             authorized_actions.append(action)
-    
+
     return authorized_actions
 ```
 

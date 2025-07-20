@@ -23,7 +23,7 @@ defaults:
         description: "Topology pattern type"
         enum: ["centralized", "peer_to_peer", "hierarchical", "mesh", "hybrid"]
         default: "centralized"
-      
+
       # Agent roles
       roles:
         type: object
@@ -47,7 +47,7 @@ defaults:
                   description: "Required capabilities for this role"
                   items:
                     type: string
-      
+
       # Relationship definitions
       relationships:
         type: object
@@ -69,7 +69,7 @@ defaults:
                   type: string
                   description: "Default communication pattern for this relationship"
                   enum: ["request_response", "publish_subscribe", "streaming", "event_based"]
-  
+
 # Agent-specific topology configuration
 agents:
   agent_name:
@@ -81,7 +81,7 @@ agents:
         role:
           type: string
           description: "Role of this agent in the topology"
-        
+
         # Agent's relationships
         relationships:
           type: array
@@ -257,7 +257,7 @@ agents:
   travel_coordinator:
     class: "agents.coordinator.TravelCoordinator"
     type: "hybrid"
-    
+
     # Topology configuration
     topology:
       role: "orchestrator"
@@ -281,7 +281,7 @@ For agents using the A2A protocol, topology information can be integrated with t
   "url": "https://agent-endpoint.example.com/a2a/api",
   "capabilities": { "streaming": true },
   "skills": [...],
-  
+
   "topology": {
     "role": "orchestrator",
     "relationships": [
@@ -335,7 +335,7 @@ agents:
           relationship_type: "orchestrator_to_worker"
         - agent_id: "hotel_search"
           relationship_type: "orchestrator_to_worker"
-  
+
   flight_search:
     class: "agents.flight.FlightSearchAgent"
     topology:
@@ -344,7 +344,7 @@ agents:
         - agent_id: "travel_coordinator"
           relationship_type: "orchestrator_to_worker"
           direction: "incoming"
-  
+
   hotel_search:
     class: "agents.hotel.HotelSearchAgent"
     topology:
@@ -365,34 +365,34 @@ class OrchestratorAgent(Agent):
     async def setup(self):
         # Get topology manager
         self.topology_manager = TopologyManager(self)
-        
+
         # Register capability
         self.register_capability(
             "coordinate_travel_planning",
             self.coordinate_travel,
             protocols=["a2a", "mcp"]
         )
-    
+
     async def coordinate_travel(self, params):
         # Get worker agents based on topology relationships
         worker_agents = await self.topology_manager.get_related_agents(
             relationship_type="orchestrator_to_worker",
             direction="outgoing"
         )
-        
+
         # Delegate tasks to appropriate worker agents
         flight_results = await self.topology_manager.invoke_agent(
             agent_id="flight_search",
             capability="search_flights",
             params={"origin": params["origin"], "destination": params["destination"]}
         )
-        
+
         hotel_results = await self.topology_manager.invoke_agent(
             agent_id="hotel_search",
             capability="search_hotels",
             params={"location": params["destination"]}
         )
-        
+
         # Combine results
         return {
             "itinerary": {

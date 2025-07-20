@@ -68,6 +68,7 @@ This is OpenMAS 0.3.0 - a complete rewrite focused on:
 - [Configuration Reference](docs/configuration/schema.md)
 - [Protocol Support](docs/protocols/overview.md)
 - [Agent Framework](docs/agents/overview.md)
+- [MCP Development Environment](docs/references/mcp_development_environment.md) - Complete MCP specifications, versions, and integration details
 
 ## 🧪 Development
 
@@ -129,4 +130,4 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 - [Documentation](https://openmas.github.io/openmas)
 - [Issues](https://github.com/openmas/openmas/issues)
-- [Discussions](https://github.com/openmas/openmas/discussions) 
+- [Discussions](https://github.com/openmas/openmas/discussions)

@@ -109,39 +109,39 @@ with tracer.start_span("operation_name") as span:
     # Add attributes to the span
     span.set_attribute("key", "value")
     span.set_attribute("user_id", user.id)
-    
+
     # Record events
     span.add_event("starting_sub_operation")
-    
+
     # Perform the operation
     result = perform_operation()
-    
+
     # Record more events
     span.add_event("sub_operation_completed", {"status": "success"})
-    
+
     # Set status
     if error:
         span.set_status(Status(StatusCode.ERROR, "Error description"))
     else:
         span.set_status(Status(StatusCode.OK))
-    
+
     return result
 
 # Create nested spans
 with tracer.start_span("parent_operation") as parent:
     # Do some work
     parent.add_event("starting_first_child")
-    
+
     with tracer.start_span("child_operation_1", parent=parent) as child1:
         # Child operation 1
         pass
-        
+
     parent.add_event("starting_second_child")
-    
+
     with tracer.start_span("child_operation_2", parent=parent) as child2:
         # Child operation 2
         pass
-    
+
     parent.add_event("children_completed")
 ```
 
@@ -253,15 +253,15 @@ Propagating context across components:
 async def receive_request(request):
     # Extract context from the request
     context = extract_context(request.headers)
-    
+
     # Start a new span with the extracted context as parent
     with tracer.start_span("process_request", context=context) as span:
         # Process the request
         response = await process_request(request)
-        
+
         # Inject context into the response
         inject_context(response.headers, span.get_context())
-        
+
         return response
 ```
 
@@ -273,16 +273,16 @@ Using baggage to carry information:
 async def authenticate_user(request):
     # Extract context
     context = extract_context(request.headers)
-    
+
     # Start span with context
     with tracer.start_span("authenticate", context=context) as span:
         # Authenticate user
         user = await authenticate(request.credentials)
-        
+
         # Add user information to baggage
         context = set_baggage(span.get_context(), "user_id", user.id)
         context = set_baggage(context, "user_role", user.role)
-        
+
         # Continue processing with enriched context
         return await process_with_context(request, context)
 ```

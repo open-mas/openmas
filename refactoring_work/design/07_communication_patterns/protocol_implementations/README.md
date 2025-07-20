@@ -32,13 +32,13 @@ Example A2A implementation of Request-Response:
 # A2A request-response implementation
 class A2ARequestResponsePattern(RequestResponsePattern):
     """A2A implementation of the request-response pattern."""
-    
+
     async def send_request(self, target, request_data, options=None):
         """Send a request using A2A protocol."""
         # Convert to A2A capability call format
         capability_name = self.mapping.get_capability_name(target)
         capability_params = self.transform.to_a2a_params(request_data)
-        
+
         # Execute A2A capability call
         response = await self.communicator.call_capability(
             target=target,
@@ -46,7 +46,7 @@ class A2ARequestResponsePattern(RequestResponsePattern):
             parameters=capability_params,
             options=options
         )
-        
+
         # Transform response back to standard format
         return self.transform.from_a2a_response(response)
 ```
@@ -67,13 +67,13 @@ Example MCP implementation of Streaming pattern:
 # MCP streaming implementation
 class MCPStreamingPattern(StreamingPattern):
     """MCP implementation of the streaming pattern."""
-    
+
     async def stream_data(self, target, request_data, options=None):
         """Stream data using MCP protocol."""
         # Convert to MCP tool call with streaming
         tool_name = self.mapping.get_tool_name(target)
         tool_params = self.transform.to_mcp_params(request_data)
-        
+
         # Create streaming generator
         async for chunk in self.communicator.stream_tool_call(
             tool=tool_name,
@@ -100,23 +100,23 @@ Example HTTP implementation of Publish-Subscribe:
 # HTTP publish-subscribe implementation
 class HTTPPublishSubscribePattern(PublishSubscribePattern):
     """HTTP implementation of the publish-subscribe pattern using SSE."""
-    
+
     async def subscribe(self, topic, callback, options=None):
         """Subscribe to a topic using HTTP Server-Sent Events."""
         # Convert topic to URL path
         path = self.mapping.topic_to_path(topic)
-        
+
         # Create SSE connection
         sse_client = self.communicator.create_sse_client(
             path=path,
             options=options
         )
-        
+
         # Set up event handling
         sse_client.on_message(
             lambda event: callback(self.transform.from_sse_event(event))
         )
-        
+
         # Start listening
         await sse_client.connect()
         return sse_client  # Return subscription handle
@@ -138,18 +138,18 @@ Example MQTT implementation of Event-Based pattern:
 # MQTT event-based implementation
 class MQTTEventBasedPattern(EventBasedPattern):
     """MQTT implementation of the event-based pattern."""
-    
+
     async def emit_event(self, event_type, event_data, options=None):
         """Emit an event using MQTT protocol."""
         # Convert event type to MQTT topic
         topic = self.mapping.event_to_topic(event_type)
-        
+
         # Transform event data to MQTT message format
         message = self.transform.to_mqtt_message(event_type, event_data)
-        
+
         # Set QoS level from options or default
         qos = options.get('qos', 1) if options else 1
-        
+
         # Publish message
         await self.communicator.publish(
             topic=topic,
@@ -175,18 +175,18 @@ Example gRPC implementation of Request-Response:
 # gRPC request-response implementation
 class GRPCRequestResponsePattern(RequestResponsePattern):
     """gRPC implementation of the request-response pattern."""
-    
+
     async def send_request(self, target, request_data, options=None):
         """Send a request using gRPC protocol."""
         # Convert target to service and method
         service, method = self.mapping.get_grpc_service_method(target)
-        
+
         # Transform request data to protobuf message
         request_message = self.transform.to_protobuf(request_data)
-        
+
         # Set deadline from options or default
         deadline = options.get('deadline_ms', 30000) if options else 30000
-        
+
         # Execute gRPC call
         response = await self.communicator.call(
             service=service,
@@ -194,7 +194,7 @@ class GRPCRequestResponsePattern(RequestResponsePattern):
             request=request_message,
             timeout=deadline
         )
-        
+
         # Transform protobuf response to standard format
         return self.transform.from_protobuf(response)
 ```

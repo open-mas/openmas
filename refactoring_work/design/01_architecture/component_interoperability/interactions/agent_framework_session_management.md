@@ -14,13 +14,13 @@
 def create_session(parameters: SessionParameters) -> Session:
     """
     Create a new session for agent interaction.
-    
+
     Args:
         parameters: SessionParameters - Configuration parameters for the session
-        
+
     Returns:
         Session - The created session object
-        
+
     Raises:
         InvalidSessionParametersError - If the session parameters are invalid
         SessionCreationError - If the session cannot be created
@@ -113,13 +113,13 @@ print(f"Session will expire at {session.expires_at}")
 def get_session(session_id: str) -> Optional[Session]:
     """
     Retrieve an existing session by ID.
-    
+
     Args:
         session_id: str - Unique identifier for the session to retrieve
-        
+
     Returns:
         Optional[Session] - The session if found, None otherwise
-        
+
     Raises:
         SessionAccessError - If there's an error accessing the session storage
     """
@@ -135,7 +135,7 @@ if session:
     print(f"Status: {session.status.value}")
     print(f"Participants: {', '.join(session.participants)}")
     print(f"Created: {session.created_at}, Expires: {session.expires_at}")
-    
+
     # Check if session is still active
     if session.status == SessionStatus.ACTIVE:
         # Use the session for further processing
@@ -154,19 +154,19 @@ else:
 ```
 
 ```python
-def update_session_state(session_id: str, updates: Dict[str, Any], 
+def update_session_state(session_id: str, updates: Dict[str, Any],
                        validation_options: Optional[StateValidationOptions] = None) -> SessionUpdateResult:
     """
     Update session state with new values.
-    
+
     Args:
         session_id: str - Unique identifier for the session to update
         updates: Dict[str, Any] - Dictionary of state updates to apply
         validation_options: Optional[StateValidationOptions] - Options for state validation
-        
+
     Returns:
         SessionUpdateResult - Result of the update operation including success status and validation details
-        
+
     Raises:
         SessionNotFoundError - If the session does not exist
         SessionStateValidationError - If the updates fail validation
@@ -239,7 +239,7 @@ result = session_manager.update_session_state(
 if result.success:
     print(f"Session state updated successfully at {result.updated_at}")
     print(f"Updated fields: {', '.join(result.fields_updated)}")
-    
+
     if result.validation_warnings:
         print("Warnings:")
         for warning in result.validation_warnings:
@@ -271,7 +271,7 @@ class SessionExpiredEvent:
     metadata: Dict[str, Any] = {}  # Additional metadata about the expiration
     affected_agents: List[str]  # List of agent IDs affected by the session expiration
     recovery_options: Optional[Dict[str, Any]] = None  # Options for session recovery if available
-    
+
     class Payload:
         """
         Payload containing details of the session expiration event.
@@ -329,7 +329,7 @@ def handle_session_expiration(event: SessionExpiredEvent):
         f"Session {event.session_id} expired at {event.expired_at} due to {event.reason}. "
         f"Affected agents: {len(event.affected_agents)}"
     )
-    
+
     # Notify affected agents about the session expiration
     for agent_id in event.affected_agents:
         try:
@@ -343,7 +343,7 @@ def handle_session_expiration(event: SessionExpiredEvent):
             logger.debug(f"Notified agent {agent_id} about session expiration")
         except NotificationError as e:
             logger.error(f"Failed to notify agent {agent_id} about session expiration: {e}")
-    
+
     # Handle recovery options if available
     if event.recovery_options and event.recovery_options.get("can_restore", False):
         # Register session for potential recovery
@@ -352,7 +352,7 @@ def handle_session_expiration(event: SessionExpiredEvent):
             expiry_time=datetime.now() + timedelta(seconds=event.recovery_options.get("restore_within_seconds", 1800))
         )
         logger.info(f"Registered session {event.session_id} for potential recovery within {event.recovery_options.get('restore_within_seconds', 1800)} seconds")
-    
+
     # For A2A protocol sessions, update agent cards to reflect session expiration
     if "a2a" in event.metadata.get("protocols", []):
         a2a_session_manager.update_agent_cards_for_expired_session(
@@ -361,7 +361,7 @@ def handle_session_expiration(event: SessionExpiredEvent):
             expiration_reason=event.reason
         )
         logger.debug(f"Updated A2A agent cards for expired session {event.session_id}")
-    
+
     # For MCP protocol sessions, close any open tool connections
     if "mcp" in event.metadata.get("protocols", []):
         mcp_session_manager.close_tool_connections(
@@ -388,7 +388,7 @@ class SessionStateInvalidEvent:
     severity: str  # Severity of the validation issue (e.g., "warning", "error", "critical")
     metadata: Dict[str, Any] = {}  # Additional metadata about the validation
     suggested_corrections: Optional[Dict[str, Any]] = None  # Suggested corrections to fix the invalid state
-    
+
     class Payload:
         """
         Payload containing details of the session state validation failure.
@@ -459,19 +459,19 @@ class SessionStateInvalidEvent:
 #### Methods/Functions
 
 ```python
-def validate_session_access(agent_id: str, session_id: str, 
+def validate_session_access(agent_id: str, session_id: str,
                          access_type: Optional[SessionAccessType] = None) -> SessionAccessResult:
     """
     Validate if an agent has access to a session.
-    
+
     Args:
         agent_id: str - Identifier of the agent requesting access
         session_id: str - Identifier of the session to access
         access_type: Optional[SessionAccessType] - Type of access being requested (read, write, admin)
-        
+
     Returns:
         SessionAccessResult - Result of the access validation check
-        
+
     Raises:
         AgentNotFoundError - If the agent does not exist
         SessionNotFoundError - If the session does not exist
@@ -520,7 +520,7 @@ access_result = agent_framework.validate_session_access(
 if access_result.has_access:
     print(f"Agent {access_result.agent_id} has {access_result.access_type.value} access to session {access_result.session_id}")
     print(f"Access validated at {access_result.validation_time} and expires at {access_result.expiration_time}")
-    
+
     # Perform admin operation with the validated access
     if access_result.access_type == SessionAccessType.ADMIN:
         add_participant_to_session(
@@ -540,18 +540,18 @@ else:
 ```
 
 ```python
-def get_session_capabilities(session_id: str, 
+def get_session_capabilities(session_id: str,
                           capability_filter: Optional[CapabilityFilter] = None) -> SessionCapabilitiesResult:
     """
     Get capabilities available in a session.
-    
+
     Args:
         session_id: str - Identifier of the session to query
         capability_filter: Optional[CapabilityFilter] - Filter criteria for capabilities
-        
+
     Returns:
         SessionCapabilitiesResult - Result containing available capabilities and metadata
-        
+
     Raises:
         SessionNotFoundError - If the session does not exist
         CapabilityFilterError - If the filter criteria are invalid
@@ -624,18 +624,18 @@ result = agent_framework.get_session_capabilities(
 if result.capabilities:
     print(f"Found {len(result.capabilities)} capabilities out of {result.total_count} total")
     print(f"Available categories: {', '.join(result.categories)}")
-    
+
     # Print information about each capability
     for capability in result.capabilities:
         print(f"\nCapability: {capability.name} (v{capability.version})")
         print(f"Description: {capability.description}")
         print(f"Provider: {capability.provider}")
         print(f"Protocol compatibility: {', '.join(capability.protocol_compatibility)}")
-        
+
         # Check if the capability requires authorization
         if capability.requires_authorization:
             print("Requires authorization before use")
-            
+
         # Show parameter schema if available
         if capability.parameters_schema:
             print(f"Parameter requirements: {json.dumps(capability.parameters_schema, indent=2)}")
@@ -646,19 +646,19 @@ else:
 ```
 
 ```python
-def notify_session_event(session_id: str, event: SessionEvent, 
+def notify_session_event(session_id: str, event: SessionEvent,
                        notification_options: Optional[NotificationOptions] = None) -> NotificationResult:
     """
     Notify agent framework of session events.
-    
+
     Args:
         session_id: str - Identifier of the session the event pertains to
         event: SessionEvent - The event to notify about
         notification_options: Optional[NotificationOptions] - Options for the notification
-        
+
     Returns:
         NotificationResult - Result of the notification operation
-        
+
     Raises:
         SessionNotFoundError - If the session does not exist
         EventValidationError - If the event is invalid
@@ -766,10 +766,10 @@ result = agent_framework.notify_session_event(
 if result.success:
     print(f"Notification sent successfully at {result.timestamp}")
     print(f"Delivered to: {', '.join(result.delivered_to)}")
-    
+
     if result.pending_deliveries:
         print(f"Pending deliveries: {', '.join(result.pending_deliveries)}")
-        
+
     if result.acknowledgments:
         print("Received acknowledgments:")
         for ack in result.acknowledgments:
@@ -799,7 +799,7 @@ class AgentJoinedSessionEvent:
     capabilities_shared: List[str] = []  # List of capabilities the agent shared with the session
     metadata: Dict[str, Any] = {}  # Additional metadata about the join
     session_state_access_level: str = "standard"  # Level of access to session state (minimal, standard, full)
-    
+
     class Payload:
         """
         Payload containing details of the agent joining a session event.
@@ -861,7 +861,7 @@ def handle_agent_joined_session(event: AgentJoinedSessionEvent):
         f"Agent {event.agent_id} joined session {event.session_id} at {event.join_time} "
         f"via {event.join_method} with role '{event.role}'"
     )
-    
+
     # Update the agent's session registry
     agent_session_registry.register_session_participation(
         agent_id=event.agent_id,
@@ -869,14 +869,14 @@ def handle_agent_joined_session(event: AgentJoinedSessionEvent):
         role=event.role,
         join_time=event.join_time
     )
-    
+
     # Make shared capabilities available to other session participants
     capability_sharing_service.register_shared_capabilities(
         session_id=event.session_id,
         agent_id=event.agent_id,
         capabilities=event.capabilities_shared
     )
-    
+
     # If this is an A2A protocol session, update agent cards
     if "a2a" in event.metadata.get("protocols", []):
         # Create protocol-specific agent card for A2A
@@ -888,7 +888,7 @@ def handle_agent_joined_session(event: AgentJoinedSessionEvent):
             visible_to=[p for p in event.metadata.get("participants", []) if p != event.agent_id]
         )
         logger.debug(f"Updated A2A agent cards for session {event.session_id} with new participant {event.agent_id}")
-    
+
     # If this is an MCP protocol session, expose agent capabilities as tools
     if "mcp" in event.metadata.get("protocols", []):
         # Register agent capabilities as tools in MCP
@@ -899,7 +899,7 @@ def handle_agent_joined_session(event: AgentJoinedSessionEvent):
             tool_access_level=event.session_state_access_level
         )
         logger.debug(f"Registered MCP tools for session {event.session_id} from agent {event.agent_id}")
-    
+
     # Notify other session participants about the new agent
     for participant_id in event.metadata.get("participants", []):
         if participant_id != event.agent_id:
@@ -928,7 +928,7 @@ class AgentLeftSessionEvent:
     capabilities_withdrawn: List[str] = []  # List of capabilities the agent withdrew from the session
     metadata: Dict[str, Any] = {}  # Additional metadata about the leave
     can_rejoin: bool = True  # Whether the agent can rejoin the session
-    
+
     class Payload:
         """
         Payload containing details of the agent leaving a session event.
@@ -991,7 +991,7 @@ def handle_agent_left_session(event: AgentLeftSessionEvent):
         f"Agent {event.agent_id} left session {event.session_id} at {event.leave_time} "
         f"due to {event.leave_reason} after {event.participation_duration} seconds"
     )
-    
+
     # Update the agent's session registry
     agent_session_registry.update_session_participation(
         agent_id=event.agent_id,
@@ -1000,14 +1000,14 @@ def handle_agent_left_session(event: AgentLeftSessionEvent):
         leave_time=event.leave_time,
         participation_duration=event.participation_duration
     )
-    
+
     # Remove withdrawn capabilities from the session's available capabilities
     capability_sharing_service.withdraw_shared_capabilities(
         session_id=event.session_id,
         agent_id=event.agent_id,
         capabilities=event.capabilities_withdrawn
     )
-    
+
     # If this is an A2A protocol session, update agent cards
     if "a2a" in event.metadata.get("protocols", []):
         # Update protocol-specific agent cards for A2A
@@ -1018,7 +1018,7 @@ def handle_agent_left_session(event: AgentLeftSessionEvent):
             can_rejoin=event.can_rejoin
         )
         logger.debug(f"Updated A2A agent cards for session {event.session_id} to remove participant {event.agent_id}")
-    
+
     # If this is an MCP protocol session, remove agent capabilities from available tools
     if "mcp" in event.metadata.get("protocols", []):
         # Unregister agent capabilities as tools in MCP
@@ -1028,7 +1028,7 @@ def handle_agent_left_session(event: AgentLeftSessionEvent):
             capabilities=event.capabilities_withdrawn
         )
         logger.debug(f"Unregistered MCP tools for session {event.session_id} from agent {event.agent_id}")
-    
+
     # Notify other session participants about the agent leaving
     for participant_id in event.metadata.get("participants", []):
         if participant_id != event.agent_id:
@@ -1040,7 +1040,7 @@ def handle_agent_left_session(event: AgentLeftSessionEvent):
                 contribution_summary=event.metadata.get("session_contribution_summary", ""),
                 can_rejoin=event.can_rejoin
             )
-    
+
     # If the agent can rejoin, register it for potential rejoining
     if event.can_rejoin:
         session_rejoining_registry.register_potential_rejoin(
@@ -1078,17 +1078,17 @@ session_management:
       implementation_class: "ConversationSession"
       default_timeout_seconds: 1800
       max_participants: 10
-    
+
     - name: "task"
       implementation_class: "TaskSession"
       default_timeout_seconds: 3600
       max_participants: 5
-  
+
   state_management:
     persistence_enabled: true
     persistence_provider: "redis"
     state_validation: true
-  
+
   timeout_management:
     heartbeat_interval_seconds: 60
     inactivity_timeout_seconds: 600
@@ -1129,15 +1129,15 @@ agent_framework:
          def initialize(self, parameters: SessionParameters) → str:
              # Initialize session with parameters and return session ID
              pass
-         
+
          def validate_state_update(self, updates: Dict[str, Any]) → bool:
              # Validate if state updates are valid for this session type
              pass
-             
+
          def add_participant(self, participant_id: str, role: str) → bool:
              # Add a participant to the session
              pass
-             
+
          def remove_participant(self, participant_id: str) → bool:
              # Remove a participant from the session
              pass
@@ -1183,10 +1183,10 @@ class A2ASessionHandler:
             },
             timeout_seconds=agent_card.get("session_timeout_seconds", 1800)
         )
-        
+
         # Create session with extracted parameters
         session = session_manager.create_session(parameters=session_params)
-        
+
         # Register agent capabilities from card
         capabilities = []
         for tool in agent_card.get("tools", []):
@@ -1195,7 +1195,7 @@ class A2ASessionHandler:
                 description=tool.get("description"),
                 parameters=tool.get("parameters")
             ))
-            
+
         # Add capabilities to session
         for capability in capabilities:
             session_manager.add_session_capability(
@@ -1203,6 +1203,6 @@ class A2ASessionHandler:
                 capability=capability,
                 provider_id=agent_card.get("agent_id")
             )
-            
+
         return True
 ```

@@ -113,7 +113,7 @@ commands =
 [testenv:integration-hybrid]
 description = Run multi-protocol integration tests
 deps = {[testenv:integration-a2a]deps}
-commands = 
+commands =
     docker-compose -f tests/integration/docker/docker-compose.hybrid.yml up --build --exit-code-from test-controller
 
 # Reasoning-specific environments
@@ -298,20 +298,20 @@ jobs:
       matrix:
         python-version: [3.8, 3.9, 3.10, 3.11]
         test-group: [unit, lint, type, integration-a2a, integration-mcp]
-    
+
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install tox tox-gh-actions
-      
+
       - name: Test with tox
         run: |
           # Map test-group to tox environments
@@ -324,7 +324,7 @@ jobs:
           else
             TOX_ENV="${{ matrix.test-group }}"
           fi
-          
+
           tox -e $TOX_ENV
 ```
 

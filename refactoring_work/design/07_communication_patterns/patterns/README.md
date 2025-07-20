@@ -317,18 +317,18 @@ async def process_large_dataset(agent, dataset):
         target_agent="data_processor",
         task={"type": "process", "dataset_id": dataset.id}
     )
-    
+
     # Step 2: Stream results
     stream = await agent.patterns.streaming.create(
         target_agent="data_processor",
         stream_config={"task_id": task_id}
     )
-    
+
     # Step 3: Process streaming results
     results = []
     async for batch in stream:
         results.extend(batch)
-    
+
     return results
 ```
 

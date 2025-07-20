@@ -19,19 +19,19 @@ def test_component_initialization():
         "name": "Test Component",
         "enabled": True
     }
-    
+
     # Act
     component = Component(**config)
-    
+
     # Assert
     assert component.id == "test-component"
     assert component.name == "Test Component"
     assert component.is_enabled is True
     assert component.is_initialized() is False
-    
+
     # Act - Initialize
     component.initialize()
-    
+
     # Assert - Post-initialization
     assert component.is_initialized() is True
 ```
@@ -51,33 +51,33 @@ def test_configuration_validation():
         "name": "Test Component",
         "enabled": True
     }
-    
+
     # Act & Assert - Valid configuration
     component = Component(**valid_config)  # Should not raise exception
-    
+
     # Arrange - Invalid configuration (missing required field)
     invalid_config = {
         "name": "Test Component",
         "enabled": True
     }
-    
+
     # Act & Assert - Invalid configuration
     with pytest.raises(ConfigurationError) as excinfo:
         component = Component(**invalid_config)
-    
+
     assert "required field 'id'" in str(excinfo.value)
-    
+
     # Arrange - Invalid configuration (wrong type)
     invalid_type_config = {
         "id": "test-component",
         "name": "Test Component",
         "enabled": "not-a-boolean"
     }
-    
+
     # Act & Assert - Invalid type
     with pytest.raises(ConfigurationError) as excinfo:
         component = Component(**invalid_type_config)
-    
+
     assert "expected boolean for field 'enabled'" in str(excinfo.value)
 ```
 
@@ -90,19 +90,19 @@ def test_dependency_injection():
     """Test that dependencies can be properly injected."""
     # Arrange
     mock_dependency = MockDependency()
-    
+
     # Act
     component = Component(
         id="test-component",
         dependency=mock_dependency
     )
-    
+
     # Assert
     assert component.dependency is mock_dependency
-    
+
     # Act - Use dependency
     result = component.use_dependency()
-    
+
     # Assert - Dependency was used correctly
     assert result == "expected-result"
     assert mock_dependency.was_called is True
@@ -118,15 +118,15 @@ def test_protocol_independence(protocol):
     """Test that core functionality works with any protocol."""
     # Arrange
     mock_protocol_adapter = MockProtocolAdapter(protocol_type=protocol)
-    
+
     component = Component(
         id="test-component",
         protocol_adapter=mock_protocol_adapter
     )
-    
+
     # Act
     result = component.process_message("test-message")
-    
+
     # Assert - Same result regardless of protocol
     assert result == "expected-result"
 ```
@@ -141,22 +141,22 @@ def test_body_brain_separation():
     # Arrange
     mock_body = MockCommunicator()
     mock_brain = MockReasoner()
-    
+
     agent = Agent(
         id="test-agent",
         communicator=mock_body,
         reasoner=mock_brain
     )
-    
+
     # Act - Process incoming message
     result = agent.process_message("test-message")
-    
+
     # Assert - Communication processed by body
     assert mock_body.received_message == "test-message"
-    
+
     # Assert - Reasoning processed by brain
     assert mock_brain.was_invoked is True
-    
+
     # Assert - Body and brain interaction
     assert mock_body.sent_to_brain == "processed-message"
     assert mock_brain.received_from_body == "processed-message"
@@ -171,20 +171,20 @@ def test_error_handling():
     """Test that component handles errors appropriately."""
     # Arrange
     component = Component(id="test-component")
-    
+
     # Arrange - Mock dependency that will raise exception
     mock_dependency = MockDependency(should_fail=True)
     component.set_dependency(mock_dependency)
-    
+
     # Act & Assert - Expected exception type
     with pytest.raises(ComponentError) as excinfo:
         component.use_dependency()
-    
+
     assert "dependency operation failed" in str(excinfo.value)
-    
+
     # Act - Using error-tolerant method
     result = component.try_use_dependency()
-    
+
     # Assert - Graceful failure
     assert result is None
     assert component.last_error is not None
@@ -200,34 +200,34 @@ def test_component_lifecycle():
     """Test the full lifecycle of a component."""
     # Arrange
     component = Component(id="test-component")
-    
+
     # Assert - Initial state
     assert component.is_initialized() is False
     assert component.is_running() is False
-    
+
     # Act - Initialize
     component.initialize()
-    
+
     # Assert - Post-initialization
     assert component.is_initialized() is True
     assert component.is_running() is False
-    
+
     # Act - Start
     component.start()
-    
+
     # Assert - Running state
     assert component.is_running() is True
-    
+
     # Act - Stop
     component.stop()
-    
+
     # Assert - Stopped state
     assert component.is_initialized() is True
     assert component.is_running() is False
-    
+
     # Act - Shutdown
     component.shutdown()
-    
+
     # Assert - Final state
     assert component.is_initialized() is False
     assert component.is_running() is False
@@ -249,21 +249,21 @@ def test_configuration_overrides():
             "retry_count": 3
         }
     }
-    
+
     # Arrange - Override configuration
     override_config = {
         "settings": {
             "timeout": 60
         }
     }
-    
+
     # Act
     component = Component(base_config)
     component.override_config(override_config)
-    
+
     # Assert - Overridden values
     assert component.config["settings"]["timeout"] == 60
-    
+
     # Assert - Non-overridden values preserved
     assert component.config["id"] == "test-component"
     assert component.config["settings"]["retry_count"] == 3
@@ -286,15 +286,15 @@ def test_a2a_protocol_adapter():
             ]
         }
     )
-    
+
     # Act - Process A2A format message
     a2a_message = {
         "capability_id": "test-capability",
         "parameters": {"param1": "value1"}
     }
-    
+
     result = adapter.process_message(a2a_message)
-    
+
     # Assert - A2A specific processing
     assert result["capability_id"] == "test-capability"
     assert adapter.last_message_protocol == "a2a"
@@ -315,15 +315,15 @@ def test_mcp_protocol_adapter():
             }
         ]
     )
-    
+
     # Act - Process MCP format message
     mcp_message = {
         "function": "test_function",
         "parameters": {"param1": "value1"}
     }
-    
+
     result = adapter.process_message(mcp_message)
-    
+
     # Assert - MCP specific processing
     assert result["function"] == "test_function"
     assert adapter.last_message_protocol == "mcp"
@@ -338,25 +338,25 @@ def test_rule_engine():
     """Test rule-based reasoning engine."""
     # Arrange
     engine = RuleEngine()
-    
+
     # Add test rule
     engine.add_rule(
         name="test-rule",
         condition="x > 10",
         action="result = x * 2"
     )
-    
+
     # Act - Process with rules
     context = {"x": 15}
     result = engine.process(context)
-    
+
     # Assert
     assert result["result"] == 30
-    
+
     # Act - Process with different context
     context = {"x": 5}
     result = engine.process(context)
-    
+
     # Assert - Rule not triggered
     assert "result" not in result
 ```
@@ -368,7 +368,7 @@ def test_bdi_engine():
     """Test BDI reasoning engine."""
     # Arrange
     engine = BDIEngine()
-    
+
     # Add beliefs, desires, and plans
     engine.add_belief("location", "home")
     engine.add_desire("reach_destination", {"destination": "work"})
@@ -378,10 +378,10 @@ def test_bdi_engine():
         context="location != destination",
         body=["set_location(destination)"]
     )
-    
+
     # Act - Run reasoning cycle
     result = engine.reason()
-    
+
     # Assert
     assert result["selected_plan"] == "travel_plan"
     assert result["new_beliefs"]["location"] == "work"
@@ -398,14 +398,14 @@ async def test_llm_engine():
             "What is the capital of France?": "The capital of France is Paris."
         }
     )
-    
+
     engine = LLMEngine(llm_provider=mock_llm_provider)
-    
+
     # Act
     result = await engine.reason(
         prompt="What is the capital of France?"
     )
-    
+
     # Assert
     assert "Paris" in result
     assert mock_llm_provider.called_with == "What is the capital of France?"
@@ -418,17 +418,17 @@ def test_knowledge_graph_engine():
     """Test knowledge graph reasoning engine."""
     # Arrange
     engine = KnowledgeGraphEngine()
-    
+
     # Add test data to graph
     engine.add_node("Alice", type="Person")
     engine.add_node("Bob", type="Person")
     engine.add_relationship("Alice", "knows", "Bob")
-    
+
     # Act - Run query
     result = engine.query(
         "MATCH (a:Person)-[r:knows]->(b:Person) RETURN a.name, b.name"
     )
-    
+
     # Assert
     assert len(result) == 1
     assert result[0]["a.name"] == "Alice"
@@ -442,16 +442,16 @@ def test_knowledge_graph_engine():
 ```python
 class MockProtocolAdapter:
     """Mock protocol adapter for testing."""
-    
+
     def __init__(self, protocol_type="http"):
         self.protocol_type = protocol_type
         self.messages = []
         self.responses = {}
-        
+
     def register_response(self, message, response):
         """Register a response for a specific message."""
         self.responses[str(message)] = response
-        
+
     def send_message(self, message):
         """Mock sending a message."""
         self.messages.append(message)
@@ -466,12 +466,12 @@ def test_with_mock_protocol():
         {"capability": "test-capability"},
         {"status": "success", "result": "test-result"}
     )
-    
+
     component = Component(protocol_adapter=mock_adapter)
-    
+
     # Act
     result = component.invoke_capability("test-capability")
-    
+
     # Assert
     assert result["status"] == "success"
     assert result["result"] == "test-result"
@@ -484,16 +484,16 @@ def test_with_mock_protocol():
 ```python
 class MockReasoner:
     """Mock reasoner for testing."""
-    
+
     def __init__(self):
         self.inputs = []
         self.responses = {}
         self.was_invoked = False
-        
+
     def register_response(self, input_data, response):
         """Register a response for specific input."""
         self.responses[str(input_data)] = response
-        
+
     def reason(self, input_data):
         """Mock reasoning process."""
         self.was_invoked = True
@@ -509,12 +509,12 @@ def test_with_mock_reasoner():
         {"query": "test-query"},
         {"answer": "test-answer"}
     )
-    
+
     agent = Agent(reasoner=mock_reasoner)
-    
+
     # Act
     result = agent.answer_query("test-query")
-    
+
     # Assert
     assert result == "test-answer"
     assert mock_reasoner.was_invoked is True

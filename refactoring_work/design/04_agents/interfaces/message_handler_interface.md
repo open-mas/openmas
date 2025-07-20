@@ -25,93 +25,93 @@ from openmas.agents.models.message_processing import MessageProcessingResult, Me
 class IMessageHandler(ABC):
     """
     Interface for protocol-agnostic message handling within the Agent Framework.
-    
+
     The IMessageHandler serves as the bridge between protocol-specific adapters
     and an agent's internal processing logic, ensuring consistent message handling
     regardless of the source or target protocol.
     """
-    
+
     @abstractmethod
     async def handle_incoming_message(
-        self, 
-        raw_message_data: Any, 
+        self,
+        raw_message_data: Any,
         source_protocol_adapter: IProtocolAdapter
     ) -> MessageProcessingResult:
         """
         Process an incoming message from a protocol adapter.
-        
+
         This method:
         1. Converts the raw message data to the standard internal message format
         2. Routes the message to the appropriate agent logic or capability
         3. Returns a result indicating the status of the message processing
-        
+
         Args:
             raw_message_data: The data as received from the protocol adapter,
                 format depends on the specific protocol
             source_protocol_adapter: Instance of the adapter that received the message,
                 used for protocol-specific message parsing
-                
+
         Returns:
-            MessageProcessingResult: Object containing the processing status, 
+            MessageProcessingResult: Object containing the processing status,
                 any generated internal message, and potential error information
-                
+
         Raises:
             MessageFormatError: If the message cannot be parsed into the internal format
             InvalidMessageError: If the message is well-formed but invalid for processing
             MessageRoutingError: If the message cannot be routed to an appropriate handler
         """
         pass
-    
+
     @abstractmethod
     async def prepare_outgoing_message(
-        self, 
-        internal_message: InternalMessageFormat, 
+        self,
+        internal_message: InternalMessageFormat,
         target_protocol_adapter: IProtocolAdapter,
         protocol_specific_options: Optional[Dict[str, Any]] = None
     ) -> Any:
         """
         Convert an internal message to a protocol-specific format for sending.
-        
+
         This method:
         1. Takes a message in the standard internal format
         2. Uses the provided protocol adapter to convert it to a protocol-specific format
         3. Applies any necessary protocol-specific transformations or options
-        
+
         Args:
             internal_message: The message in the agent's standard internal format
             target_protocol_adapter: The protocol adapter that will send the message
             protocol_specific_options: Optional parameters specific to the target protocol
-                
+
         Returns:
             Any: The message converted to the protocol-specific format expected by the adapter
-                
+
         Raises:
             MessageFormatError: If the internal message cannot be converted to the target format
             UnsupportedMessageTypeError: If the message type is not supported by the target protocol
         """
         pass
-    
+
     @abstractmethod
     async def route_internal_message(
-        self, 
+        self,
         internal_message: InternalMessageFormat
     ) -> MessageProcessingResult:
         """
         Route an internal message to the appropriate agent component.
-        
+
         This method:
         1. Analyzes the message type and payload
         2. Determines the appropriate handler (capability, reasoning engine, etc.)
         3. Delivers the message to the handler
         4. Returns the result of the processing
-        
+
         Args:
             internal_message: The message in the standard internal format
-                
+
         Returns:
             MessageProcessingResult: Object containing the processing status,
                 any response message, and potential error information
-                
+
         Raises:
             MessageRoutingError: If the message cannot be routed to an appropriate handler
             CapabilityNotFoundError: If the message targets a capability that doesn't exist
@@ -130,10 +130,10 @@ class IMessageHandler(ABC):
     ) -> InternalMessageFormat:
         """
         Create a new internal message with the standard format.
-        
+
         This is a helper method for components that need to generate messages
         internally without receiving them from a protocol adapter.
-        
+
         Args:
             message_type: Type of the message (see MessageType enum)
             payload: The message payload (must match a valid payload type)
@@ -141,10 +141,10 @@ class IMessageHandler(ABC):
             source_agent_id: Optional ID of the sending agent
             session_id: Optional conversation/session ID
             metadata: Optional additional metadata for the message
-                
+
         Returns:
             InternalMessageFormat: A properly formatted internal message
-                
+
         Raises:
             InvalidPayloadError: If the payload doesn't match a valid payload type
             InvalidMessageTypeError: If the message type is not recognized
@@ -191,27 +191,27 @@ class MessageProcessingResult(BaseModel):
     Result of message processing within the Agent Framework.
     """
     status: MessageProcessingStatus = Field(
-        ..., 
+        ...,
         description="Status of the message processing"
     )
     internal_message: Optional[InternalMessageFormat] = Field(
-        None, 
+        None,
         description="The processed internal message if available"
     )
     response_message: Optional[InternalMessageFormat] = Field(
-        None, 
+        None,
         description="Response message if one was generated"
     )
     error_message: Optional[str] = Field(
-        None, 
+        None,
         description="Error message if processing failed"
     )
     error_details: Optional[Dict[str, Any]] = Field(
-        None, 
+        None,
         description="Detailed error information if processing failed"
     )
     metadata: Dict[str, Any] = Field(
-        default_factory=dict, 
+        default_factory=dict,
         description="Additional metadata about the processing"
     )
 ```
@@ -226,9 +226,9 @@ sequenceDiagram
     participant PA as Protocol Adapter
     participant MH as Message Handler (IMessageHandler)
     participant AC as Agent Component
-    
+
     Note over External,AC: Inbound Message Flow
-    
+
     External->>PA: Protocol-specific message
     PA->>MH: handle_incoming_message(raw_message, this_adapter)
     MH->>MH: Convert to InternalMessageFormat
@@ -236,9 +236,9 @@ sequenceDiagram
     MH->>AC: Deliver message to appropriate component
     AC->>MH: Return processing result with optional response
     MH->>PA: Return MessageProcessingResult
-    
+
     Note over External,AC: Outbound Message Flow
-    
+
     AC->>MH: create_internal_message(...) or direct InternalMessageFormat
     MH->>MH: Validate message
     MH->>PA: prepare_outgoing_message(internal_message, target_adapter)
@@ -280,7 +280,7 @@ async def on_message_received(self, raw_message):
         raw_message_data=raw_message,
         source_protocol_adapter=self
     )
-    
+
     if processing_result.status == MessageProcessingStatus.RESPONSE_READY:
         # We have a response to send back
         response_data = await self.message_handler.prepare_outgoing_message(
@@ -317,16 +317,16 @@ async def notify_user_of_completion(self, task_id, result):
         session_id=self.current_session_id,
         metadata={"priority": "high"}
     )
-    
+
     # Get the protocol adapter for the target
     protocol_adapter = await self.protocol_manager.get_adapter_for_agent("user-interface")
-    
+
     # Prepare and send the message
     protocol_message = await self.message_handler.prepare_outgoing_message(
         internal_message=message,
         target_protocol_adapter=protocol_adapter
     )
-    
+
     await protocol_adapter.send_message(protocol_message)
 ```
 

@@ -13,7 +13,7 @@ sequenceDiagram
     participant AM as Asset Management
     participant SM as Session Management
     participant OB as Observability
-    
+
     EC->>PL: Send message via protocol
     PL->>OB: Log incoming message
     PL->>SM: Validate session
@@ -52,22 +52,22 @@ sequenceDiagram
     participant PM as Prompt Management
     participant ES as Extension System
     participant SS as Security System
-    
+
     CS->>AF: Initialize agent framework
     CS->>KR: Configure reasoning engines
     CS->>PL: Configure protocol handlers
     CS->>TS: Configure topology
     CS->>SS: Apply security policies
-    
+
     AF->>KR: Register reasoning engines
     AF->>AM: Load initial assets
     AF->>PM: Register prompt templates
     AF->>ES: Register extensions
     AF->>PL: Register with protocol handlers
-    
+
     PL->>SS: Authenticate/authorize
     PL->>TS: Register in topology
-    
+
     TS->>AF: Notify topology ready
     AF->>AF: Mark initialization complete
 ```
@@ -90,7 +90,7 @@ sequenceDiagram
     participant KR as Knowledge & Reasoning
     participant ES as Extension System
     participant OB as Observability
-    
+
     EC->>PL: Invoke capability
     PL->>AF: Translate capability request
     AF->>KR: Evaluate capability constraints
@@ -104,7 +104,7 @@ sequenceDiagram
 ```
 
 ### Workflow Steps:
-1. **Capability Request**: External component requests a capability invocation 
+1. **Capability Request**: External component requests a capability invocation
 2. **Request Translation**: Protocol Layer translates the request to the internal format
 3. **Constraint Evaluation**: Knowledge & Reasoning evaluates if the capability can be invoked
 4. **Capability Execution**: Extension System handles the actual execution of the capability
@@ -120,7 +120,7 @@ sequenceDiagram
     participant PL as Protocol Layer
     participant A2 as Agent 2
     participant SM as Session Management
-    
+
     A1->>TS: Discover agents
     TS-->>A1: Return agent 2 info
     A1->>CPE: Select communication pattern
@@ -148,7 +148,7 @@ sequenceDiagram
     participant OB as Observability
     participant SS as Security System
     participant AF as Agent Framework
-    
+
     C->>C: Error occurs
     C->>OB: Log error details
     OB->>OB: Analyze error severity

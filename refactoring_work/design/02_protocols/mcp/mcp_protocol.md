@@ -252,10 +252,10 @@ await server.start()
 async def search_database_handler(params):
     query = params.get("query")
     limit = params.get("limit", 10)
-    
+
     # Search database
     results = await database.search(query, limit=limit)
-    
+
     return {
         "records": results,
         "total_count": await database.count(query),
@@ -277,10 +277,10 @@ class DataAnalysisAgent(Agent):
             "server_url": "https://customer-data-agent.example.com/mcp",
             "client_mode": true
         })
-        
+
         # Discover available tools
         self.tools = await self.mcp_client.list_tools()
-    
+
     async def search_customer_data(self, query):
         # Call MCP tool
         result = await self.mcp_client.call_tool(
@@ -290,15 +290,15 @@ class DataAnalysisAgent(Agent):
                 "limit": 100
             }
         )
-        
+
         # Process result
         return self.analyze_results(result)
-    
+
     def analyze_results(self, results):
         # Analyze the results
         positive_feedback = [r for r in results["records"] if r["rating"] >= 4]
         negative_feedback = [r for r in results["records"] if r["rating"] <= 2]
-        
+
         return {
             "positive_count": len(positive_feedback),
             "negative_count": len(negative_feedback),

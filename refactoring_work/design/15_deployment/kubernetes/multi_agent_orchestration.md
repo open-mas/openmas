@@ -442,15 +442,15 @@ spec:
 ## Best Practices
 
 1. **Maintain Body-Brain Separation**: Preserve the separation of communication infrastructure from reasoning engines in your Kubernetes deployment patterns
-   
+
 2. **Protocol-Aware Scaling**: Scale agents based on protocol traffic patterns and reasoning engine resource requirements
-   
+
 3. **Configuration Inheritance**: Use hierarchical ConfigMaps to implement configuration inheritance
-   
+
 4. **Observability**: Implement protocol-specific monitoring and logging with Prometheus and distributed tracing
-   
+
 5. **Security**: Implement protocol-specific security measures, including network policies and authentication providers
-   
+
 6. **State Management**: Use appropriate Kubernetes abstractions (StatefulSets, PVCs) for reasoning engines requiring persistent state
 
 ## Related Documentation

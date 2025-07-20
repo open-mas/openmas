@@ -114,50 +114,50 @@ from typing import Dict, List, Any
 
 class UtilityToolsExtension(ToolExtension):
     """Extension that provides utility tools."""
-    
+
     extension_type = "tool"
     extension_name = "utility_tools"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         options = config.get("options", {})
-        
+
         # Extract tool configurations
         self.tools = {}
         for tool_config in options.get("tools", []):
             tool_name = tool_config.get("name")
             if tool_name:
                 self.tools[tool_name] = tool_config
-        
+
         # Initialize session for external API calls
         self.session = None
-        
+
         # Extract API keys
         self.weather_api_key = None
         weather_tool = self.tools.get("weather_lookup", {})
         if weather_tool:
             self.weather_api_key = weather_tool.get("api_key") or os.environ.get("WEATHER_API_KEY")
-    
+
     async def initialize(self):
         """Initialize the extension."""
         self.session = aiohttp.ClientSession()
         self.initialized = True
-    
+
     def validate_config(self):
         """Validate the extension configuration."""
         options = self.config.get("options", {})
         if not options.get("tools"):
             raise ValueError("Tool extension requires 'tools' in options")
-        
+
         # Validate weather tool configuration
         if "weather_lookup" in self.tools and not self.weather_api_key:
             raise ValueError("Weather lookup tool requires an API key")
-    
+
     def get_tool_schema(self):
         """Get the schema for the tools provided."""
         schemas = {}
-        
+
         # Weather lookup tool
         if "weather_lookup" in self.tools:
             schemas["weather_lookup"] = {
@@ -180,7 +180,7 @@ class UtilityToolsExtension(ToolExtension):
                     "required": ["location"]
                 }
             }
-        
+
         # Calculator tool
         if "calculator" in self.tools:
             schemas["calculator"] = {
@@ -197,44 +197,44 @@ class UtilityToolsExtension(ToolExtension):
                     "required": ["expression"]
                 }
             }
-        
+
         return schemas
-    
+
     def get_tool_metadata(self):
         """Get metadata about the tools."""
         metadata = {}
-        
+
         if "weather_lookup" in self.tools:
             metadata["weather_lookup"] = {
                 "requires_api_key": True,
                 "external_service": "weatherapi.com",
                 "rate_limit": "60 calls per minute"
             }
-        
+
         if "calculator" in self.tools:
             metadata["calculator"] = {
                 "local_execution": True,
                 "safe_execution": True,
                 "supported_operations": ["+", "-", "*", "/", "^", "sqrt", "sin", "cos", "tan"]
             }
-        
+
         return metadata
-    
+
     def get_supported_protocols(self):
         """Get protocols supported by these tools."""
         return ["a2a", "mcp", "http"]  # These tools work with all major protocols
-    
+
     async def execute_tool(self, tool_name, parameters, context=None):
         """Execute a tool with given parameters."""
         if not self.initialized:
             await self.initialize()
-        
+
         # Validate the tool exists
         if tool_name not in self.tools:
             return {
                 "error": f"Tool not found: {tool_name}"
             }
-        
+
         # Validate parameters
         try:
             self.validate_parameters(tool_name, parameters)
@@ -242,7 +242,7 @@ class UtilityToolsExtension(ToolExtension):
             return {
                 "error": f"Invalid parameters: {str(e)}"
             }
-        
+
         # Execute the appropriate tool
         if tool_name == "weather_lookup":
             return await self._execute_weather_lookup(parameters)
@@ -252,31 +252,31 @@ class UtilityToolsExtension(ToolExtension):
             return {
                 "error": f"Tool implementation not found: {tool_name}"
             }
-    
+
     def validate_parameters(self, tool_name, parameters):
         """Validate parameters for a specific tool."""
         if tool_name == "weather_lookup":
             if "location" not in parameters:
                 raise ValueError("Missing required parameter: location")
-            
+
             units = parameters.get("units", "celsius")
             if units not in ["celsius", "fahrenheit"]:
                 raise ValueError("Units must be either 'celsius' or 'fahrenheit'")
-        
+
         elif tool_name == "calculator":
             if "expression" not in parameters:
                 raise ValueError("Missing required parameter: expression")
-            
+
             # Check for potentially unsafe expressions
             expression = parameters["expression"]
             if re.search(r'[^0-9+\-*/().\s^sqrt sin cos tan]', expression):
                 raise ValueError("Expression contains invalid characters")
-    
+
     async def _execute_weather_lookup(self, parameters):
         """Execute the weather lookup tool."""
         location = parameters["location"]
         units = parameters.get("units", "celsius")
-        
+
         try:
             # Call weather API
             url = f"https://api.weatherapi.com/v1/current.json?key={self.weather_api_key}&q={location}&aqi=no"
@@ -286,20 +286,20 @@ class UtilityToolsExtension(ToolExtension):
                     return {
                         "error": f"Weather API error ({response.status}): {error_text}"
                     }
-                
+
                 data = await response.json()
-                
+
                 # Extract relevant weather information
                 current = data.get("current", {})
                 temp_c = current.get("temp_c")
                 temp_f = current.get("temp_f")
                 condition = current.get("condition", {}).get("text")
                 humidity = current.get("humidity")
-                
+
                 # Format the response based on requested units
                 temp = temp_f if units == "fahrenheit" else temp_c
                 unit_symbol = "°F" if units == "fahrenheit" else "°C"
-                
+
                 return {
                     "location": data.get("location", {}).get("name"),
                     "temperature": temp,
@@ -311,11 +311,11 @@ class UtilityToolsExtension(ToolExtension):
             return {
                 "error": f"Error accessing weather information: {str(e)}"
             }
-    
+
     async def _execute_calculator(self, parameters):
         """Execute the calculator tool."""
         expression = parameters["expression"]
-        
+
         try:
             # Replace mathematical functions with Python equivalents
             expression = expression.replace("^", "**")
@@ -323,14 +323,14 @@ class UtilityToolsExtension(ToolExtension):
             expression = re.sub(r'sin\(([^)]+)\)', r'math.sin(\1)', expression)
             expression = re.sub(r'cos\(([^)]+)\)', r'math.cos(\1)', expression)
             expression = re.sub(r'tan\(([^)]+)\)', r'math.tan(\1)', expression)
-            
+
             # Add math import if needed
             if any(func in expression for func in ["math.sqrt", "math.sin", "math.cos", "math.tan"]):
                 import math
-            
+
             # Evaluate the expression safely
             result = eval(expression, {"__builtins__": {}}, {"math": math})
-            
+
             return {
                 "result": result,
                 "expression": parameters["expression"]
@@ -387,7 +387,7 @@ def get_tool_schema(self):
     base_schemas = {
         # Base schemas as shown earlier
     }
-    
+
     # Add protocol-specific schema overrides
     protocol_schemas = {
         "a2a": {
@@ -400,7 +400,7 @@ def get_tool_schema(self):
             # MCP-specific schema adaptations
         }
     }
-    
+
     return {
         "base": base_schemas,
         "protocol_specific": protocol_schemas

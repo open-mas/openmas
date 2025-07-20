@@ -42,16 +42,16 @@ class TravelCoordinator(Agent):
     async def setup(self):
         # Set up patterns from configuration
         await self.pattern_manager.setup()
-        
+
         # Set up topology from configuration
         await self.topology_manager.setup()
-        
+
     async def search_flights(self, search_params):
         """Search for flights using the flight search agent."""
         try:
             # Get the request-response pattern
             pattern = await self.pattern_manager.get_pattern("request_response")
-            
+
             # Send request to flight search agent
             response = await pattern.send_request(
                 content={
@@ -60,14 +60,14 @@ class TravelCoordinator(Agent):
                 },
                 target_agent_id="flight_search"
             )
-            
+
             # Process response
             if response.get("status") == "success":
                 return response.get("content", {}).get("flights", [])
             else:
                 self.logger.error(f"Flight search failed: {response.get('error')}")
                 return []
-                
+
         except Exception as e:
             self.logger.error(f"Error in flight search: {e}")
             return []
@@ -83,7 +83,7 @@ communication_patterns:
   publish_subscribe:
     options:
       delivery_guarantee: "at_least_once"
-      
+
 # Agent configuration
 agents:
   status_monitor:
@@ -110,30 +110,30 @@ class StatusMonitor(Agent):
     async def setup(self):
         # Set up patterns from configuration
         await self.pattern_manager.setup()
-        
+
         # Get the publish-subscribe pattern
         self.pubsub = await self.pattern_manager.get_pattern("publish_subscribe")
-        
+
         # Subscribe to status topics
         await self.pubsub.subscribe("system/status/#")
-        
+
         # Register message handler
         self.pubsub.on_message(self.handle_status_update)
-        
+
     async def handle_status_update(self, message):
         """Handle a status update message."""
         topic = message.get("topic")
         content = message.get("content")
-        
+
         self.logger.info(f"Status update on {topic}: {content}")
-        
+
         # Process the status update
         service_id = topic.split("/")[-1]
         status = content.get("status")
-        
+
         if status == "error":
             await self.alert_service_error(service_id, content)
-            
+
     async def broadcast_system_alert(self, alert_level, message):
         """Broadcast a system alert to all services."""
         await self.pubsub.publish(
@@ -159,7 +159,7 @@ communication_patterns:
         include_metadata: true
       event_handling:
         ordering: "timestamp"
-        
+
 # Agent configuration
 agents:
   workflow_engine:
@@ -184,17 +184,17 @@ class WorkflowEngine(Agent):
     async def setup(self):
         # Set up patterns from configuration
         await self.pattern_manager.setup()
-        
+
         # Get the event-based pattern
         self.events = await self.pattern_manager.get_pattern("event_based")
-        
+
         # Register event handlers
         self.events.on_event("task_completed", self.handle_task_completed)
         self.events.on_event("task_failed", self.handle_task_failed)
-        
+
         # Initialize workflow state
         self.active_workflows = {}
-        
+
     async def start_workflow(self, workflow_id, workflow_definition):
         """Start a new workflow."""
         # Initialize workflow state
@@ -204,7 +204,7 @@ class WorkflowEngine(Agent):
             "status": "running",
             "started_at": datetime.now().isoformat()
         }
-        
+
         # Emit workflow started event
         await self.events.emit_event(
             event_type="workflow_started",
@@ -213,23 +213,23 @@ class WorkflowEngine(Agent):
                 "definition": workflow_definition
             }
         )
-        
+
         # Start the first task
         await self.execute_next_task(workflow_id)
-        
+
     async def handle_task_completed(self, event):
         """Handle a task completed event."""
         workflow_id = event.get("content", {}).get("workflow_id")
         task_id = event.get("content", {}).get("task_id")
-        
+
         if workflow_id in self.active_workflows:
             workflow = self.active_workflows[workflow_id]
             workflow["current_step"] += 1
-            
+
             # Check if workflow is complete
             if workflow["current_step"] >= len(workflow["definition"]["steps"]):
                 workflow["status"] = "completed"
-                
+
                 # Emit workflow completed event
                 await self.events.emit_event(
                     event_type="workflow_completed",
@@ -255,7 +255,7 @@ communication_patterns:
       flow_control:
         buffer_size: 1000
         batch_size: 100
-      
+
 # Agent configuration
 agents:
   data_processor:
@@ -280,10 +280,10 @@ class DataProcessor(Agent):
     async def setup(self):
         # Set up patterns from configuration
         await self.pattern_manager.setup()
-        
+
         # Get the streaming pattern
         self.streaming = await self.pattern_manager.get_pattern("streaming")
-        
+
     async def process_data_stream(self, stream_params):
         """Process a data stream from a data source."""
         # Start a stream
@@ -291,18 +291,18 @@ class DataProcessor(Agent):
             source_agent_id="data_source",
             params=stream_params
         )
-        
+
         # Process the stream
         async for chunk in stream:
             # Process each chunk
             processed_data = await self._process_chunk(chunk)
-            
+
             # Send processed data to output
             await stream.send_result(processed_data)
-            
+
         # Stream complete
         await stream.complete()
-        
+
     async def _process_chunk(self, chunk):
         """Process a data chunk."""
         # Implementation-specific processing
@@ -321,23 +321,23 @@ class SmartAssistant(Agent):
     async def setup(self):
         # Set up patterns
         await self.pattern_manager.setup()
-        
+
         # Get patterns
         self.request_response = await self.pattern_manager.get_pattern("request_response")
         self.events = await self.pattern_manager.get_pattern("event_based")
         self.pubsub = await self.pattern_manager.get_pattern("publish_subscribe")
-        
+
         # Subscribe to user activity
         await self.pubsub.subscribe("user/activity/#")
-        
+
         # Register event handlers
         self.events.on_event("task_assigned", self.handle_task_assigned)
-        
+
     async def handle_user_query(self, query):
         """Handle a user query using request-response pattern."""
         # Determine which service can handle this query
         service = self._determine_service(query)
-        
+
         # Send request to appropriate service
         response = await self.request_response.send_request(
             content={
@@ -346,7 +346,7 @@ class SmartAssistant(Agent):
             },
             target_agent_id=service
         )
-        
+
         # Process response
         if response.get("status") == "success":
             # Publish user response event
@@ -358,7 +358,7 @@ class SmartAssistant(Agent):
                     "service": service
                 }
             )
-            
+
             return response.get("content")
         else:
             # Emit error event
@@ -370,7 +370,7 @@ class SmartAssistant(Agent):
                     "service": service
                 }
             )
-            
+
             return {
                 "error": "Could not process your query",
                 "details": response.get("error", {}).get("message")
@@ -398,7 +398,7 @@ agents:
         - agent_id: "backend_agent"
           relationship_type: "client_to_server"
           communication_pattern: "request_response"
-  
+
   backend_agent:
     communicator_type: "a2a"
     patterns:
@@ -448,26 +448,26 @@ class ConversationalAgent(Agent):
     async def setup(self):
         # Set up patterns
         await self.pattern_manager.setup()
-        
+
         # Get the request-response pattern
         self.request_response = await self.pattern_manager.get_pattern("request_response")
-        
+
         # Initialize session manager
         self.session_manager = SessionManager(self.config.get("sessions", {}))
-        
+
     async def handle_message(self, message):
         """Handle a conversational message."""
         user_id = message.get("user_id")
         content = message.get("content")
-        
+
         # Get or create session
         session = await self.session_manager.get_session(user_id)
         if not session:
             session = await self.session_manager.create_session(user_id)
-            
+
         # Update session with new message
         session.add_message("user", content)
-        
+
         # Use request-response pattern to get response from reasoning agent
         response = await self.request_response.send_request(
             content={
@@ -476,17 +476,17 @@ class ConversationalAgent(Agent):
             },
             target_agent_id="reasoning_agent"
         )
-        
+
         # Process response
         if response.get("status") == "success":
             agent_response = response.get("content", {}).get("response")
-            
+
             # Update session with agent response
             session.add_message("assistant", agent_response)
-            
+
             # Save session
             await self.session_manager.update_session(user_id, session)
-            
+
             return agent_response
         else:
             return "I'm sorry, I couldn't process your message."
@@ -508,7 +508,7 @@ agents:
       request_response:
         options:
           timeout: 5000  # Fast response expected
-          
+
   # LLM-based agent
   llm_agent:
     class: "agents.llm.LLMAgent"
@@ -532,10 +532,10 @@ class RuleAgent(Agent):
     async def handle_request(self, request):
         # Extract parameters
         params = request.get("content", {})
-        
+
         # Apply rules to determine response
         response = self.rule_engine.apply_rules(params)
-        
+
         return response
 
 # LLM-based agent (more complex reasoning)
@@ -543,16 +543,16 @@ class LLMAgent(Agent):
     async def handle_request(self, request):
         # Extract parameters
         params = request.get("content", {})
-        
+
         # Prepare prompt for LLM
         prompt = self._create_prompt(params)
-        
+
         # Get response from LLM
         llm_response = await self.llm_service.complete(prompt)
-        
+
         # Process and format response
         response = self._process_llm_response(llm_response)
-        
+
         return response
 ```
 

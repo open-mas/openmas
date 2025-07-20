@@ -33,7 +33,7 @@ A2A and MCP serve different but complementary purposes:
 
 OpenMAS enables A2A and MCP to work together through the Standard Internal Message Format (SIMF) as a mediation layer:
 
-1. **Dedicated Protocol Adapters**: 
+1. **Dedicated Protocol Adapters**:
    - The `A2AProtocolAdapter` translates between native A2A messages and SIMF
    - The `MCPProtocolAdapter` translates between native MCP messages and SIMF
 
@@ -94,14 +94,14 @@ protocols:
       type: "http"
       config: { port: 8080, host: "0.0.0.0" }
     # Used for agent discovery and delegation
-  
+
   mcp:
     enabled: true
     transport:
       type: "sse"
       config: { port: 8082, host: "0.0.0.0" }
     # Used for tool invocation
-  
+
   mqtt:
     enabled: true
     transport:
@@ -160,37 +160,37 @@ class WeatherServiceAgent(Agent):
                 "capabilities": ["getWeather", "getForecasts", "subscribeAlerts"]
             }
         })
-        
+
         # Set up MCP protocol for tool access
         self.mcp_client = await self.setup_protocol("mcp-sse", {
             "server_mode": False,
             "server_url": "https://weather-api.example.com/mcp"
         })
-        
+
         # Set up MQTT for real-time weather updates
         self.mqtt_client = await self.setup_protocol("mqtt", {
             "broker_url": "mqtt://weather-broker.example.com",
             "client_id": "weather-service-agent",
             "subscribe_topics": ["weather/updates/#"]
         })
-        
+
         # Register capability handlers
         self.register_capability("getWeather", self.handle_get_weather)
         self.register_capability("getForecasts", self.handle_get_forecasts)
         self.register_capability("subscribeAlerts", self.handle_subscribe_alerts)
-    
+
     async def handle_get_weather(self, params):
         # This demonstrates using A2A input to parameterize an MCP tool call
         # The A2A message has already been converted to SIMF by the A2A adapter
         # and the params are extracted from that SIMF representation
         location = params.get("location", "default")
-        
+
         # Invoke MCP tool - OpenMAS handles the SIMF-mediated translation:
         # 1. Creates an SIMF message from the parameters
         # 2. MCP adapter translates SIMF to native MCP format
         # 3. Result is translated back to SIMF, then extracted
         weather_data = await self.mcp_client.invoke_tool("get_weather", {"location": location})
-        
+
         # Format and return data - will be converted to A2A format by the A2A adapter
         return {
             "location": location,
@@ -220,7 +220,7 @@ async def translate_text(text, source_language, target_language):
         source_lang=source_language,
         target_lang=target_language
     )
-    
+
     return {
         "translated_text": translation_result.text,
         "source_language": source_language,
@@ -258,14 +258,14 @@ protocols:
       auth_config:
         secret_key_env: "OPENMAS_A2A_JWT_SECRET"
         token_expiry_seconds: 3600
-  
+
   http:
     security:
       auth_provider: "api_key"
       auth_config:
         header_name: "X-API-Key"
         api_key_env: "OPENMAS_HTTP_API_KEY"
-  
+
   mqtt:
     security:
       auth_config:
@@ -325,7 +325,7 @@ class LoggingObserver(MessageObserver):
     def observe_message(self, message, protocol, direction):
         """Log messages across all protocols."""
         logger.info(f"[{protocol}][{direction}] Message: {message}")
-        
+
 # Register with the protocol manager
 protocol_manager.add_observer(LoggingObserver())
 ```

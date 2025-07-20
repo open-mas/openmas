@@ -5,7 +5,7 @@
 This tutorial walks through the complete process of creating a custom OpenMAS extension from initial setup to deployment. We'll build a "Weather Service" extension that allows agents to retrieve weather information regardless of which reasoning approach or protocol they use, demonstrating OpenMAS's reasoning agnosticism and protocol independence principles.
 
 > **IMPORTANT**: Before starting this tutorial, please review the detailed documentation for the specific extension type you're interested in developing. Each extension type has its own interface requirements and integration patterns:
-> 
+>
 > - [Agent Extensions](../extension_types/agent_extensions.md) - Enhance agent capabilities and behaviors
 > - [Communicator Extensions](../extension_types/communicator_extensions.md) - Add support for new communication protocols
 > - [Asset Extensions](../extension_types/assets.md) - Handle various types of assets and resources
@@ -82,30 +82,30 @@ from typing import Optional, List, Dict, Any
 class WeatherApiConfig(BaseModel):
     """Configuration for the weather API service."""
     api_key_env: str = Field(
-        "WEATHER_API_KEY", 
+        "WEATHER_API_KEY",
         description="Environment variable containing the API key"
     )
     base_url: AnyHttpUrl = Field(
-        "https://api.weatherservice.example", 
+        "https://api.weatherservice.example",
         description="Base URL for the weather API"
     )
     timeout: int = Field(
-        10, 
+        10,
         description="Timeout in seconds for API requests"
     )
     units: str = Field(
-        "metric", 
+        "metric",
         description="Unit system (metric/imperial)"
     )
     cache_ttl: int = Field(
-        300, 
+        300,
         description="Cache time-to-live in seconds"
     )
 
 class WeatherServiceConfig(BaseModel):
     """Configuration schema for the Weather Service extension."""
     enabled: bool = Field(
-        True, 
+        True,
         description="Whether the weather service is enabled"
     )
     api: WeatherApiConfig = Field(
@@ -113,7 +113,7 @@ class WeatherServiceConfig(BaseModel):
         description="API configuration"
     )
     default_location: Optional[str] = Field(
-        None, 
+        None,
         description="Default location for weather queries"
     )
     capabilities: List[str] = Field(
@@ -141,44 +141,44 @@ logger = logging.getLogger(__name__)
 
 class WeatherClient:
     """Client for the weather service API."""
-    
+
     def __init__(self, config):
         """Initialize the weather client with configuration."""
         self.config = config
         self.api_key = os.environ.get(config.api_key_env)
         if not self.api_key:
             logger.warning(f"API key not found in environment variable {config.api_key_env}")
-        
+
         self.base_url = str(config.base_url)
         self.timeout = config.timeout
         self.units = config.units
-        
+
         # Simple in-memory cache
         self._cache = {}
-    
+
     def _get_cache_key(self, endpoint: str, params: Dict[str, Any]) -> str:
         """Generate a cache key from endpoint and parameters."""
         param_str = "&".join(f"{k}={v}" for k, v in sorted(params.items()))
         return f"{endpoint}?{param_str}"
-    
+
     def _is_cache_valid(self, cache_entry) -> bool:
         """Check if a cache entry is still valid."""
         if not cache_entry:
             return False
         timestamp, _ = cache_entry
         return datetime.now() < timestamp + timedelta(seconds=self.config.cache_ttl)
-    
+
     def _request(self, endpoint: str, params: Dict[str, Any]) -> Dict[str, Any]:
         """Make an API request with caching."""
         # Check cache first
         cache_key = self._get_cache_key(endpoint, params)
         cache_entry = self._cache.get(cache_key)
-        
+
         if self._is_cache_valid(cache_entry):
             logger.debug(f"Cache hit for {cache_key}")
             _, data = cache_entry
             return data
-        
+
         # Prepare request
         url = f"{self.base_url}/{endpoint}"
         request_params = {
@@ -186,42 +186,42 @@ class WeatherClient:
             "units": self.units,
             **params
         }
-        
+
         # Make request
         try:
             response = requests.get(
-                url, 
+                url,
                 params=request_params,
                 timeout=self.timeout
             )
             response.raise_for_status()
             data = response.json()
-            
+
             # Cache response
             self._cache[cache_key] = (datetime.now(), data)
             return data
-            
+
         except requests.RequestException as e:
             logger.error(f"Weather API request failed: {e}")
             raise
-    
+
     def get_current_weather(self, location: str) -> Dict[str, Any]:
         """Get current weather for a location."""
         return self._request("current", {"location": location})
-    
+
     def get_forecast(self, location: str, days: int = 5) -> Dict[str, Any]:
         """Get weather forecast for a location."""
         return self._request("forecast", {"location": location, "days": days})
-    
+
     def get_alerts(self, location: str) -> Dict[str, Any]:
         """Get weather alerts for a location."""
         return self._request("alerts", {"location": location})
-    
+
     # For demonstration, we'll add a mock implementation that doesn't require an actual API
     def mock_implementation(self) -> bool:
         """Set up mock data instead of real API calls."""
         logger.info("Using mock weather data")
-        
+
         # Create mock methods that override the real ones
         def mock_current(location):
             return {
@@ -233,7 +233,7 @@ class WeatherClient:
                 "wind_direction": "NW",
                 "updated": datetime.now().isoformat()
             }
-        
+
         def mock_forecast(location, days=5):
             return {
                 "location": location,
@@ -248,18 +248,18 @@ class WeatherClient:
                     for i in range(days)
                 ]
             }
-        
+
         def mock_alerts(location):
             return {
                 "location": location,
                 "alerts": []  # No alerts by default
             }
-        
+
         # Replace real methods with mocks
         self.get_current_weather = mock_current
         self.get_forecast = mock_forecast
         self.get_alerts = mock_alerts
-        
+
         return True
 ```
 
@@ -282,38 +282,38 @@ logger = logging.getLogger(__name__)
 class WeatherServiceExtension(BaseExtension):
     """
     Weather Service Extension for OpenMAS.
-    
+
     This extension enables agents to retrieve weather information,
     demonstrating OpenMAS's reasoning agnosticism and protocol independence.
     """
-    
+
     def __init__(self, config: Dict[str, Any]):
         """Initialize the extension with configuration."""
         super().__init__(config)
         self.config = WeatherServiceConfig(**config)
         self.client = None
         self._initialized = False
-    
+
     async def initialize(self) -> bool:
         """Initialize the extension and set up the weather client."""
         if self._initialized:
             return True
-        
+
         if not self.config.enabled:
             logger.info("Weather service extension is disabled")
             return False
-        
+
         # Create and initialize the weather client
         self.client = WeatherClient(self.config.api)
-        
+
         # For demonstration purposes, use mock implementation
         # In production, you would use the real API
         if os.environ.get("OPENMAS_EXTENSIONS_MOCK", "").lower() == "true":
             self.client.mock_implementation()
-        
+
         # Register capabilities with the extension registry
         registry = ExtensionRegistry.get_instance()
-        
+
         if "current_weather" in self.config.capabilities:
             registry.register_capability(
                 "current_weather",
@@ -345,7 +345,7 @@ class WeatherServiceExtension(BaseExtension):
                 },
                 protocol_mapping=self.config.protocol_mapping.get("current_weather", {})
             )
-        
+
         if "forecast" in self.config.capabilities:
             registry.register_capability(
                 "forecast",
@@ -391,7 +391,7 @@ class WeatherServiceExtension(BaseExtension):
                 },
                 protocol_mapping=self.config.protocol_mapping.get("forecast", {})
             )
-        
+
         if "alerts" in self.config.capabilities:
             registry.register_capability(
                 "alerts",
@@ -430,44 +430,44 @@ class WeatherServiceExtension(BaseExtension):
                 },
                 protocol_mapping=self.config.protocol_mapping.get("alerts", {})
             )
-        
+
         self._initialized = True
         logger.info("Weather service extension initialized successfully")
         return True
-    
+
     async def get_current_weather(self, location: Optional[str] = None) -> Dict[str, Any]:
         """Get current weather for a location."""
         if not self._initialized:
             raise RuntimeError("Extension not initialized")
-        
+
         location = location or self.config.default_location
         if not location:
             raise ValueError("Location is required")
-        
+
         return self.client.get_current_weather(location)
-    
+
     async def get_forecast(self, location: Optional[str] = None, days: int = 5) -> Dict[str, Any]:
         """Get weather forecast for a location."""
         if not self._initialized:
             raise RuntimeError("Extension not initialized")
-        
+
         location = location or self.config.default_location
         if not location:
             raise ValueError("Location is required")
-        
+
         return self.client.get_forecast(location, days)
-    
+
     async def get_alerts(self, location: Optional[str] = None) -> Dict[str, Any]:
         """Get weather alerts for a location."""
         if not self._initialized:
             raise RuntimeError("Extension not initialized")
-        
+
         location = location or self.config.default_location
         if not location:
             raise ValueError("Location is required")
-        
+
         return self.client.get_alerts(location)
-    
+
     async def shutdown(self) -> bool:
         """Clean up resources and shut down the extension."""
         logger.info("Shutting down weather service extension")
@@ -665,10 +665,10 @@ agents:
         temperature: 0.2
         system_prompt: |
           You are a travel assistant that helps plan trips.
-          
+
           Use the weather tools to check conditions and provide
           appropriate recommendations based on the forecast.
-          
+
           For sunny days, suggest outdoor activities.
           For rainy days, suggest indoor activities.
 ```
@@ -719,7 +719,7 @@ class ActivityRecommenderAgent(RuleBasedAgent):
     async def setup(self):
         await super().setup()
         self.registry = ExtensionRegistry.get_instance()
-    
+
     async def recommend_outdoor_activities(self, context):
         location = context.get("location", self.config.get("default_location"))
         return {
@@ -732,7 +732,7 @@ class ActivityRecommenderAgent(RuleBasedAgent):
             ],
             "weather": await self.registry.invoke_capability("current_weather", {"location": location})
         }
-    
+
     async def recommend_indoor_activities(self, context):
         location = context.get("location", self.config.get("default_location"))
         return {
@@ -824,12 +824,12 @@ async def test_current_weather(weather_extension):
     assert result["location"] == "Berlin"
     assert "temperature" in result
     assert "condition" in result
-    
+
 async def test_forecast(weather_extension):
     result = await weather_extension.get_forecast("Paris", days=3)
     assert result["location"] == "Paris"
     assert len(result["days"]) == 3
-    
+
 async def test_alerts(weather_extension):
     result = await weather_extension.get_alerts("Tokyo")
     assert result["location"] == "Tokyo"

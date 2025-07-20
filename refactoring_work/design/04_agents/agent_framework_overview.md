@@ -95,7 +95,7 @@ agents:
     module: "openmas.agents"
     class: "AssistiveAgent"
     description: "An agent that provides assistance with data analysis"
-    
+
     # Capability configuration
     capabilities:
       analyze_data:
@@ -103,8 +103,8 @@ agents:
         versions: ["1.0", "1.1"]
         input_schema: {}
         output_schema: {}
-      
-    # Protocol configuration  
+
+    # Protocol configuration
     protocols:
       - type: "a2a-http"
         enabled: true
@@ -112,12 +112,12 @@ agents:
       - type: "mcp-sse"
         enabled: true
         options: {}
-    
+
     # State configuration
     state:
       storage: "memory"
       persistence: false
-      
+
     # Session configuration
     sessions:
       timeout: 3600

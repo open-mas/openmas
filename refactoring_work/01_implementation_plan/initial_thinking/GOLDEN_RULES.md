@@ -1,7 +1,7 @@
 # ⚠️ **DEPRECATED: This file has been replaced**
 
-**New Location**: `.cursor/rules/openmas_ai_continuity.md`  
-**Reason**: Moved to Cursor-integrated system for better AI accessibility  
+**New Location**: `.cursor/rules/openmas_ai_continuity.md`
+**Reason**: Moved to Cursor-integrated system for better AI accessibility
 **Date**: 2024-12-28
 
 **Please use the new AI continuity system instead of this file.**
@@ -28,7 +28,7 @@ These golden rules establish standards for OpenMAS development, ensuring code qu
 - **Reference completed TASK files** for consistency patterns - never reinvent interfaces
 - **Maintain SIMF compatibility** - all protocol work MUST use the Standard Internal Message Format
 
-### TASK File Excellence  
+### TASK File Excellence
 - **Follow the exact TASK format** defined in the master plan - no variations
 - **Update Progress Notes** in real-time as you work through sub-tasks
 - **Document design decisions** with clear rationale in "Decision Note" sections
@@ -97,11 +97,11 @@ These golden rules establish standards for OpenMAS development, ensuring code qu
   my_variable = "value"
   def my_function():
       pass
-  
+
   # Classes: PascalCase
   class MyClass:
       pass
-  
+
   # Constants: UPPER_CASE
   MY_CONSTANT = "value"
   ```
@@ -145,15 +145,15 @@ These golden rules establish standards for OpenMAS development, ensuring code qu
 - **Write Google-style docstrings** for all modules, classes, methods, and properties:
   ```python
   """Brief summary.
-  
+
   Detailed explanation.
-  
+
   Args:
       param1 (type): Description.
-      
+
   Returns:
       type: Description.
-      
+
   Raises:
       Exception: Description.
   """
@@ -202,12 +202,12 @@ These golden rules establish standards for OpenMAS development, ensuring code qu
 
 ### Session Start Checklist
 - [ ] Read `PHASE_1_MASTER_PLAN.md`
-- [ ] Read `PLANNING.md` 
+- [ ] Read `PLANNING.md`
 - [ ] Read `internal_message_format_standard.md`
 - [ ] Check current TASK status in master plan
 - [ ] Pick highest priority incomplete TASK
 
-### Session End Checklist  
+### Session End Checklist
 - [ ] Update TASK Progress Notes
 - [ ] Update master plan status table
 - [ ] Document design decisions made

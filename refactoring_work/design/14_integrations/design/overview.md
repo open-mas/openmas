@@ -112,12 +112,12 @@ Service integrations connect to external cloud services:
 ```python
 class CloudStorageIntegration(ServiceIntegration):
     """Integration with cloud storage providers."""
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.provider = config.get("provider")
         self.region = config.get("region")
-        
+
     async def initialize(self):
         # Set up client based on provider
         if self.provider == "aws":
@@ -125,11 +125,11 @@ class CloudStorageIntegration(ServiceIntegration):
         elif self.provider == "azure":
             self.client = self._create_azure_client()
         # ...
-        
+
     async def upload_file(self, local_path, remote_path):
         # Provider-agnostic file upload
         # ...
-        
+
     async def download_file(self, remote_path, local_path):
         # Provider-agnostic file download
         # ...
@@ -142,19 +142,19 @@ Framework integrations enable interoperability with other agent frameworks:
 ```python
 class LangChainIntegration(FrameworkIntegration):
     """Integration with LangChain framework."""
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.components = config.get("components", {})
-        
+
     async def initialize(self):
         # Import LangChain components
         # ...
-        
+
     def convert_agent(self, openmas_agent):
         """Convert OpenMAS agent to LangChain agent."""
         # ...
-        
+
     def import_agent(self, langchain_agent):
         """Import LangChain agent as OpenMAS agent."""
         # ...
@@ -167,21 +167,21 @@ API integrations connect to external APIs:
 ```python
 class RestApiIntegration(ApiIntegration):
     """Integration with REST APIs."""
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.base_url = config.get("base_url")
         self.version = config.get("version")
-        
+
     async def initialize(self):
         # Set up HTTP client
         # ...
-        
+
     async def request(self, method, endpoint, data=None, params=None):
         """Make API request."""
         # Handle authentication
         headers = await self._get_auth_headers()
-        
+
         # Make request with retry logic
         return await self._make_request_with_retry(
             method, endpoint, data, params, headers
@@ -223,7 +223,7 @@ agents:
     # Agent configuration
     module: "agents.example"
     class: "ExampleAgent"
-    
+
     # Agent-specific integrations
     integrations:
       - name: "slack"

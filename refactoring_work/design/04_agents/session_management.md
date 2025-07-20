@@ -21,7 +21,7 @@ properties:
         type: boolean
         description: "Whether session management is enabled"
         default: true
-      
+
       # Storage configuration
       storage:
         type: object
@@ -41,7 +41,7 @@ properties:
             type: integer
             description: "Session expiration time in seconds"
             default: 604800
-      
+
       # Protocol-specific session configuration
       protocol_sessions:
         type: object
@@ -78,7 +78,7 @@ properties:
                   state_transitions:
                     type: object
                     description: "Configuration for state transition behavior"
-                    
+
           # MCP session configuration
           mcp:
             type: object
@@ -115,7 +115,7 @@ properties:
                     default: false
         required:
           - type
-      
+
       # A2A Message and Artifact Storage
       message_storage:
         type: object
@@ -146,7 +146,7 @@ properties:
                 description: "Retention policy for artifacts"
                 enum: ["session", "permanent", "custom"]
                 default: "session"
-  
+
       # Context management configuration
       context:
         type: object
@@ -165,7 +165,7 @@ properties:
             description: "Strategy for pruning context when exceeding limits"
             enum: ["fifo", "selective", "summarize"]
             default: "selective"
-        
+
       # A2A task integration
       task_integration:
         type: object
@@ -180,7 +180,7 @@ properties:
             description: "Mapping between tasks and sessions"
             enum: ["one_to_one", "many_to_one", "one_to_many"]
             default: "one_to_one"
-    
+
     required:
       - enabled
 ```
@@ -206,7 +206,7 @@ class StorageConfig(BaseModel):
     connection_string: Optional[str] = None
     table_name: Optional[str] = None
     expiration: int = 604800  # 7 days default
-    
+
     @validator("connection_string")
     def validate_connection_string(cls, v, values):
         if values.get("type") in ["database", "redis"] and not v:
@@ -350,7 +350,7 @@ properties:
         class:
           type: string
           description: "Agent class name"
-        
+
         # Agent-specific session configuration
         sessions:
           type: object
@@ -466,26 +466,26 @@ from openmas.sessions import SessionManager
 class MyAgent:
     def __init__(self, config):
         self.session_manager = SessionManager(config["sessions"])
-    
+
     async def on_startup(self):
         # Load session on startup
         self.session = await self.session_manager.load_session(self.agent_id)
-    
+
     async def process_message(self, message):
         # Update session with message
         self.session.add_message(message)
-        
+
         # Use session context in processing
         response = await self.generate_response(self.session.get_context())
-        
+
         # Update session with response
         self.session.add_message(response)
-        
+
         # Persist session
         await self.session_manager.save_session(self.session)
-        
+
         return response
-    
+
     async def on_shutdown(self):
         # Save session on shutdown
-        await self.session_manager.save_session(self.session) 
+        await self.session_manager.save_session(self.session)

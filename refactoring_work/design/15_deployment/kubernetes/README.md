@@ -27,7 +27,7 @@ Kubernetes provides a robust platform for deploying OpenMAS agents and systems a
 
 Kubernetes deployments of OpenMAS maintain the framework's distinctive reasoning-agnostic architecture through proper separation of components:
 
-1. **Communication Layer ("Body")**: 
+1. **Communication Layer ("Body")**:
    - Deployed as Kubernetes Deployments/StatefulSets
    - Exposed through Services and Ingress resources
    - Configured via ConfigMaps and Secrets

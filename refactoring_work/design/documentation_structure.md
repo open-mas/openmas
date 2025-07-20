@@ -83,7 +83,7 @@ Types of documents that belong here:
 - System boundaries and interfaces
 - Architectural decisions and rationales
 
-Examples: 
+Examples:
 - `01_architecture/reasoning_agnostic_design.md`
 - `01_architecture/communication_patterns_design.md`
 - `01_architecture/multi_protocol_design.md`

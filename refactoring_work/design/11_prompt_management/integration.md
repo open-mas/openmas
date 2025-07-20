@@ -117,7 +117,7 @@ class QuestionAnsweringAgent(Agent):
             prompt_template="qa_template",
             prompt_version="^1.0.0"
         )
-        
+
     async def answer_question(self, question):
         # Use prompt template with capability
         response = await self.prompt_manager.render_and_complete(
@@ -134,13 +134,13 @@ class MCPProtocolAdapter:
     async def format_for_protocol(self, prompt_template, variables):
         # Adapt prompt for MCP protocol
         template = await self.prompt_manager.get_template(prompt_template)
-        
+
         # Convert to MCP message format
         mcp_message = {
             "role": "system",
             "content": await template.render(variables)
         }
-        
+
         return mcp_message
 ```
 
@@ -151,7 +151,7 @@ class ConversationManager:
     async def prepare_context(self, conversation_id, current_input):
         # Prepare context for prompt
         history = await self.conversation_store.get_history(conversation_id)
-        
+
         # Create context with prioritization
         context = await self.prompt_manager.create_context(
             system=self.system_prompt,
@@ -159,7 +159,7 @@ class ConversationManager:
             current_input=current_input,
             max_tokens=4000
         )
-        
+
         return context
 ```
 

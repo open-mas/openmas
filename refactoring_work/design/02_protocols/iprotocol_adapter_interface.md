@@ -80,7 +80,7 @@ class ProtocolConfig(BaseModel):
     security: Optional[SecurityConfig] = Field(default=None, description="Security configuration")
     retry_policy: Optional[RetryPolicy] = Field(default=None, description="Retry configuration")
     timeout_seconds: float = Field(default=30.0, description="Default timeout for operations in seconds")
-    
+
     class Config:
         """Pydantic configuration."""
         extra = "allow"  # Allow protocol-specific additional fields
@@ -95,7 +95,7 @@ class ProtocolStatus(BaseModel):
     error_count: int = Field(default=0, description="Number of errors since last successful operation")
     message_count: int = Field(default=0, description="Total number of messages processed")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Protocol-specific status information")
-    
+
     class Config:
         """Pydantic configuration."""
         json_encoders = {
@@ -117,62 +117,62 @@ class ProtocolCapabilities(BaseModel):
 class IProtocolAdapter(ABC):
     """
     Interface for protocol-specific adapters in OpenMAS.
-    
+
     The IProtocolAdapter serves as the bridge between protocol-specific
     communication mechanisms and the OpenMAS Standard Internal Message Format (SIMF).
     It provides a consistent interface for connecting, sending, receiving, and
     translating messages across different protocols.
-    
+
     All protocol adapters must implement this interface to ensure consistent
     behavior and enable OpenMAS's multi-protocol capabilities.
     """
-    
+
     @abstractmethod
     async def connect(self, config: ProtocolConfig) -> None:
         """
         Initialize and establish the protocol connection.
-        
+
         This method performs all necessary setup to enable communication through
         the protocol, including authentication, connection establishment, and
         any protocol-specific initialization.
-        
+
         Args:
             config: Protocol-specific configuration including connection details,
                 security settings, and protocol options
-                
+
         Raises:
             ConnectionError: If the connection cannot be established
             ValueError: If the configuration is invalid
             ProtocolError: For other protocol-specific errors
         """
         pass
-    
+
     @abstractmethod
     async def disconnect(self) -> None:
         """
         Close the protocol connection and clean up resources.
-        
+
         This method performs graceful shutdown of the protocol connection,
         ensuring all pending operations are completed and resources are
         properly released.
-        
+
         Raises:
             ProtocolError: If the disconnection fails
         """
         pass
-    
+
     @abstractmethod
     async def send_message(self, internal_message: InternalMessageFormat) -> None:
         """
         Send a message using the protocol.
-        
+
         This method converts the internal message format to the protocol-specific
         format and transmits it. The conversion preserves all semantic information
         while adapting to protocol-specific constraints.
-        
+
         Args:
             internal_message: Message in the Standard Internal Message Format
-                
+
         Raises:
             MessageTranslationError: If the message cannot be converted to protocol format
             UnsupportedMessageTypeError: If the message type is not supported
@@ -180,117 +180,117 @@ class IProtocolAdapter(ABC):
             ProtocolError: For other protocol-specific errors
         """
         pass
-    
+
     @abstractmethod
     async def register_message_callback(
-        self, 
+        self,
         callback: Callable[[InternalMessageFormat], Awaitable[None]]
     ) -> None:
         """
         Register a callback function for incoming messages.
-        
+
         This method sets up the callback that will be invoked when messages
         are received through the protocol. The callback receives messages
         that have been converted to the Standard Internal Message Format.
-        
+
         Args:
             callback: Async function to call when messages are received.
                 Must accept a single InternalMessageFormat parameter.
-                
+
         Raises:
             ValueError: If the callback is invalid
             ProtocolError: If callback registration fails
         """
         pass
-    
+
     @abstractmethod
     async def get_status(self) -> ProtocolStatus:
         """
         Get the current status of the protocol adapter.
-        
+
         Returns:
             ProtocolStatus: Current connection status, activity information,
                 and protocol-specific metadata
         """
         pass
-    
+
     @abstractmethod
     def get_capabilities(self) -> ProtocolCapabilities:
         """
         Get the capabilities supported by this protocol adapter.
-        
+
         Returns:
             ProtocolCapabilities: Information about what features and
                 message types this protocol supports
         """
         pass
-    
+
     @abstractmethod
     def to_internal_format(self, protocol_message: Any) -> InternalMessageFormat:
         """
         Convert a protocol-specific message to Standard Internal Message Format.
-        
+
         This method performs the critical translation from the protocol's
         native message format to OpenMAS's standard internal representation.
         All semantic information must be preserved during this conversion.
-        
+
         Args:
             protocol_message: Message in the protocol's native format
-            
+
         Returns:
             InternalMessageFormat: Message converted to SIMF
-            
+
         Raises:
             MessageTranslationError: If the message cannot be converted
             ValueError: If the protocol message is invalid
         """
         pass
-    
+
     @abstractmethod
     def from_internal_format(self, internal_message: InternalMessageFormat) -> Any:
         """
         Convert a Standard Internal Message Format message to protocol-specific format.
-        
+
         This method performs the critical translation from OpenMAS's standard
         internal representation to the protocol's native message format.
         Protocol-specific constraints and requirements must be respected.
-        
+
         Args:
             internal_message: Message in Standard Internal Message Format
-            
+
         Returns:
             Any: Message converted to protocol-specific format
-            
+
         Raises:
             MessageTranslationError: If the message cannot be converted
             UnsupportedMessageTypeError: If the message type is not supported
             ValueError: If the internal message is invalid
         """
         pass
-    
+
     @abstractmethod
     def validate_message(self, internal_message: InternalMessageFormat) -> bool:
         """
         Validate whether a message can be handled by this protocol.
-        
+
         This method checks if the given internal message can be successfully
         converted to the protocol's format and transmitted. It should return
         False for unsupported message types or constraints.
-        
+
         Args:
             internal_message: Message to validate
-            
+
         Returns:
             bool: True if the message can be handled, False otherwise
         """
         pass
-    
+
     # Optional lifecycle methods that adapters can implement
-    
+
     async def health_check(self) -> bool:
         """
         Perform a health check on the protocol connection.
-        
+
         Returns:
             bool: True if the connection is healthy, False otherwise
         """
@@ -299,14 +299,14 @@ class IProtocolAdapter(ABC):
             return status.status == ConnectionStatus.CONNECTED
         except Exception:
             return False
-    
+
     async def reconnect(self) -> None:
         """
         Attempt to reconnect the protocol.
-        
+
         Default implementation disconnects and reconnects using stored config.
         Adapters can override for protocol-specific reconnection logic.
-        
+
         Raises:
             ConnectionError: If reconnection fails
             ProtocolError: For protocol-specific errors
@@ -361,11 +361,11 @@ Protocol adapters must handle translation errors gracefully:
 ```python
 class MCPProtocolAdapter(IProtocolAdapter):
     """Example MCP protocol adapter implementation."""
-    
+
     def to_internal_format(self, protocol_message: Dict[str, Any]) -> InternalMessageFormat:
         """Convert MCP message to SIMF."""
         message_id = protocol_message.get("id", str(uuid.uuid4()))
-        
+
         # Determine message type based on MCP message structure
         if "method" in protocol_message:
             if protocol_message["method"] == "tools/call":
@@ -396,7 +396,7 @@ class MCPProtocolAdapter(IProtocolAdapter):
                 payload_type=PayloadType.TEXT_CONTENT,
                 text=str(protocol_message)
             )
-        
+
         return InternalMessageFormat(
             message_id=message_id,
             timestamp=datetime.utcnow(),
@@ -407,7 +407,7 @@ class MCPProtocolAdapter(IProtocolAdapter):
             payload=payload,
             metadata={"mcp_method": protocol_message.get("method")}
         )
-    
+
     def from_internal_format(self, internal_message: InternalMessageFormat) -> Dict[str, Any]:
         """Convert SIMF to MCP message."""
         if internal_message.payload.payload_type == PayloadType.INVOCATION_CONTENT:
@@ -444,12 +444,12 @@ class MCPProtocolAdapter(IProtocolAdapter):
 ```python
 class A2AProtocolAdapter(IProtocolAdapter):
     """Example A2A protocol adapter implementation."""
-    
+
     def to_internal_format(self, protocol_message: Dict[str, Any]) -> InternalMessageFormat:
         """Convert A2A message to SIMF."""
         # A2A messages can have multiple parts
         parts = protocol_message.get("parts", [])
-        
+
         if len(parts) == 1:
             # Single part - direct mapping
             part = parts[0]
@@ -489,13 +489,13 @@ class A2AProtocolAdapter(IProtocolAdapter):
                         data=part["data"]
                     ))
                 # Add other part types...
-            
+
             payload = MultiPartContentPayload(
                 payload_type=PayloadType.MULTI_PART_CONTENT,
                 parts=part_payloads
             )
             message_type = MessageType.MULTI_PART_MESSAGE
-        
+
         return InternalMessageFormat(
             message_id=protocol_message.get("id", str(uuid.uuid4())),
             timestamp=datetime.utcnow(),
@@ -510,7 +510,7 @@ class A2AProtocolAdapter(IProtocolAdapter):
                 "a2a_conversation_id": protocol_message.get("conversation_id")
             }
         )
-    
+
     def get_capabilities(self) -> ProtocolCapabilities:
         """Get A2A protocol capabilities."""
         return ProtocolCapabilities(
@@ -585,27 +585,27 @@ Protocol adapters should include comprehensive tests:
 ```python
 class TestProtocolAdapter:
     """Example test structure for protocol adapters."""
-    
+
     async def test_connect_success(self):
         """Test successful connection."""
         pass
-    
+
     async def test_connect_failure(self):
         """Test connection failure scenarios."""
         pass
-    
+
     async def test_message_translation_to_simf(self):
         """Test protocol message to SIMF conversion."""
         pass
-    
+
     async def test_message_translation_from_simf(self):
         """Test SIMF to protocol message conversion."""
         pass
-    
+
     async def test_unsupported_message_types(self):
         """Test handling of unsupported message types."""
         pass
-    
+
     async def test_error_conditions(self):
         """Test various error conditions."""
         pass
@@ -616,4 +616,4 @@ class TestProtocolAdapter:
 - [Standard Internal Message Format](../01_architecture/internal_message_format_standard.md)
 - [Multi-Protocol Design](../01_architecture/multi_protocol_design.md)
 - [Protocol Configuration Schema](../03_configuration/schema/protocols.md)
-- [Message Handler Interface](../04_agents/interfaces/message_handler_interface.md) 
+- [Message Handler Interface](../04_agents/interfaces/message_handler_interface.md)

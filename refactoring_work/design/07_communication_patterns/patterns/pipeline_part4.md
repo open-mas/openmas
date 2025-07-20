@@ -138,38 +138,38 @@ sessions:
 ```python
 class PipelineSessionManager:
     """Manages session state for pipeline pattern."""
-    
+
     def __init__(self, session_manager):
         """Initialize with session manager."""
         self.session_manager = session_manager
-        
+
     async def store_pipeline_state(self, pipeline_id, state):
         """Store pipeline state in session."""
         session_id = f"pipeline:{pipeline_id}"
         session = await self.session_manager.get_session(session_id)
-        
+
         if not session:
             session = {
                 "type": "pipeline",
                 "pipeline_id": pipeline_id,
                 "created_at": datetime.now().isoformat()
             }
-            
+
         session["pipeline_state"] = state
         session["updated_at"] = datetime.now().isoformat()
-        
+
         await self.session_manager.update_session(session_id, session)
-        
+
     async def retrieve_pipeline_state(self, pipeline_id):
         """Retrieve pipeline state from session."""
         session_id = f"pipeline:{pipeline_id}"
         session = await self.session_manager.get_session(session_id)
-        
+
         if not session:
             return None
-            
+
         return session.get("pipeline_state")
-        
+
     async def cleanup_pipeline_session(self, pipeline_id):
         """Clean up pipeline session."""
         session_id = f"pipeline:{pipeline_id}"

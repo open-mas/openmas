@@ -90,23 +90,23 @@ async def http_request_response(agent, url, method, params):
 async def mqtt_request_response(agent, request_topic, response_topic, message):
     # Generate correlation ID
     correlation_id = str(uuid.uuid4())
-    
+
     # Create response future
     response_future = asyncio.Future()
-    
+
     # Set up response handler
     def on_response(topic, payload):
         response_data = json.loads(payload)
         if response_data.get("correlation_id") == correlation_id:
             response_future.set_result(response_data)
-    
+
     # Subscribe to response topic
     await agent.mqtt_client.subscribe(response_topic, on_response)
-    
+
     # Publish request with correlation ID
     request_data = {**message, "correlation_id": correlation_id}
     await agent.mqtt_client.publish(request_topic, json.dumps(request_data))
-    
+
     # Wait for response
     return await response_future
 ```

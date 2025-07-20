@@ -101,4 +101,4 @@ For refactoring the configuration system:
 4. Repeat step 3 for each sub-component
 5. Finally, use `component_integration.md` to integrate all sub-components
 
-Following this structured approach ensures consistent, high-quality implementations that adhere to OpenMAS's architectural principles and testing requirements. 
+Following this structured approach ensures consistent, high-quality implementations that adhere to OpenMAS's architectural principles and testing requirements.

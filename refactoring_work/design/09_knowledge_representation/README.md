@@ -22,7 +22,7 @@ The KR&R module provides these core capabilities:
    - Query processing and optimization
    - Consistency checking
    - Similarity search (for vector stores)
-   
+
    > **Note**: These are internal knowledge processing capabilities of the KR&R System itself and should not be confused with the high-level agent reasoning performed by `ReasoningEngines`.
 
 3. **Knowledge Management**

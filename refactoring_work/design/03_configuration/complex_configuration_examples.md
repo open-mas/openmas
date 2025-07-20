@@ -16,7 +16,7 @@ description: "Multi-agent system for travel booking with various reasoning appro
 defaults:
   common:
     log_level: "info"
-  
+
   security:
     authentication:
       enabled: true
@@ -27,7 +27,7 @@ defaults:
             - name: "system_default"
               key: "${SYSTEM_API_KEY}"
               roles: ["system"]
-  
+
   observability:
     logging:
       enabled: true
@@ -46,7 +46,7 @@ agents:
     class: "agents.travel.TravelCoordinatorAgent"
     type: "llm"
     description: "Coordinates overall travel planning"
-    
+
     protocols:
       - type: "a2a-http"
         enabled: true
@@ -58,7 +58,7 @@ agents:
         options:
           server_mode: true
           port: 3000
-    
+
     capabilities:
       multi_protocol_capabilities:
         core:
@@ -68,13 +68,13 @@ agents:
             parameters:
               type: "object"
               properties:
-                origin: 
+                origin:
                   type: "string"
                   description: "Origin airport code"
-                destination: 
+                destination:
                   type: "string"
                   description: "Destination airport code"
-                date: 
+                date:
                   type: "string"
                   description: "Date of travel (YYYY-MM-DD)"
             returns:
@@ -82,35 +82,35 @@ agents:
               items:
                 type: "object"
                 properties:
-                  flight_id: 
+                  flight_id:
                     type: "string"
-                  airline: 
+                  airline:
                     type: "string"
-                  departure: 
+                  departure:
                     type: "string"
-                  arrival: 
+                  arrival:
                     type: "string"
-                  price: 
+                  price:
                     type: "number"
         protocol_mapping:
           a2a-http:
             search_flights: "search_flights"
           mcp-sse:
             search_flights: "search_flights_tool"
-    
+
     reasoning:
       type: "llm"
       llm_config:
         model: "gpt-4"
         temperature: 0.2
         system_prompt: "${COORDINATOR_PROMPT}"
-  
+
   # Rule-based flight search agent
   flight_search:
     class: "agents.travel.FlightSearchAgent"
     type: "rule_based"
     description: "Searches flight databases using rule-based approach"
-    
+
     protocols:
       - type: "a2a-http"
         enabled: true
@@ -122,7 +122,7 @@ agents:
         options:
           host: "0.0.0.0"
           port: 50051
-    
+
     capabilities:
       multi_protocol_capabilities:
         core:
@@ -132,11 +132,11 @@ agents:
             parameters:
               type: "object"
               properties:
-                origin: 
+                origin:
                   type: "string"
-                destination: 
+                destination:
                   type: "string"
-                date: 
+                date:
                   type: "string"
                 airline_code:
                   type: "string"
@@ -151,7 +151,7 @@ agents:
             search_airline_database: "search_airline_database"
           grpc:
             search_airline_database: "SearchAirlineDatabase"
-    
+
     reasoning:
       type: "rule_based"
       rules:
@@ -161,13 +161,13 @@ agents:
         - name: "international_flight_search"
           condition: "origin.country != destination.country"
           action: "search_international_database"
-  
+
   # BDI-based booking agent
   booking_agent:
     class: "agents.travel.BookingAgent"
     type: "bdi"
     description: "Handles booking process using BDI approach"
-    
+
     protocols:
       - type: "a2a-http"
         enabled: true
@@ -184,7 +184,7 @@ agents:
               role: "subscribe"
             - name: "booking/confirmations"
               role: "publish"
-    
+
     capabilities:
       multi_protocol_capabilities:
         core:
@@ -194,7 +194,7 @@ agents:
             parameters:
               type: "object"
               properties:
-                flight_id: 
+                flight_id:
                   type: "string"
                 passenger_details:
                   type: "object"
@@ -203,16 +203,16 @@ agents:
             returns:
               type: "object"
               properties:
-                booking_id: 
+                booking_id:
                   type: "string"
-                status: 
+                status:
                   type: "string"
         protocol_mapping:
           a2a-http:
             book_flight: "book_flight"
           mqtt:
             book_flight: "booking/requests"
-    
+
     reasoning:
       type: "bdi"
       beliefs:
@@ -301,7 +301,7 @@ environments:
             options:
               host: "${PROD_GRPC_HOST}"
               port: "${PROD_GRPC_PORT}"
-  
+
   development:
     common:
       log_level: "debug"
@@ -320,7 +320,7 @@ agents:
     class: "agents.hybrid.CustomerServiceAgent"
     type: "hybrid"
     description: "Customer service agent with hybrid reasoning"
-    
+
     protocols:
       - type: "a2a-http"
         enabled: true
@@ -338,7 +338,7 @@ agents:
           host: "0.0.0.0"
           port: 8080
           path: "/customer-service"
-    
+
     capabilities:
       multi_protocol_capabilities:
         core:
@@ -348,14 +348,14 @@ agents:
             parameters:
               type: "object"
               properties:
-                question: 
+                question:
                   type: "string"
             returns:
               type: "object"
               properties:
-                answer: 
+                answer:
                   type: "string"
-                confidence: 
+                confidence:
                   type: "number"
           - id: "escalate_issue"
             name: "Escalate Issue"
@@ -363,17 +363,17 @@ agents:
             parameters:
               type: "object"
               properties:
-                issue_description: 
+                issue_description:
                   type: "string"
-                priority: 
+                priority:
                   type: "string"
                   enum: ["low", "medium", "high", "critical"]
             returns:
               type: "object"
               properties:
-                ticket_id: 
+                ticket_id:
                   type: "string"
-                estimated_response_time: 
+                estimated_response_time:
                   type: "string"
         protocol_mapping:
           a2a-http:
@@ -385,7 +385,7 @@ agents:
           websocket:
             answer_faq: "answer_faq"
             escalate_issue: "escalate_issue"
-    
+
     reasoning:
       type: "hybrid"
       components:
@@ -398,21 +398,21 @@ agents:
             - name: "critical_issue"
               condition: "issue_priority == 'critical'"
               action: "immediate_escalation"
-        
+
         - type: "llm"
           priority: 2
           llm_config:
             model: "gpt-4"
             temperature: 0.3
             system_prompt: "${CUSTOMER_SERVICE_PROMPT}"
-        
+
         - type: "symbolic"
           priority: 3
           knowledge_base: "customer_service_kb"
           inference_engine: "prolog"
-      
+
       fallback: "llm"  # If no component can handle the request
-    
+
     knowledge:
       representation_type: "hybrid"
       storage:
@@ -425,7 +425,7 @@ agents:
         - name: "product_documentation"
           type: "unstructured"
           path: "/data/product_docs"
-    
+
     asset_management:
       enabled: true
       asset_types:
@@ -436,7 +436,7 @@ agents:
         - type: "product_images"
           storage: "cdn"
           cache_policy: "public"
-    
+
     security:
       authentication:
         providers:
@@ -447,7 +447,7 @@ agents:
             client_secret: "${OAUTH_CLIENT_SECRET}"
             auth_url: "https://auth.example.com/oauth2/authorize"
             token_url: "https://auth.example.com/oauth2/token"
-      
+
       authorization:
         roles:
           - name: "customer"
@@ -456,14 +456,14 @@ agents:
             permissions: ["view_faq", "create_ticket", "view_customer_data"]
           - name: "admin"
             permissions: ["*"]
-    
+
     sessions:
       enabled: true
       storage:
         type: "redis"
         connection_string: "${REDIS_CONNECTION}"
       ttl: 3600  # Session timeout in seconds
-    
+
     observability:
       logging:
         level: "info"
@@ -499,7 +499,7 @@ integrations:
       retry:
         max_attempts: 3
         backoff_factor: 2
-  
+
   email_service:
     type: "api"
     description: "Email Marketing Service"
@@ -514,7 +514,7 @@ integrations:
       rate_limit:
         max_requests: 100
         time_window: 60  # seconds
-  
+
   analytics_platform:
     type: "api"
     description: "Marketing Analytics Platform"
@@ -534,7 +534,7 @@ agents:
     class: "agents.marketing.CampaignManagerAgent"
     type: "llm"
     description: "Manages marketing campaigns"
-    
+
     protocols:
       - type: "a2a-http"
         enabled: true
@@ -546,7 +546,7 @@ agents:
         options:
           server_mode: true
           port: 3010
-    
+
     capabilities:
       multi_protocol_capabilities:
         core:
@@ -556,20 +556,20 @@ agents:
             parameters:
               type: "object"
               properties:
-                name: 
+                name:
                   type: "string"
-                target_audience: 
+                target_audience:
                   type: "object"
-                content: 
+                content:
                   type: "object"
-                schedule: 
+                schedule:
                   type: "object"
             returns:
               type: "object"
               properties:
-                campaign_id: 
+                campaign_id:
                   type: "string"
-                status: 
+                status:
                   type: "string"
           - id: "analyze_results"
             name: "Analyze Campaign Results"
@@ -577,16 +577,16 @@ agents:
             parameters:
               type: "object"
               properties:
-                campaign_id: 
+                campaign_id:
                   type: "string"
-                metrics: 
+                metrics:
                   type: "array"
                   items:
                     type: "string"
             returns:
               type: "object"
               properties:
-                insights: 
+                insights:
                   type: "array"
                   items:
                     type: "object"
@@ -597,7 +597,7 @@ agents:
           mcp-sse:
             create_campaign: "create_campaign_tool"
             analyze_results: "analyze_results_tool"
-    
+
     # Integration references in agent configuration
     integrations:
       - integration_id: "crm_system"
@@ -612,19 +612,19 @@ agents:
         capabilities:
           - id: "get_campaign_metrics"
             mapping: "fetch_campaign_analytics"
-    
+
     reasoning:
       type: "llm"
       llm_config:
         model: "gpt-4"
         temperature: 0.3
         system_prompt: "${CAMPAIGN_MANAGER_PROMPT}"
-  
+
   audience_analyzer:
     class: "agents.marketing.AudienceAnalyzerAgent"
     type: "hybrid"
     description: "Analyzes and segments the audience"
-    
+
     protocols:
       - type: "a2a-http"
         enabled: true
@@ -636,7 +636,7 @@ agents:
         options:
           host: "0.0.0.0"
           port: 50055
-    
+
     # Integration references in agent configuration
     integrations:
       - integration_id: "crm_system"
@@ -647,7 +647,7 @@ agents:
         capabilities:
           - id: "get_audience_insights"
             mapping: "analyze_audience_behavior"
-    
+
     reasoning:
       type: "hybrid"
       components:
@@ -684,15 +684,15 @@ defaults:
           schema:
             type: "object"
             properties:
-              campaign_id: 
+              campaign_id:
                 type: "string"
         - name: "segment_updated"
           schema:
             type: "object"
             properties:
-              segment_id: 
+              segment_id:
                 type: "string"
-              changes: 
+              changes:
                 type: "object"
 
 # Environment-specific integration configuration
@@ -709,7 +709,7 @@ environments:
           rate_limit:
             max_requests: 500
             time_window: 60
-  
+
   staging:
     integrations:
       crm_system:
@@ -746,7 +746,7 @@ defaults:
             - name: "admin"
               key: "${ADMIN_API_KEY}"
               roles: ["admin"]
-        
+
         jwt:
           enabled: true
           issuer: "openmas-auth"
@@ -755,7 +755,7 @@ defaults:
           private_key_path: "/keys/jwt_private.pem"
           private_key_password: "${JWT_KEY_PASSWORD}"
           expiration: 3600  # seconds
-        
+
         oauth2:
           enabled: true
           client_id: "${OAUTH_CLIENT_ID}"
@@ -764,7 +764,7 @@ defaults:
           token_url: "https://auth.example.com/oauth2/token"
           scopes: ["openid", "profile", "agents:read", "agents:write"]
           redirect_uri: "https://api.example.com/oauth2/callback"
-      
+
     authorization:
       enabled: true
       default_policy: "deny"
@@ -777,7 +777,7 @@ defaults:
           permissions: ["agents:*"]
         - name: "system"
           permissions: ["*"]
-      
+
       resources:
         - name: "agents"
           actions: ["discover", "invoke", "manage"]
@@ -785,14 +785,14 @@ defaults:
           actions: ["discover", "invoke"]
         - name: "system"
           actions: ["monitor", "configure"]
-      
+
       policies:
         - name: "public_access"
           resources: ["agents"]
           actions: ["discover"]
           effect: "allow"
           subjects: ["anonymous", "user", "admin", "system"]
-        
+
         - name: "capability_access"
           resources: ["capabilities"]
           actions: ["invoke"]
@@ -800,7 +800,7 @@ defaults:
           subjects: ["user", "admin", "system"]
           conditions:
             - "capability.access_level == 'public' OR subject.role IN capability.allowed_roles"
-    
+
     # Protocol-specific security configurations
     protocols:
       a2a:
@@ -812,7 +812,7 @@ defaults:
         agent_cards:
           signature_verification: true
           public_key_directory: "/keys/agent_cards/"
-      
+
       mcp:
         authentication:
           enabled: true
@@ -821,7 +821,7 @@ defaults:
           enabled: true
         tool_authorization:
           enabled: true
-      
+
       http:
         authentication:
           enabled: true
@@ -835,7 +835,7 @@ defaults:
           allowed_headers: ["Content-Type", "Authorization", "X-API-Key"]
           expose_headers: ["Content-Length", "Content-Type"]
           max_age: 3600
-      
+
       grpc:
         authentication:
           enabled: true
@@ -847,7 +847,7 @@ defaults:
           cert_file: "/certs/grpc.crt"
           key_file: "/certs/grpc.key"
           ca_file: "/certs/ca.crt"
-      
+
       mqtt:
         authentication:
           enabled: true

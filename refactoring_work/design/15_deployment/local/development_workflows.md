@@ -50,17 +50,17 @@ version: "0.3.0"
 system:
   name: "my_agent_system"
   description: "My first OpenMAS agent system"
-  
+
   # Reference to agent configurations
   agents:
     - file: "./agents/agent1.yaml"
     - file: "./agents/agent2.yaml"
-  
+
   # Global protocol settings
   protocols:
     - file: "./protocols/mcp_config.yaml"
     - file: "./protocols/a2a_config.yaml"
-  
+
   # Observability settings
   observability:
     file: "./observability.yaml"
@@ -86,7 +86,7 @@ class MyRuleBasedAgent(Agent):
     def __init__(self, config):
         super().__init__(config)
         self.reasoning = RuleBasedReasoning(config.reasoning)
-        
+
     async def handle_message(self, message):
         # Process message using rule-based reasoning
         response = await self.reasoning.process(message)
@@ -103,7 +103,7 @@ class MyLLMAgent(Agent):
     def __init__(self, config):
         super().__init__(config)
         self.reasoning = LLMReasoning(config.reasoning)
-        
+
     async def handle_message(self, message):
         # Process message using LLM reasoning
         response = await self.reasoning.process(message)
@@ -178,13 +178,13 @@ class ProtocolAgnosticAgent(Agent):
     def __init__(self, config):
         super().__init__(config)
         self.protocol_manager = ProtocolManager(config.protocols)
-        
+
     async def initialize(self):
         await super().initialize()
         # Register protocol handlers
         for protocol in self.protocol_manager.protocols:
             await protocol.register_handler(self.handle_message)
-    
+
     async def handle_message(self, message, protocol=None):
         # Process message content regardless of protocol
         content = message.get_content()
@@ -205,21 +205,21 @@ from openmas.testing import AgentTestHarness
 async def test_agent_conversation():
     # Create a test harness
     harness = AgentTestHarness()
-    
+
     # Add agents to the harness
     agent1 = await harness.add_agent("./configs/agents/agent1.yaml")
     agent2 = await harness.add_agent("./configs/agents/agent2.yaml")
-    
+
     # Start interaction
     response = await harness.send_message(
         from_agent=agent1,
         to_agent=agent2,
         content="Hello, how are you?"
     )
-    
+
     # Verify response
     assert "I'm fine" in response.content
-    
+
     # Cleanup
     await harness.shutdown()
 
@@ -240,10 +240,10 @@ class KnowledgeComponent(Component):
     def __init__(self, config, database=None):
         super().__init__(config)
         self.database = database
-    
+
     async def initialize(self):
         await self.database.connect()
-    
+
     async def query(self, query_string):
         return await self.database.execute(query_string)
 
@@ -253,7 +253,7 @@ class KnowledgeAgent(Agent):
     def __init__(self, config, knowledge=None):
         super().__init__(config)
         self.knowledge = knowledge
-    
+
     async def handle_message(self, message):
         query = self.extract_query(message)
         result = await self.knowledge.query(query)

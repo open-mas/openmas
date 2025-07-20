@@ -122,24 +122,24 @@ version: "1"
 
 deployment:
   environment: docker
-  
+
   resources:
     default:
       cpu: 0.5
       memory: 512Mi
-      
+
   networking:
     ports:
       - name: api
         port: 8080
         target: agent1
-    
+
   storage:
     volumes:
       - name: data
         size: 1Gi
         path: /data
-  
+
   observability:
     logging:
       level: info
@@ -149,7 +149,7 @@ deployment:
       port: 9090
     tracing:
       enabled: true
-  
+
   components:
     agent1:
       type: agent
@@ -158,7 +158,7 @@ deployment:
       resources:
         cpu: 0.5
         memory: 512Mi
-    
+
     agent2:
       type: agent
       config: config/agent2_config.yaml
@@ -186,7 +186,7 @@ OpenMAS supports variable templating in configuration files to reference other v
 ```yaml
 deployment:
   environment: ${OPENMAS_ENV:development}
-  
+
   components:
     agent1:
       config: config/${OPENMAS_ENV:development}/agent1_config.yaml
@@ -204,7 +204,7 @@ deployment:
         default:
           cpu: 0.25
           memory: 256Mi
-    
+
     production:
       resources:
         default:

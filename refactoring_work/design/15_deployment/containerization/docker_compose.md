@@ -162,11 +162,11 @@ services:
   agent1:
     image: openmas/agent:0.3.0
     # configuration for agent1
-    
+
   agent2:
     image: openmas/agent:0.3.0
     # configuration for agent2
-    
+
   agent3:
     image: openmas/agent:0.3.0
     # configuration for agent3
@@ -198,17 +198,17 @@ services:
   agent-service:
     image: openmas/agent-service:0.3.0
     # configuration
-    
+
   # Protocol services
   protocol-service:
     image: openmas/protocol-service:0.3.0
     # configuration
-    
+
   # Knowledge services
   knowledge-service:
     image: openmas/knowledge-service:0.3.0
     # configuration
-    
+
   # Database services
   database:
     image: postgres:14
@@ -243,7 +243,7 @@ services:
     image: openmas/agent:0.3.0
     volumes:
       - agent1-data:/app/data
-      
+
 volumes:
   agent1-data:
     driver: local
@@ -260,12 +260,12 @@ services:
     networks:
       - frontend-network
       - backend-network
-      
+
   agent2:
     image: openmas/agent:0.3.0
     networks:
       - backend-network
-      
+
 networks:
   frontend-network:
     driver: bridge

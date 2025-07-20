@@ -48,9 +48,9 @@ async def supervisor():
     """Create and initialize a test supervisor."""
     supervisor = TestSupervisor()
     await supervisor.initialize()
-    
+
     yield supervisor
-    
+
     await supervisor.shutdown()
 
 async def test_agent_communication(supervisor):
@@ -63,7 +63,7 @@ async def test_agent_communication(supervisor):
         "capabilities": [{"id": "messaging", "type": "messaging"}],
         "protocol": {"type": "mcp", "transport": "memory"}
     })
-    
+
     agent2_config = Configuration.from_dict({
         "id": "agent2",
         "name": "Agent 2",
@@ -71,23 +71,23 @@ async def test_agent_communication(supervisor):
         "capabilities": [{"id": "messaging", "type": "messaging"}],
         "protocol": {"type": "mcp", "transport": "memory"}
     })
-    
+
     # Add agents to supervisor
     agent1 = await supervisor.add_agent(agent1_config)
     agent2 = await supervisor.add_agent(agent2_config)
-    
+
     # Test messaging
     message = {
         "content": "Hello, Agent 2!",
         "type": "text"
     }
-    
+
     response = await supervisor.send_message(
         from_agent=agent1,
         to_agent=agent2,
         message=message
     )
-    
+
     # Assert on response
     assert response is not None
     assert "Hello" in response["content"]
@@ -189,7 +189,7 @@ for protocol_config in [mcp_config, a2a_config, http_config]:
         "capabilities": [{"id": "messaging", "type": "messaging"}],
         **protocol_config
     })
-    
+
     agent = await supervisor.add_agent(agent_config)
     # Run protocol-specific tests
 ```
@@ -238,7 +238,7 @@ for reasoning_config in [llm_config, rule_config, bdi_config]:
         "protocol": {"type": "mcp", "transport": "memory"},
         **reasoning_config
     })
-    
+
     agent = await supervisor.add_agent(agent_config)
     # Run reasoning-specific tests
 ```
@@ -286,17 +286,17 @@ Manages test agent instances:
 ```python
 class AgentManager:
     """Manages test agent instances."""
-    
+
     def __init__(self):
         self.agents = {}
-    
+
     async def add_agent(self, config):
         """Add a new agent for testing."""
         agent = Agent(config)
         await agent.initialize()
         self.agents[agent.id] = agent
         return agent
-    
+
     async def remove_agent(self, agent_id):
         """Remove a test agent."""
         if agent_id in self.agents:
@@ -311,24 +311,24 @@ Intercepts messages between agents:
 ```python
 class MessageInterceptor:
     """Intercepts messages between agents."""
-    
+
     def __init__(self):
         self.intercepted_messages = []
         self.enabled = False
-    
+
     def enable(self, enabled=True):
         """Enable or disable message interception."""
         self.enabled = enabled
-    
+
     def intercept(self, message):
         """Intercept a message."""
         if self.enabled:
             self.intercepted_messages.append(message)
-    
+
     def get_messages(self):
         """Get all intercepted messages."""
         return self.intercepted_messages
-    
+
     def clear(self):
         """Clear intercepted messages."""
         self.intercepted_messages = []
@@ -341,31 +341,31 @@ Tracks agent state changes:
 ```python
 class StateStore:
     """Tracks agent state changes."""
-    
+
     def __init__(self):
         self.state_changes = {}
         self.enabled = False
-    
+
     def enable(self, enabled=True):
         """Enable or disable state tracking."""
         self.enabled = enabled
-    
+
     def track_state_change(self, agent_id, previous_state, current_state):
         """Track a state change."""
         if self.enabled:
             if agent_id not in self.state_changes:
                 self.state_changes[agent_id] = []
-            
+
             self.state_changes[agent_id].append({
                 "timestamp": time.time(),
                 "previous_state": previous_state,
                 "current_state": current_state
             })
-    
+
     def get_state_changes(self, agent_id):
         """Get state changes for an agent."""
         return self.state_changes.get(agent_id, [])
-    
+
     def clear(self):
         """Clear state changes."""
         self.state_changes = {}

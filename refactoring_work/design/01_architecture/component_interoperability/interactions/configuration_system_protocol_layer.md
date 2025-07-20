@@ -51,7 +51,7 @@
 
 - `protocol_layer.update_protocol_config(protocol_type: str, updates: Dict[str, Any]) → bool`
   - **Purpose**: Update configuration for a specific protocol
-  - **Parameters**: 
+  - **Parameters**:
     - `protocol_type`: Protocol identifier (e.g., "a2a", "mcp")
     - `updates`: Configuration updates
   - **Returns**: Boolean indicating successful update
@@ -102,7 +102,7 @@ class ProtocolConfigurationUpdatedEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         protocol_type: str  # Type of the protocol (a2a, mcp, etc.)
         protocol_version: str  # Version of the protocol
@@ -127,76 +127,76 @@ def handle_protocol_configuration_update(event: ProtocolConfigurationUpdatedEven
     protocol_type = payload.protocol_type
     protocol_version = payload.protocol_version
     updated_paths = payload.updated_paths
-    
+
     logger.info(f"Protocol configuration update for {protocol_type} v{protocol_version} with {len(updated_paths)} path updates")
-    
+
     # Get the protocol adapter
     adapter = protocol_layer.get_protocol_adapter(protocol_type)
     if not adapter:
         logger.error(f"No adapter found for protocol type: {protocol_type}")
         return
-    
+
     # Apply the configuration updates to the adapter
     try:
         # Get the updated protocol configuration
         protocol_config = configuration_system.get_protocol_configuration(protocol_type)
-        
+
         # Apply the configuration to the adapter
         result = adapter.update_configuration(protocol_config)
-        
+
         logger.info(f"Applied configuration update to {protocol_type} adapter: Success={result.success}")
-        
+
         # Handle server mode changes which may require endpoint reconfiguration
         if payload.requires_endpoint_reconfiguration:
             logger.info(f"Reconfiguring endpoints for {protocol_type} protocol")
-            
+
             # Check if server mode changed
             if "server_mode" in [path.split('.')[-1] for path in updated_paths]:
                 is_server_mode = protocol_config.get("server_mode", True)
-                
+
                 if is_server_mode:
                     logger.info(f"Switching {protocol_type} adapter to server mode")
                     result = adapter.switch_to_server_mode()
                 else:
                     logger.info(f"Switching {protocol_type} adapter to client mode")
                     result = adapter.switch_to_client_mode()
-                
+
                 if not result.success:
                     logger.error(f"Failed to switch {protocol_type} adapter mode: {result.error_message}")
-            
+
             # Update endpoints
             if any(path.endswith("endpoint") for path in updated_paths):
                 logger.info(f"Updating endpoints for {protocol_type} protocol")
                 result = adapter.reconfigure_endpoints()
-                
+
                 if not result.success:
                     logger.error(f"Failed to reconfigure endpoints for {protocol_type}: {result.error_message}")
-        
+
         # Handle connection settings updates
         if any(path.startswith(f"protocol_layer.protocols[type={protocol_type}].config.connection_settings") for path in updated_paths):
             logger.info(f"Updating connection settings for {protocol_type} protocol")
             result = adapter.update_connection_settings()
-            
+
             if not result.success:
                 logger.error(f"Failed to update connection settings for {protocol_type}: {result.error_message}")
-        
+
         # Handle adapter restart if needed
         if payload.requires_adapter_restart:
             logger.info(f"Protocol adapter {protocol_type} requires restart due to configuration changes")
-            
+
             # Check if we're configured to auto-restart protocol adapters
             protocol_layer_config = configuration_system.get_configuration_value("protocol_layer")
             auto_restart = protocol_layer_config.get("auto_restart_on_config_change", False)
-            
+
             if auto_restart:
                 logger.info(f"Auto-restarting {protocol_type} protocol adapter")
-                
+
                 # Restart the protocol adapter
                 restart_result = protocol_layer.restart_protocol_adapter(protocol_type)
-                
+
                 if restart_result.success:
                     logger.info(f"Successfully restarted {protocol_type} protocol adapter")
-                    
+
                     # Notify interested components
                     event_system.emit("protocol_adapter_restarted", {
                         "protocol_type": protocol_type,
@@ -206,7 +206,7 @@ def handle_protocol_configuration_update(event: ProtocolConfigurationUpdatedEven
                     })
                 else:
                     logger.error(f"Failed to restart {protocol_type} protocol adapter: {restart_result.error_message}")
-                    
+
                     # Report the error
                     error_reporting.report_error(
                         error_type="protocol_adapter_restart_failure",
@@ -220,7 +220,7 @@ def handle_protocol_configuration_update(event: ProtocolConfigurationUpdatedEven
                     )
             else:
                 logger.warning(f"Protocol adapter {protocol_type} needs manual restart to apply configuration changes")
-                
+
                 # Notify administrators
                 notification_service.send_admin_notification(
                     severity="warning",
@@ -234,30 +234,30 @@ def handle_protocol_configuration_update(event: ProtocolConfigurationUpdatedEven
                         "update_source": payload.update_source
                     }
                 )
-        
+
         # Handle active connections
         if payload.affects_active_connections:
             logger.warning(f"Configuration update affects active {protocol_type} connections")
-            
+
             # Get active connections count
             active_connections = adapter.get_active_connections_count()
-            
+
             if active_connections > 0:
                 logger.warning(f"Configuration update affects {active_connections} active {protocol_type} connections")
-                
+
                 # Notify clients if applicable
                 if protocol_config.get("notify_clients_on_config_change", False):
                     logger.info(f"Notifying clients of configuration change for {protocol_type}")
                     adapter.notify_clients_of_configuration_change()
-                
+
                 # Refresh connections if needed
                 if protocol_config.get("auto_refresh_connections_on_config_change", False):
                     logger.info(f"Auto-refreshing {active_connections} connections for {protocol_type}")
                     adapter.refresh_connections()
-    
+
     except Exception as e:
         logger.error(f"Error applying configuration update to {protocol_type} adapter: {str(e)}")
-        
+
         # Report the error
         error_reporting.report_error(
             error_type="protocol_configuration_update_failure",
@@ -282,7 +282,7 @@ class ProtocolCapabilityConfiguredEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         protocol_type: str  # Type of the protocol (a2a, mcp, etc.)
         protocol_version: str  # Version of the protocol
@@ -308,15 +308,15 @@ def handle_protocol_capability_configuration(event: ProtocolCapabilityConfigured
     capability_id = payload.capability_id
     capability_version = payload.capability_version
     is_enabled = payload.is_enabled
-    
+
     logger.info(f"Protocol capability {capability_id} v{capability_version} for {protocol_type} configured: Enabled={is_enabled}")
-    
+
     # Get the protocol adapter
     adapter = protocol_layer.get_protocol_adapter(protocol_type)
     if not adapter:
         logger.error(f"No adapter found for protocol type: {protocol_type}")
         return
-    
+
     # Apply the capability configuration to the adapter
     try:
         # Configure the capability in the adapter
@@ -326,10 +326,10 @@ def handle_protocol_capability_configuration(event: ProtocolCapabilityConfigured
             is_enabled=is_enabled,
             configuration=payload.capability_configuration
         )
-        
+
         if result.success:
             logger.info(f"Successfully configured capability {capability_id} for {protocol_type}")
-            
+
             # Update protocol capability registry
             capability_registry.update_protocol_capability(
                 protocol_type=protocol_type,
@@ -338,34 +338,34 @@ def handle_protocol_capability_configuration(event: ProtocolCapabilityConfigured
                 is_enabled=is_enabled,
                 metadata=payload.capability_metadata
             )
-            
+
             # If the capability is enabled, ensure the necessary handlers are registered
             if is_enabled:
                 logger.info(f"Registering handlers for capability {capability_id}")
-                
+
                 handler_result = adapter.register_capability_handlers(capability_id)
-                
+
                 if not handler_result.success:
                     logger.error(f"Failed to register handlers for capability {capability_id}: {handler_result.error_message}")
             else:
                 logger.info(f"Unregistering handlers for capability {capability_id}")
-                
+
                 adapter.unregister_capability_handlers(capability_id)
-            
+
             # Handle adapter restart if needed
             if payload.requires_adapter_restart:
                 logger.info(f"Protocol adapter {protocol_type} requires restart due to capability configuration changes")
-                
+
                 # Check if we're configured to auto-restart protocol adapters
                 protocol_layer_config = configuration_system.get_configuration_value("protocol_layer")
                 auto_restart = protocol_layer_config.get("auto_restart_on_capability_change", False)
-                
+
                 if auto_restart:
                     logger.info(f"Auto-restarting {protocol_type} protocol adapter")
                     protocol_layer.restart_protocol_adapter(protocol_type)
                 else:
                     logger.warning(f"Protocol adapter {protocol_type} needs manual restart to apply capability changes")
-                    
+
                     # Notify administrators
                     notification_service.send_admin_notification(
                         severity="warning",
@@ -381,10 +381,10 @@ def handle_protocol_capability_configuration(event: ProtocolCapabilityConfigured
                     )
         else:
             logger.error(f"Failed to configure capability {capability_id} for {protocol_type}: {result.error_message}")
-    
+
     except Exception as e:
         logger.error(f"Error configuring capability {capability_id} for {protocol_type}: {str(e)}")
-        
+
         # Report the error
         error_reporting.report_error(
             error_type="protocol_capability_configuration_failure",
@@ -406,7 +406,7 @@ class A2AProtocolConfigurationUpdatedEvent(ProtocolConfigurationUpdatedEvent):
     Extends ProtocolConfigurationUpdatedEvent with A2A-specific fields.
     """
     event_name: str = "a2a_protocol_configuration_updated"  # Override event name
-    
+
     class Payload(ProtocolConfigurationUpdatedEvent.Payload):
         agent_card_validation_enabled: Optional[bool] = None  # Whether agent card validation is enabled
         agent_card_schema_updated: bool = False  # Whether the agent card schema was updated
@@ -424,19 +424,19 @@ class A2AProtocolConfigurationUpdatedEvent(ProtocolConfigurationUpdatedEvent):
 def update_a2a_protocol_configuration(updates: Dict[str, Any]) -> bool:
     # Validate the configuration updates
     validation_result = configuration_system.validate_partial_protocol_configuration("a2a", updates)
-    
+
     if not validation_result.is_valid:
         logger.error(f"Invalid A2A protocol configuration updates: {validation_result.errors}")
         return False
-    
+
     # Build the configuration path
     config_path = "protocol_layer.protocols[type=a2a].config"
-    
+
     # Apply the updates to the configuration system
     update_result = configuration_system.update_configuration({
         config_path: updates
     })
-    
+
     if update_result.success:
         # Determine what aspects of the configuration were updated
         agent_card_validation_updated = "agent_card_validation" in updates
@@ -445,36 +445,36 @@ def update_a2a_protocol_configuration(updates: Dict[str, Any]) -> bool:
         rate_limit_updated = "rate_limit" in updates
         streaming_configuration_updated = "streaming" in updates
         multipart_message_config_updated = "multipart_message" in updates
-        
+
         # Determine if adapter restart is required
         requires_adapter_restart = any([
             "server_mode" in updates,
             "adapter_class" in updates,
             oauth_configuration_updated
         ])
-        
+
         # Determine if endpoint reconfiguration is required
         requires_endpoint_reconfiguration = any([
             "server_mode" in updates,
             "endpoint" in updates,
             "client_endpoint" in updates
         ])
-        
+
         # Determine if active connections are affected
         affects_active_connections = any([
             streaming_configuration_updated,
             multipart_message_config_updated,
             rate_limit_updated
         ])
-        
+
         # Get the current protocol configuration to extract version
         a2a_config = configuration_system.get_protocol_configuration("a2a")
         protocol_version = a2a_config.get("version", "v1")
-        
+
         # Emit A2A protocol configuration updated event
         update_id = f"a2a_config_{uuid.uuid4().hex[:8]}"
         update_time = datetime.now()
-        
+
         event_system.emit(
             event_name="a2a_protocol_configuration_updated",
             payload=A2AProtocolConfigurationUpdatedEvent.Payload(
@@ -497,12 +497,12 @@ def update_a2a_protocol_configuration(updates: Dict[str, Any]) -> bool:
                 multipart_message_config_updated=multipart_message_config_updated,
                 a2a_specific_details={
                     key: value for key, value in updates.items()
-                    if key in ["agent_card_validation", "agent_card_schema", "oauth", 
+                    if key in ["agent_card_validation", "agent_card_schema", "oauth",
                               "rate_limit", "streaming", "multipart_message"]
                 }
             )
         )
-        
+
         logger.info(f"A2A protocol configuration updated successfully")
         return True
     else:
@@ -517,7 +517,7 @@ class MCPProtocolConfigurationUpdatedEvent(ProtocolConfigurationUpdatedEvent):
     Extends ProtocolConfigurationUpdatedEvent with MCP-specific fields.
     """
     event_name: str = "mcp_protocol_configuration_updated"  # Override event name
-    
+
     class Payload(ProtocolConfigurationUpdatedEvent.Payload):
         server_capabilities_updated: bool = False  # Whether server capabilities were updated
         server_capabilities_added: List[str] = []  # Capabilities that were added
@@ -535,68 +535,68 @@ class MCPProtocolConfigurationUpdatedEvent(ProtocolConfigurationUpdatedEvent):
 def update_mcp_protocol_configuration(updates: Dict[str, Any]) -> bool:
     # Validate the configuration updates
     validation_result = configuration_system.validate_partial_protocol_configuration("mcp", updates)
-    
+
     if not validation_result.is_valid:
         logger.error(f"Invalid MCP protocol configuration updates: {validation_result.errors}")
         return False
-    
+
     # Get the current MCP protocol configuration
     current_config = configuration_system.get_protocol_configuration("mcp")
-    
+
     # Build the configuration path
     config_path = "protocol_layer.protocols[type=mcp].config"
-    
+
     # Apply the updates to the configuration system
     update_result = configuration_system.update_configuration({
         config_path: updates
     })
-    
+
     if update_result.success:
         # Determine what aspects of the configuration were updated
         server_capabilities_updated = "server_capabilities" in updates
         tool_validation_updated = "tool_validation" in updates
         resource_handling_updated = "resource_handling" in updates
         streaming_configuration_updated = "streaming" in updates
-        
+
         # If server capabilities were updated, determine what was added/removed
         server_capabilities_added = []
         server_capabilities_removed = []
-        
+
         if server_capabilities_updated:
             current_capabilities = set(current_config.get("server_capabilities", []))
             new_capabilities = set(updates.get("server_capabilities", []))
-            
+
             server_capabilities_added = list(new_capabilities - current_capabilities)
             server_capabilities_removed = list(current_capabilities - new_capabilities)
-        
+
         # Determine if adapter restart is required
         requires_adapter_restart = any([
             "server_mode" in updates,
             "adapter_class" in updates,
             "authentication" in updates
         ])
-        
+
         # Determine if endpoint reconfiguration is required
         requires_endpoint_reconfiguration = any([
             "server_mode" in updates,
             "endpoint" in updates,
             "client_endpoint" in updates
         ])
-        
+
         # Determine if active connections are affected
         affects_active_connections = any([
             streaming_configuration_updated,
             tool_validation_updated,
             resource_handling_updated
         ])
-        
+
         # Get protocol version
         protocol_version = current_config.get("version", "v1")
-        
+
         # Emit MCP protocol configuration updated event
         update_id = f"mcp_config_{uuid.uuid4().hex[:8]}"
         update_time = datetime.now()
-        
+
         event_system.emit(
             event_name="mcp_protocol_configuration_updated",
             payload=MCPProtocolConfigurationUpdatedEvent.Payload(
@@ -619,12 +619,12 @@ def update_mcp_protocol_configuration(updates: Dict[str, Any]) -> bool:
                 streaming_configuration_updated=streaming_configuration_updated,
                 mcp_specific_details={
                     key: value for key, value in updates.items()
-                    if key in ["server_capabilities", "tool_validation", 
+                    if key in ["server_capabilities", "tool_validation",
                               "resource_handling", "streaming"]
                 }
             )
         )
-        
+
         logger.info(f"MCP protocol configuration updated successfully")
         return True
     else:
@@ -648,7 +648,7 @@ def update_mcp_protocol_configuration(updates: Dict[str, Any]) -> bool:
 
 - `configuration_system.validate_protocol_configuration(protocol_type: str, config: ProtocolConfig) → ValidationResult`
   - **Purpose**: Validate protocol configuration against schema
-  - **Parameters**: 
+  - **Parameters**:
     - `protocol_type`: Protocol identifier
     - `config`: Protocol configuration
   - **Returns**: Validation result with any errors
@@ -716,7 +716,7 @@ protocol_layer:
         rate_limit:
           max_requests_per_minute: 60
         agent_card_validation: true
-    
+
     - type: "mcp"
       enabled: true
       adapter_class: "MCPProtocolAdapter"
@@ -729,14 +729,14 @@ protocol_layer:
         server_capabilities:
           - "sequential-thinking"
           - "agentic-actions"
-  
+
   default_protocol: "a2a"
-  
+
   connection_settings:
     max_retries: 3
     timeout_seconds: 30
     keepalive_interval: 60
-  
+
   communication_patterns:
     enabled: true
     pattern_validation: true
@@ -747,7 +747,7 @@ security:
       type: "oauth2"
       required: true
       provider: "default_oauth_provider"
-    
+
     mcp:
       type: "api_key"
       required: true
@@ -781,11 +781,11 @@ security:
          def initialize(self, config: Dict[str, Any]) → bool:
              # Initialize adapter with configuration
              pass
-         
+
          def translate_incoming(self, external_message: Any) → Message:
              # Translate external protocol message to internal format
              pass
-             
+
          def translate_outgoing(self, internal_message: Message) → Any:
              # Translate internal message to external protocol format
              pass
@@ -833,7 +833,7 @@ protocols:
         tools:
           - name: "search_web"
             description: "Search the web for information"
-            input_schema: 
+            input_schema:
               type: "object"
               properties:
                 query:

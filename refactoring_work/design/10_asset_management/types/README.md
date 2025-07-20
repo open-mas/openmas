@@ -131,16 +131,16 @@ class Asset(ABC):
     def asset_id(self) -> str:
         """Unique identifier for the asset."""
         pass
-        
+
     @property
     def metadata(self) -> dict:
         """Asset metadata."""
         pass
-        
+
     async def load(self) -> Any:
         """Load the asset into memory."""
         pass
-        
+
     async def unload(self) -> None:
         """Unload the asset from memory."""
         pass
@@ -154,7 +154,7 @@ class ModelAsset(Asset):
     async def get_model(self) -> "Model":
         """Get the loaded model."""
         pass
-        
+
     @property
     def model_type(self) -> str:
         """Type of the model."""

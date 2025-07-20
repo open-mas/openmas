@@ -219,7 +219,7 @@ class ClientAgent(Agent):
         self.a2a = await self.setup_protocol("a2a-http", {
             "base_url": "https://weather-agent.example.com"
         })
-        
+
     async def get_weather(self, location):
         # Invoke capability through A2A
         response = await self.a2a.invoke_capability(
@@ -251,7 +251,7 @@ class WeatherAgent(Agent):
                 "description": "Provides weather forecasts for locations worldwide"
             }
         })
-        
+
         # Register capability
         self.register_capability(
             "get_weather",
@@ -282,14 +282,14 @@ class WeatherAgent(Agent):
                 }
             }
         )
-    
+
     async def get_weather(self, request):
         location = request.get("location")
         units = request.get("units", "celsius")
-        
+
         # Get weather data from service
         weather_data = await self.weather_service.get_forecast(location, units)
-        
+
         return {
             "temperature": weather_data["temp"],
             "conditions": weather_data["conditions"],

@@ -65,28 +65,28 @@ topology:
       coordinator:
         description: "Central coordination agent"
         capabilities: ["delegate", "monitor"]
-      
+
       subcoordinator:
         description: "Domain manager and pattern bridge"
         capabilities: ["delegate", "collaborate", "bridge"]
-      
+
       worker:
         description: "Task execution agent"
         capabilities: ["execute", "report"]
-      
+
       peer:
         description: "Collaborative agent"
         capabilities: ["collaborate", "share"]
-  
+
   patterns:
     central_segment:
       pattern: "centralized"
       roles: ["coordinator", "worker", "subcoordinator"]
-    
+
     hierarchical_segment:
       pattern: "hierarchical"
       roles: ["subcoordinator", "peer"]
-    
+
     peer_segment:
       pattern: "peer_to_peer"
       roles: ["peer"]
@@ -100,7 +100,7 @@ agents:
         type: "coordinator"
       relationships:
         coordinates: ["worker_a", "subcoordinator", "worker_b"]
-  
+
   subcoordinator:
     topology:
       patterns: ["central_segment", "hierarchical_segment"]
@@ -109,7 +109,7 @@ agents:
       relationships:
         reports_to: ["main_coordinator"]
         manages: ["peer_1", "peer_2", "peer_3"]
-  
+
   peer_1:
     topology:
       patterns: ["hierarchical_segment", "peer_segment"]

@@ -22,17 +22,17 @@ delegation:
 ```python
 class A2ADelegationAdapter(ProtocolAdapter):
     """Adapts the Delegation pattern to A2A protocol."""
-    
+
     async def process_incoming(self, message, pattern):
         """Process an incoming A2A message."""
         if message.get("type") == pattern.config.get("task_type", "delegation"):
             # Extract metadata
             metadata = message.get("metadata", {})
-            
+
             # Determine message type from function
             function_type = metadata.get("function", "")
             delegation_id = metadata.get("delegation_id")
-            
+
             if function_type == "request":
                 # This is a delegation request
                 return {
@@ -46,7 +46,7 @@ class A2ADelegationAdapter(ProtocolAdapter):
                     },
                     "metadata": metadata
                 }
-                
+
             elif function_type == "acceptance":
                 # This is a delegation acceptance
                 return {
@@ -58,7 +58,7 @@ class A2ADelegationAdapter(ProtocolAdapter):
                     },
                     "metadata": metadata
                 }
-                
+
             elif function_type == "rejection":
                 # This is a delegation rejection
                 return {
@@ -71,7 +71,7 @@ class A2ADelegationAdapter(ProtocolAdapter):
                     },
                     "metadata": metadata
                 }
-                
+
             elif function_type == "progress":
                 # This is a progress update
                 return {
@@ -84,7 +84,7 @@ class A2ADelegationAdapter(ProtocolAdapter):
                     },
                     "metadata": metadata
                 }
-                
+
             elif function_type == "completion":
                 # This is a delegation completion
                 return {
@@ -97,7 +97,7 @@ class A2ADelegationAdapter(ProtocolAdapter):
                     },
                     "metadata": metadata
                 }
-                
+
             elif function_type == "failure":
                 # This is a delegation failure
                 return {
@@ -110,14 +110,14 @@ class A2ADelegationAdapter(ProtocolAdapter):
                     },
                     "metadata": metadata
                 }
-                
+
         return message
-        
+
     async def prepare_outgoing(self, message, pattern):
         """Prepare an outgoing A2A message."""
         msg_type = message.get("type")
         delegation_id = message.get("delegation_id")
-        
+
         if msg_type == "delegation_request":
             # Prepare delegation request
             task = {
@@ -135,7 +135,7 @@ class A2ADelegationAdapter(ProtocolAdapter):
                 }
             }
             return task
-            
+
         elif msg_type == "delegation_acceptance":
             # Prepare delegation acceptance
             task = {
@@ -148,7 +148,7 @@ class A2ADelegationAdapter(ProtocolAdapter):
                 }
             }
             return task
-            
+
         elif msg_type == "delegation_rejection":
             # Prepare delegation rejection
             task = {
@@ -162,7 +162,7 @@ class A2ADelegationAdapter(ProtocolAdapter):
                 }
             }
             return task
-            
+
         elif msg_type == "delegation_progress":
             # Prepare progress update
             task = {
@@ -177,7 +177,7 @@ class A2ADelegationAdapter(ProtocolAdapter):
                 }
             }
             return task
-            
+
         elif msg_type == "delegation_completion":
             # Prepare delegation completion
             task = {
@@ -191,7 +191,7 @@ class A2ADelegationAdapter(ProtocolAdapter):
                 }
             }
             return task
-            
+
         elif msg_type == "delegation_failure":
             # Prepare delegation failure
             task = {
@@ -205,7 +205,7 @@ class A2ADelegationAdapter(ProtocolAdapter):
                 }
             }
             return task
-            
+
         return message
 ```
 
@@ -231,13 +231,13 @@ delegation:
 ```python
 class MCPDelegationAdapter(ProtocolAdapter):
     """Adapts the Delegation pattern to MCP protocol."""
-    
+
     async def process_incoming(self, message, pattern):
         """Process an incoming MCP message."""
         if message.get("type") == "function_call":
             function_name = message.get("name", "")
             args = message.get("arguments", {})
-            
+
             if function_name == pattern.config.get("request_function", "delegate_task"):
                 # This is a delegation request
                 return {
@@ -257,7 +257,7 @@ class MCPDelegationAdapter(ProtocolAdapter):
                         "timeout_ms": args.get("timeout_ms", 60000)
                     }
                 }
-                
+
             elif function_name == pattern.config.get("acceptance_function", "accept_delegation"):
                 # This is a delegation acceptance
                 return {
@@ -272,7 +272,7 @@ class MCPDelegationAdapter(ProtocolAdapter):
                         "timestamp": datetime.now().isoformat()
                     }
                 }
-                
+
             elif function_name == pattern.config.get("rejection_function", "reject_delegation"):
                 # This is a delegation rejection
                 return {
@@ -288,7 +288,7 @@ class MCPDelegationAdapter(ProtocolAdapter):
                         "timestamp": datetime.now().isoformat()
                     }
                 }
-                
+
             elif function_name == pattern.config.get("progress_function", "report_progress"):
                 # This is a progress update
                 return {
@@ -304,7 +304,7 @@ class MCPDelegationAdapter(ProtocolAdapter):
                         "timestamp": datetime.now().isoformat()
                     }
                 }
-                
+
             elif function_name == pattern.config.get("completion_function", "complete_delegation"):
                 # This is a delegation completion
                 return {
@@ -320,7 +320,7 @@ class MCPDelegationAdapter(ProtocolAdapter):
                         "timestamp": datetime.now().isoformat()
                     }
                 }
-                
+
             elif function_name == pattern.config.get("failure_function", "fail_delegation"):
                 # This is a delegation failure
                 return {
@@ -336,11 +336,11 @@ class MCPDelegationAdapter(ProtocolAdapter):
                         "timestamp": datetime.now().isoformat()
                     }
                 }
-                
+
         elif message.get("type") == "function_result":
             # This could be a result of a delegation request
             result = message.get("result", {})
-            
+
             if "delegation_id" in result:
                 return {
                     "id": message.get("id"),
@@ -351,13 +351,13 @@ class MCPDelegationAdapter(ProtocolAdapter):
                         "error": message.get("error")
                     }
                 }
-                
+
         return message
-        
+
     async def prepare_outgoing(self, message, pattern):
         """Prepare an outgoing MCP message."""
         msg_type = message.get("type")
-        
+
         if msg_type == "delegation_request":
             # Prepare delegation request
             function_call = {
@@ -375,7 +375,7 @@ class MCPDelegationAdapter(ProtocolAdapter):
                 }
             }
             return function_call
-            
+
         elif msg_type == "delegation_acceptance":
             # Prepare delegation acceptance
             function_call = {
@@ -387,7 +387,7 @@ class MCPDelegationAdapter(ProtocolAdapter):
                 }
             }
             return function_call
-            
+
         elif msg_type == "delegation_rejection":
             # Prepare delegation rejection
             function_call = {
@@ -400,7 +400,7 @@ class MCPDelegationAdapter(ProtocolAdapter):
                 }
             }
             return function_call
-            
+
         elif msg_type == "delegation_progress":
             # Prepare progress update
             function_call = {
@@ -414,7 +414,7 @@ class MCPDelegationAdapter(ProtocolAdapter):
                 }
             }
             return function_call
-            
+
         elif msg_type == "delegation_completion":
             # Prepare delegation completion
             function_call = {
@@ -427,7 +427,7 @@ class MCPDelegationAdapter(ProtocolAdapter):
                 }
             }
             return function_call
-            
+
         elif msg_type == "delegation_failure":
             # Prepare delegation failure
             function_call = {
@@ -440,7 +440,7 @@ class MCPDelegationAdapter(ProtocolAdapter):
                 }
             }
             return function_call
-            
+
         elif msg_type == "delegation_request_response":
             # Prepare response to a delegation request
             function_result = {
@@ -452,7 +452,7 @@ class MCPDelegationAdapter(ProtocolAdapter):
                 "error": message.get("content", {}).get("status") == "rejected" and message.get("content", {}).get("error")
             }
             return function_result
-            
+
         return message
 ```
 
@@ -625,7 +625,7 @@ A personal assistant agent delegating information retrieval:
 async def handle_user_query(self, query):
     # Identify the query type
     query_type = self.classify_query(query)
-    
+
     if query_type == "information_retrieval":
         # Delegate to a specialized information retrieval agent
         delegation = await self.delegation_pattern.delegate_task(
@@ -637,10 +637,10 @@ async def handle_user_query(self, query):
             },
             policy="standard"
         )
-        
+
         # Wait for the results
         result = await delegation.wait_for_completion(timeout=30)
-        
+
         if result and result["status"] == "completed":
             # Process and present the information
             return self.format_information(result["output"])
@@ -656,12 +656,12 @@ async def handle_delegation_request(self, delegation_id, task_type, task_data, p
     if task_type == "information_retrieval":
         # Accept the delegation
         await self.delegation_pattern.accept_delegation(delegation_id)
-        
+
         # Extract query parameters
         query = task_data.get("query")
         sources = task_data.get("sources", ["knowledge_base"])
         max_results = task_data.get("max_results", 5)
-        
+
         try:
             # Report starting
             await self.delegation_pattern.report_progress(
@@ -669,10 +669,10 @@ async def handle_delegation_request(self, delegation_id, task_type, task_data, p
                 progress=0,
                 status_message="Starting information retrieval"
             )
-            
+
             # Gather information from sources
             results = []
-            
+
             # Report progress for each source
             for i, source in enumerate(sources):
                 progress = int((i / len(sources)) * 100)
@@ -681,19 +681,19 @@ async def handle_delegation_request(self, delegation_id, task_type, task_data, p
                     progress=progress,
                     status_message=f"Searching {source}"
                 )
-                
+
                 # Get information from the source
                 source_results = await self.information_service.search(
                     query=query,
                     source=source,
                     max_results=max_results
                 )
-                
+
                 results.extend(source_results)
-                
+
             # Limit to max results
             results = results[:max_results]
-            
+
             # Complete the delegation with results
             await self.delegation_pattern.complete_delegation(
                 delegation_id=delegation_id,
@@ -704,7 +704,7 @@ async def handle_delegation_request(self, delegation_id, task_type, task_data, p
                     "timestamp": datetime.now().isoformat()
                 }
             )
-            
+
         except Exception as e:
             # Report failure
             await self.delegation_pattern.fail_delegation(
@@ -725,15 +725,15 @@ A workflow agent decomposing and delegating tasks:
 async def process_workflow_item(self, workflow_item):
     # Decompose the workflow item into subtasks
     subtasks = self.decompose_workflow_item(workflow_item)
-    
+
     # Track delegations
     delegations = []
-    
+
     # Delegate each subtask
     for subtask in subtasks:
         # Find appropriate delegate based on subtask type
         delegate_id = await self.find_delegate_for_subtask(subtask["type"])
-        
+
         if delegate_id:
             # Create delegation
             delegation = await self.delegation_pattern.delegate_task(
@@ -742,7 +742,7 @@ async def process_workflow_item(self, workflow_item):
                 policy=subtask.get("priority", "standard"),
                 delegates=[delegate_id]
             )
-            
+
             delegations.append({
                 "subtask_id": subtask["id"],
                 "delegation": delegation
@@ -750,24 +750,24 @@ async def process_workflow_item(self, workflow_item):
         else:
             # Handle no delegate found
             self.logger.warning(f"No delegate found for subtask: {subtask['id']}")
-            
+
     # Wait for all delegations to complete
     results = {}
     for delegation_info in delegations:
         subtask_id = delegation_info["subtask_id"]
         delegation = delegation_info["delegation"]
-        
+
         # Wait for completion
         result = await delegation.wait_for_completion()
-        
+
         if result and result["status"] == "completed":
             results[subtask_id] = result["output"]
         else:
             # Handle delegation failure
             self.logger.error(f"Delegation failed for subtask: {subtask_id}")
-            
+
     # Integrate results
     integrated_result = self.integrate_results(results)
-    
+
     return integrated_result
 ```

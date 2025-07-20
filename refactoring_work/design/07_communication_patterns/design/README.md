@@ -84,20 +84,20 @@ Central repository for registered patterns:
 ```python
 class PatternRegistry:
     """Central registry for communication patterns."""
-    
+
     def __init__(self):
         """Initialize the pattern registry."""
         self._patterns = {}
-    
+
     def register(self, pattern_name, pattern_class):
         """Register a pattern."""
         self._patterns[pattern_name] = pattern_class
         return self
-    
+
     def get(self, pattern_name):
         """Get a pattern by name."""
         return self._patterns.get(pattern_name)
-    
+
     def list_patterns(self):
         """List all registered patterns."""
         return list(self._patterns.keys())
@@ -110,22 +110,22 @@ Factory for creating pattern instances:
 ```python
 class PatternFactory:
     """Factory for creating pattern instances."""
-    
+
     def __init__(self, registry, communicator_factory):
         """Initialize the pattern factory."""
         self._registry = registry
         self._communicator_factory = communicator_factory
-    
+
     def create(self, pattern_name, config):
         """Create a pattern instance."""
         pattern_class = self._registry.get(pattern_name)
         if not pattern_class:
             raise ValueError(f"Unknown pattern: {pattern_name}")
-        
+
         # Create protocol-specific communicator
         protocol = config.get("protocol", "a2a")
         communicator = self._communicator_factory.create(protocol, config.get("protocol_config", {}))
-        
+
         # Create and return the pattern instance
         return pattern_class(communicator, config)
 ```
@@ -137,22 +137,22 @@ Abstract base class for all patterns:
 ```python
 class BasePattern:
     """Base class for all communication patterns."""
-    
+
     def __init__(self, communicator, config):
         """Initialize with a communicator and configuration."""
         self.communicator = communicator
         self.config = config
-    
+
     async def initialize(self):
         """Initialize the pattern."""
         # Implement in subclasses
         pass
-    
+
     async def shutdown(self):
         """Shut down the pattern."""
         # Implement in subclasses
         pass
-    
+
     def get_config(self):
         """Get the pattern configuration."""
         return self.config
@@ -165,15 +165,15 @@ Base class for protocol-specific adapters:
 ```python
 class ProtocolAdapter:
     """Base class for protocol adapters."""
-    
+
     def __init__(self, protocol_name):
         """Initialize with protocol name."""
         self.protocol_name = protocol_name
-    
+
     async def adapt_outgoing(self, message, pattern_name):
         """Adapt an outgoing message to this protocol."""
         raise NotImplementedError
-    
+
     async def adapt_incoming(self, protocol_message, pattern_name):
         """Adapt an incoming protocol message to the pattern format."""
         raise NotImplementedError
@@ -224,18 +224,18 @@ request_response:
     a2a:
       capability_name: "request"
       response_capability: "response"
-    
+
     mcp:
       tool_name: "request"
-      
+
     http:
       method: "POST"
       response_codes: [200, 201]
-      
+
     mqtt:
       request_topic: "requests/{agent_id}"
       response_topic: "responses/{agent_id}"
-      
+
     grpc:
       service: "RequestService"
       method: "MakeRequest"
@@ -286,17 +286,17 @@ from openmas.communication.patterns import BasePattern, register_pattern
 @register_pattern("custom_pattern")
 class CustomPattern(BasePattern):
     """A custom communication pattern."""
-    
+
     def __init__(self, communicator, config):
         """Initialize with configuration."""
         super().__init__(communicator, config)
         self.custom_option = config.get("custom_option", "default")
-    
+
     async def initialize(self):
         """Initialize the pattern."""
         # Register event handlers
         self.communicator.on_message(self._handle_message)
-    
+
     async def send_message(self, recipient, content):
         """Send a message using this pattern."""
         # Adapt the message based on protocol
@@ -308,10 +308,10 @@ class CustomPattern(BasePattern):
             },
             "custom_pattern"
         )
-        
+
         # Send the adapted message
         return await self.communicator.send(adapted)
-    
+
     async def _handle_message(self, message):
         """Handle an incoming message."""
         # Process the message according to pattern semantics

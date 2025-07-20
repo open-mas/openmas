@@ -242,7 +242,7 @@ agents:
     # Agent configuration
     module: "agents.example"
     class: "ExampleAgent"
-    
+
     # Agent-specific integrations
     integrations:
       slack:

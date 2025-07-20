@@ -89,7 +89,7 @@ topology:
             description: "Top-level system coordinator"
           - name: "domain_coordinator"
             description: "Domain-specific coordinator"
-      
+
     - name: "task_execution"
       pattern: "centralized"
       scope: "domain_specific"
@@ -99,7 +99,7 @@ topology:
             description: "Task orchestrator for a specific domain"
           - name: "worker"
             description: "Specialized worker for specific tasks"
-    
+
     - name: "peer_network"
       pattern: "mesh"
       scope: "specialized_services"
@@ -107,14 +107,14 @@ topology:
         types:
           - name: "service_peer"
             description: "Service-providing peer in a mesh network"
-  
+
   cross_component_relationships:
     - from_component: "management_hierarchy"
       from_role: "domain_coordinator"
       to_component: "task_execution"
       to_role: "domain_orchestrator"
       relationship_type: "delegation"
-    
+
     - from_component: "task_execution"
       from_role: "domain_orchestrator"
       to_component: "peer_network"

@@ -122,9 +122,9 @@ prompts:
     version: "1.0.0"
     template: |
       System: {{system_instruction}}
-      
+
       User: {{user_input}}
-      
+
       Assistant:
 
 # Extended template

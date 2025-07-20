@@ -101,22 +101,22 @@ from typing import List, Dict, Any, Optional
 
 class LLMProviderInterface(ABC):
     """Interface for language model providers."""
-    
+
     @abstractmethod
     async def generate_text(
-        self, 
-        prompt: str, 
-        max_tokens: int = 100, 
+        self,
+        prompt: str,
+        max_tokens: int = 100,
         temperature: float = 0.7
     ) -> str:
         """Generate text completion."""
         pass
-    
+
     @abstractmethod
     async def generate_chat_response(
-        self, 
-        messages: List[Dict[str, str]], 
-        max_tokens: int = 100, 
+        self,
+        messages: List[Dict[str, str]],
+        max_tokens: int = 100,
         temperature: float = 0.7
     ) -> Dict[str, Any]:
         """Generate chat completion."""
@@ -133,15 +133,15 @@ from .exceptions import LLMProviderError
 
 class OpenAIAdapter(LLMProviderInterface):
     """Adapter for OpenAI API."""
-    
+
     def __init__(self, api_key: str, organization_id: Optional[str] = None):
         """Initialize the OpenAI adapter."""
         self.client = AsyncOpenAI(api_key=api_key, organization=organization_id)
-    
+
     async def generate_text(
-        self, 
-        prompt: str, 
-        max_tokens: int = 100, 
+        self,
+        prompt: str,
+        max_tokens: int = 100,
         temperature: float = 0.7
     ) -> str:
         """Generate text completion using OpenAI."""
@@ -155,11 +155,11 @@ class OpenAIAdapter(LLMProviderInterface):
             return response.choices[0].text.strip()
         except Exception as e:
             raise LLMProviderError(f"OpenAI text generation failed: {str(e)}")
-    
+
     async def generate_chat_response(
-        self, 
-        messages: List[Dict[str, str]], 
-        max_tokens: int = 100, 
+        self,
+        messages: List[Dict[str, str]],
+        max_tokens: int = 100,
         temperature: float = 0.7
     ) -> Dict[str, Any]:
         """Generate chat completion using OpenAI."""

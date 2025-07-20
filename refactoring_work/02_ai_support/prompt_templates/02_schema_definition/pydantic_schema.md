@@ -98,4 +98,4 @@ This schema may need to interact with these related components:
 - MessageSchema
 - AuthConfig
 
-[Rest of prompt follows...] 
+[Rest of prompt follows...]

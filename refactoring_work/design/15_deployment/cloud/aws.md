@@ -133,7 +133,7 @@ Components:
 
 AWS deployments maintain OpenMAS's reasoning-agnostic architecture through:
 
-1. **Communication Layer ("Body")**: 
+1. **Communication Layer ("Body")**:
    - Deployed as Lambda functions or containers
    - Handles protocol-specific messaging (A2A, MCP, HTTP, etc.)
    - Manages service discovery and routing
@@ -205,7 +205,7 @@ components:
         a2a:
           mode: server
           endpoint: ${API_GATEWAY_URL}
-  
+
   # MCP protocol agent deployed on ECS
   mcp_agent:
     type: agent
@@ -220,7 +220,7 @@ components:
         mcp:
           mode: client
           endpoint: ${MCP_SERVER_URL}
-  
+
   # Agent with rule-based reasoning
   rule_agent:
     type: agent
@@ -231,7 +231,7 @@ components:
       timeout: 30
     reasoning:
       engine: simple_rule
-  
+
   # Agent with BDI reasoning
   bdi_agent:
     type: agent

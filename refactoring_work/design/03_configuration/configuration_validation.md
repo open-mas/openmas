@@ -154,16 +154,16 @@ def validate_configuration(config, environment="development"):
         config=config,
         environment=environment
     )
-    
+
     # Run validation
     result = validator.validate()
-    
+
     if not result.is_valid:
         if result.action == "fail":
             raise ValidationError(result.format_errors())
         elif result.action == "warn":
             for warning in result.format_warnings():
                 logger.warning(warning)
-    
+
     return result.is_valid
-``` 
+```

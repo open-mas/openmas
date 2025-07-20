@@ -10,20 +10,20 @@
 
 #### Methods/Functions
 ```python
-def authenticate_protocol_request(protocol_type: str, 
+def authenticate_protocol_request(protocol_type: str,
                               request_data: Dict[str, Any],
                               auth_options: Optional[ProtocolAuthOptions] = None) -> AuthenticationResult:
     """
     Authenticate an incoming protocol request.
-    
+
     Args:
         protocol_type: str - Protocol identifier (e.g., "a2a", "mcp", "http")
         request_data: Dict[str, Any] - Protocol request data containing authentication information
         auth_options: Optional[ProtocolAuthOptions] - Authentication options/settings
-        
+
     Returns:
         AuthenticationResult - Result of authentication process with security principal info
-        
+
     Raises:
         AuthenticationProviderNotFoundError - If no authentication provider is configured for the protocol
         MalformedCredentialsError - If credentials are malformed or cannot be extracted
@@ -160,7 +160,7 @@ try:
         "path": "/a2a/agents/assistant1",
         "method": "POST"
     }
-    
+
     # Configure authentication options for A2A protocol
     a2a_auth_options = ProtocolAuthOptions(
         required_auth_level=AuthLevel.MEDIUM,
@@ -175,18 +175,18 @@ try:
         scope_validation=True,
         required_scopes=["a2a:invoke", "agents:read"]
     )
-    
+
     # Authenticate the A2A request
     auth_result = security_system.authenticate_protocol_request(
         protocol_type="a2a",
         request_data=a2a_request,
         auth_options=a2a_auth_options
     )
-    
+
     # Handle authentication result
     if auth_result.is_authenticated and auth_result.principal:
         logger.info(f"A2A request authenticated successfully for principal: {auth_result.principal.name}")
-        
+
         # Check if the principal has the necessary roles
         if "agent_invoker" in auth_result.principal.roles:
             # Process the authenticated request
@@ -204,14 +204,14 @@ try:
     else:
         # Log authentication failure
         logger.warning(f"A2A authentication failed: {auth_result.error_code} - {auth_result.error_message}")
-        
+
         # Send authentication error response
         protocol_layer.send_authentication_error_response(
             request=a2a_request,
             error_code=auth_result.error_code or "authentication_failed",
             error_message=auth_result.error_message or "Authentication failed"
         )
-        
+
         # Emit authentication failure event
         event_system.emit("protocol_authentication_failed", {
             "protocol_type": "a2a",
@@ -261,7 +261,7 @@ try:
         "path": "/mcp/capabilities/sequential-thinking",
         "method": "POST"
     }
-    
+
     # Configure authentication options for MCP protocol
     mcp_auth_options = ProtocolAuthOptions(
         required_auth_level=AuthLevel.MEDIUM,
@@ -273,18 +273,18 @@ try:
             "rate_limit": 100  # Maximum requests per minute
         }
     )
-    
+
     # Authenticate the MCP request
     auth_result = security_system.authenticate_protocol_request(
         protocol_type="mcp",
         request_data=mcp_request,
         auth_options=mcp_auth_options
     )
-    
+
     # Handle authentication result
     if auth_result.is_authenticated and auth_result.principal:
         logger.info(f"MCP request authenticated successfully for service: {auth_result.principal.name}")
-        
+
         # Check rate limits (could be handled internally by the auth system)
         if is_rate_limited(auth_result.principal.id):
             logger.warning(f"Rate limit exceeded for principal {auth_result.principal.id}")
@@ -302,7 +302,7 @@ try:
     else:
         # Log authentication failure
         logger.warning(f"MCP authentication failed: {auth_result.error_code} - {auth_result.error_message}")
-        
+
         # Send authentication error response
         protocol_layer.send_authentication_error_response(
             request=mcp_request,
@@ -320,24 +320,24 @@ except Exception as e:
 ```
 
 ```python
-def authorize_protocol_action(protocol_type: str, 
-                         principal: SecurityPrincipal, 
-                         action: str, 
+def authorize_protocol_action(protocol_type: str,
+                         principal: SecurityPrincipal,
+                         action: str,
                          resource: str,
                          auth_context: Optional[AuthorizationContext] = None) -> AuthorizationResult:
     """
     Authorize a protocol action for an authenticated principal.
-    
+
     Args:
         protocol_type: str - Protocol identifier (e.g., "a2a", "mcp", "http")
         principal: SecurityPrincipal - Authenticated security principal
         action: str - Action being performed (e.g., "INVOKE_CAPABILITY", "READ_AGENT")
         resource: str - Resource being accessed (e.g., "sequential-thinking", "agent:123")
         auth_context: Optional[AuthorizationContext] - Additional context for authorization decision
-        
+
     Returns:
         AuthorizationResult - Result of authorization process with decision
-        
+
     Raises:
         AuthorizationProviderNotFoundError - If no authorization provider is configured for the protocol
         InvalidPrincipalError - If the provided principal is invalid or expired
@@ -440,7 +440,7 @@ try:
         },
         request_id="req_789"
     )
-    
+
     # Authorize the MCP capability invocation
     auth_result = security_system.authorize_protocol_action(
         protocol_type="mcp",
@@ -449,37 +449,37 @@ try:
         resource="sequential-thinking",
         auth_context=auth_context
     )
-    
+
     # Handle authorization result
     if auth_result.decision == AuthorizationDecision.ALLOW:
         logger.info(f"MCP capability invocation authorized for principal: {authenticated_principal.id}")
-        
+
         # Check if there are any obligations to fulfill
         if auth_result.obligations:
             # Handle obligations (e.g., logging, notifications)
             for obligation in auth_result.obligations:
                 fulfill_obligation(obligation)
-        
+
         # Process the capability invocation
         capability_result = mcp_handler.invoke_capability(
             capability_name="sequential-thinking",
             parameters=request_body["parameters"],
             principal=authenticated_principal
         )
-        
+
         # Send successful response
         protocol_layer.send_capability_response(request, capability_result)
-        
+
     elif auth_result.decision == AuthorizationDecision.DENY:
         logger.warning(f"MCP capability invocation denied for principal: {authenticated_principal.id}, reason: {auth_result.reason}")
-        
+
         # Send authorization error response
         protocol_layer.send_authorization_error_response(
             request=request,
             error_code="authorization_denied",
             error_message=auth_result.reason or "You are not authorized to invoke this capability."
         )
-        
+
         # Emit authorization denied event
         event_system.emit("protocol_authorization_denied", {
             "protocol_type": "mcp",
@@ -492,7 +492,7 @@ try:
         })
     else:  # INDETERMINATE
         logger.error(f"MCP capability authorization indeterminate for principal: {authenticated_principal.id}")
-        
+
         # Send error response
         protocol_layer.send_error_response(
             request=request,
@@ -530,7 +530,7 @@ except Exception as e:
 try:
     # Define the resource with more specificity
     resource = f"agent:{agent_id}"
-    
+
     # Create authorization context with additional information
     auth_context = AuthorizationContext(
         environment={
@@ -556,7 +556,7 @@ try:
         },
         session_id=session_id
     )
-    
+
     # Authorize the A2A agent invocation
     auth_result = security_system.authorize_protocol_action(
         protocol_type="a2a",
@@ -565,11 +565,11 @@ try:
         resource=resource,
         auth_context=auth_context
     )
-    
+
     # Handle authorization result
     if auth_result.decision == AuthorizationDecision.ALLOW:
         logger.info(f"A2A agent invocation authorized for principal: {authenticated_principal.id}")
-        
+
         # Process the agent invocation
         agent_framework.process_agent_request(
             agent_id=agent_id,
@@ -577,17 +577,17 @@ try:
             principal=authenticated_principal,
             session_id=session_id
         )
-        
+
     elif auth_result.decision == AuthorizationDecision.DENY:
         logger.warning(f"A2A agent invocation denied for principal: {authenticated_principal.id}, reason: {auth_result.reason}")
-        
+
         # Send authorization error response
         protocol_layer.send_authorization_error_response(
             request=request,
             error_code="authorization_denied",
             error_message=auth_result.reason or "You are not authorized to invoke this agent."
         )
-        
+
         # If there's advice in the authorization result, include it in the response
         if auth_result.advice:
             additional_info = {}
@@ -596,12 +596,12 @@ try:
                     additional_info["request_access_url"] = advice_item.get("url")
                 elif advice_item.get("type") == "documentation":
                     additional_info["documentation_url"] = advice_item.get("url")
-            
+
             if additional_info:
                 protocol_layer.add_response_metadata(request, additional_info)
     else:  # INDETERMINATE
         logger.error(f"A2A agent authorization indeterminate for principal: {authenticated_principal.id}")
-        
+
         # Send error response
         protocol_layer.send_error_response(
             request=request,
@@ -619,22 +619,22 @@ except Exception as e:
 ```
 
 ```python
-def encrypt_protocol_message(protocol_type: str, 
-                        message: Dict[str, Any], 
+def encrypt_protocol_message(protocol_type: str,
+                        message: Dict[str, Any],
                         recipient_id: str,
                         encryption_options: Optional[EncryptionOptions] = None) -> EncryptedMessage:
     """
     Encrypt a protocol message for secure transmission.
-    
+
     Args:
         protocol_type: str - Protocol identifier (e.g., "a2a", "mcp", "http")
         message: Dict[str, Any] - Message to encrypt
         recipient_id: str - Identifier of the recipient
         encryption_options: Optional[EncryptionOptions] - Options for encryption
-        
+
     Returns:
         EncryptedMessage - Encrypted message with metadata
-        
+
     Raises:
         EncryptionProviderNotFoundError - If no encryption provider is configured for the protocol
         RecipientKeyNotFoundError - If the recipient's public key cannot be found
@@ -754,7 +754,7 @@ try:
             }
         }
     }
-    
+
     # Configure encryption options for A2A protocol
     encryption_options = EncryptionOptions(
         algorithm=EncryptionAlgorithm.AES_GCM,
@@ -768,7 +768,7 @@ try:
             "encrypt_attachments": True  # Encrypt any file attachments
         }
     )
-    
+
     # Encrypt the A2A message
     encrypted_message = security_system.encrypt_protocol_message(
         protocol_type="a2a",
@@ -776,11 +776,11 @@ try:
         recipient_id="agent_456",  # The recipient agent
         encryption_options=encryption_options
     )
-    
+
     # Log encryption success
     logger.info(f"A2A message encrypted successfully for recipient: {encrypted_message.recipient_id}")
     logger.debug(f"Encryption algorithm: {encrypted_message.algorithm.value}, Mode: {encrypted_message.mode.value}")
-    
+
     # Prepare the encrypted message for transmission
     secure_a2a_message = {
         "messageId": a2a_message["messageId"],
@@ -803,26 +803,26 @@ try:
             }
         }
     }
-    
+
     # Send the encrypted message
     protocol_layer.send_message(secure_a2a_message)
-    
+
     logger.info(f"Encrypted A2A message sent successfully to {secure_a2a_message['encryptedContent']['senderId']}")
 
 except RecipientKeyNotFoundError as e:
     logger.error(f"Recipient key not found: {str(e)}")
-    
+
     # Handle missing recipient key
     key_request = create_key_request("agent_456")
     key_management_system.request_recipient_key(key_request)
-    
+
     # Send unencrypted message with reduced sensitive information
     fallback_message = create_fallback_message(a2a_message)
     protocol_layer.send_message(fallback_message)
 
 except EncryptionError as e:
     logger.error(f"Encryption failed: {str(e)}")
-    
+
     # Send error notification to the sender
     protocol_layer.send_error_notification(
         sender_id="agent_789",
@@ -850,7 +850,7 @@ try:
             "includePersonalRecommendations": True
         }
     }
-    
+
     # Configure encryption options for MCP protocol with field-level encryption
     encryption_options = EncryptionOptions(
         algorithm=EncryptionAlgorithm.AES_GCM,
@@ -866,10 +866,10 @@ try:
             "integrity_protection": "hmac"
         }
     )
-    
+
     # Get the recipient service ID for the capability provider
     recipient_id = capability_registry.get_capability_provider_id("personal-data-analysis")
-    
+
     # Encrypt the MCP message (or just sensitive fields)
     encrypted_message = security_system.encrypt_protocol_message(
         protocol_type="mcp",
@@ -877,7 +877,7 @@ try:
         recipient_id=recipient_id,
         encryption_options=encryption_options
     )
-    
+
     # For field-level encryption, the system returns a modified message with encrypted fields
     if encryption_options.encrypt_all:
         # Handle fully encrypted message
@@ -892,20 +892,20 @@ try:
         # With field-level encryption, the original message structure is preserved
         # but sensitive fields are replaced with encrypted values
         secure_mcp_message = encrypted_message.metadata["field_encrypted_message"]
-        
+
         logger.info(f"MCP message encrypted with field-level encryption. {len(encryption_options.sensitive_fields)} fields protected.")
-    
+
     # Send the secure MCP message
     protocol_layer.send_capability_request(secure_mcp_message)
 
 except Exception as e:
     logger.error(f"Error encrypting MCP message: {str(e)}")
-    
+
     # Handle encryption failure
     if isinstance(e, RecipientKeyNotFoundError):
         # Try to fetch the recipient's key
         fetch_recipient_key(recipient_id)
-        
+
         # Notify the user about the delay
         user_notification.send(
             user_id=get_current_user_id(),
@@ -934,7 +934,7 @@ class ProtocolAuthenticationFailedEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "warning"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         protocol_type: str  # Protocol type for which authentication failed
         error_code: str  # Error code indicating reason for failure
@@ -947,7 +947,7 @@ class ProtocolAuthenticationFailedEvent:
         correlation_id: Optional[str] = None  # Correlation ID for tracing
         attempt_count: int = 1  # Number of failed authentication attempts
         metadata: Dict[str, Any] = {}  # Additional metadata about the authentication failure
-        
+
         class AuthenticationDetails:
             """
             Detailed information about the authentication failure.
@@ -959,7 +959,7 @@ class ProtocolAuthenticationFailedEvent:
             credential_problems: List[str] = []  # Specific problems with the credentials
             timestamp: str  # ISO-8601 timestamp of the failure
             trace_id: Optional[str] = None  # Distributed tracing ID
-            
+
         class ProtocolSpecificDetails:
             """
             Protocol-specific details about the authentication failure.
@@ -989,9 +989,9 @@ def handle_authentication_failure(event: ProtocolAuthenticationFailedEvent):
     payload = event.payload
     protocol_type = payload.protocol_type
     error_code = payload.error_code
-    
+
     logger.warning(f"Authentication failed for {protocol_type} protocol: {error_code}")
-    
+
     # Log details for security monitoring
     security_logger.log(
         level="WARNING",
@@ -1005,13 +1005,13 @@ def handle_authentication_failure(event: ProtocolAuthenticationFailedEvent):
             "correlation_id": payload.correlation_id
         }
     )
-    
+
     # Protocol-specific handling based on protocol type
     if protocol_type == "a2a":
         # Handle A2A-specific authentication failures
         a2a_auth_details = payload.request_details.get("a2a", {})
         agent_card_id = a2a_auth_details.get("agent_card_id")
-        
+
         if agent_card_id:
             # Update agent card authentication status
             a2a_agent_registry.update_authentication_status(
@@ -1021,7 +1021,7 @@ def handle_authentication_failure(event: ProtocolAuthenticationFailedEvent):
                 timestamp=event.timestamp
             )
             logger.debug(f"Updated authentication status for A2A agent card {agent_card_id}")
-        
+
         # Send appropriate A2A error response
         a2a_response_formatter.create_auth_error_response(
             error_code=error_code,
@@ -1029,13 +1029,13 @@ def handle_authentication_failure(event: ProtocolAuthenticationFailedEvent):
             request_id=payload.request_details.get("request_id"),
             correlation_id=payload.correlation_id
         )
-    
+
     elif protocol_type == "mcp":
         # Handle MCP-specific authentication failures
         mcp_auth_details = payload.request_details.get("mcp", {})
         tool_id = mcp_auth_details.get("tool_id")
         capability_id = mcp_auth_details.get("capability_id")
-        
+
         if tool_id or capability_id:
             # Update MCP capability/tool access status
             mcp_registry.update_access_status(
@@ -1046,7 +1046,7 @@ def handle_authentication_failure(event: ProtocolAuthenticationFailedEvent):
                 timestamp=event.timestamp
             )
             logger.debug(f"Updated access status for MCP tool {tool_id} or capability {capability_id}")
-        
+
         # Send appropriate MCP error response
         mcp_response_formatter.create_auth_error_response(
             error_code=error_code,
@@ -1054,7 +1054,7 @@ def handle_authentication_failure(event: ProtocolAuthenticationFailedEvent):
             request_id=payload.request_details.get("request_id"),
             correlation_id=payload.correlation_id
         )
-    
+
     # Check for potential security threats
     if payload.attempt_count >= 3:
         # Potential brute force attack
@@ -1068,7 +1068,7 @@ def handle_authentication_failure(event: ProtocolAuthenticationFailedEvent):
                 "timestamp": event.timestamp.isoformat()
             }
         )
-        
+
         # Apply temporary IP ban if configured
         if security_config.get("auto_block_repeated_failures", False):
             security_system.temporary_block_ip(
@@ -1077,7 +1077,7 @@ def handle_authentication_failure(event: ProtocolAuthenticationFailedEvent):
                 reason=f"Multiple authentication failures for {protocol_type}"
             )
             logger.info(f"Temporarily blocked IP {payload.ip_address} after multiple authentication failures")
-            
+
     # Update observability metrics
     metrics_service.increment(
         metric_name="authentication_failures",
@@ -1100,7 +1100,7 @@ class ProtocolAuthorizationDeniedEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "warning"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         protocol_type: str  # Protocol type for which authorization was denied
         principal_id: str  # ID of the principal that was denied
@@ -1127,9 +1127,9 @@ def handle_authorization_denial(event: ProtocolAuthorizationDeniedEvent):
     principal_id = payload.principal_id
     action = payload.action
     resource = payload.resource
-    
+
     logger.warning(f"Authorization denied for {protocol_type} protocol: {principal_id} attempted {action} on {resource}")
-    
+
     # Log details for security monitoring
     security_logger.log(
         level="WARNING",
@@ -1147,7 +1147,7 @@ def handle_authorization_denial(event: ProtocolAuthorizationDeniedEvent):
             "session_id": payload.session_id
         }
     )
-    
+
     # Check for potential security violations
     security_monitoring.record_authorization_denial(
         protocol=protocol_type,
@@ -1156,7 +1156,7 @@ def handle_authorization_denial(event: ProtocolAuthorizationDeniedEvent):
         resource=resource,
         timestamp=event.timestamp
     )
-    
+
     # Check if this is a sensitive resource that requires additional monitoring
     if is_sensitive_resource(resource):
         # Send alert to security team
@@ -1173,13 +1173,13 @@ def handle_authorization_denial(event: ProtocolAuthorizationDeniedEvent):
                 "ip_address": payload.ip_address
             }
         )
-        
+
     # If multiple denials for the same principal in a short time, escalate
     recent_denials = security_monitoring.get_recent_denials(
         principal_id=principal_id,
         time_window_seconds=300  # 5 minutes
     )
-    
+
     if len(recent_denials) >= 5:  # 5 or more denials in 5 minutes
         # Potential privilege escalation attempt
         security_alerts.send(
@@ -1193,7 +1193,7 @@ def handle_authorization_denial(event: ProtocolAuthorizationDeniedEvent):
                 "timestamp": event.timestamp.isoformat()
             }
         )
-        
+
         # Optionally lock account if configured
         if security_config.get("lock_account_on_suspicious_activity", False):
             security_system.lock_principal(
@@ -1215,7 +1215,7 @@ class ProtocolSecurityViolationEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "error"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         protocol_type: str  # Protocol type where violation was detected
         violation_type: str  # Type of security violation
@@ -1239,7 +1239,7 @@ class ProtocolSecurityViolationEvent:
 def detect_mcp_message_tampering(message: Dict[str, Any], signature: str) -> bool:
     # Verify the message signature
     calculated_signature = calculate_message_signature(message)
-    
+
     if calculated_signature != signature:
         # Signature doesn't match, potential tampering
         event_system.emit(
@@ -1263,19 +1263,19 @@ def detect_mcp_message_tampering(message: Dict[str, Any], signature: str) -> boo
                 }
             )
         )
-        
+
         # Log the violation
         logger.error(f"MCP message tampering detected for message {message.get('id')}")
-        
+
         # Block the sender temporarily
         security_system.block_sender(
             sender_id=message.get("sender_id"),
             duration_minutes=15,
             reason="Message tampering detected"
         )
-        
+
         return True  # Tampering detected
-    
+
     return False  # No tampering detected
 ```
 
@@ -1283,20 +1283,20 @@ def detect_mcp_message_tampering(message: Dict[str, Any], signature: str) -> boo
 
 #### Methods/Functions
 ```python
-def register_protocol_authentication_handler(protocol_type: str, 
+def register_protocol_authentication_handler(protocol_type: str,
                                        handler: ProtocolAuthHandler,
                                        registration_options: Optional[HandlerRegistrationOptions] = None) -> RegistrationResult:
     """
     Register an authentication handler for a specific protocol.
-    
+
     Args:
         protocol_type: str - Protocol identifier (e.g., "a2a", "mcp", "http")
         handler: ProtocolAuthHandler - Authentication handler implementation
         registration_options: Optional[HandlerRegistrationOptions] - Options for handler registration
-        
+
     Returns:
         RegistrationResult - Result of handler registration with details
-        
+
     Raises:
         HandlerRegistrationError - If registration fails
         HandlerAlreadyRegisteredError - If a handler is already registered for the protocol
@@ -1314,35 +1314,35 @@ class ProtocolAuthHandler:
     def extract_credentials(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract credentials from a protocol request.
-        
+
         Args:
             request: Dict[str, Any] - Protocol request data
-            
+
         Returns:
             Dict[str, Any] - Extracted credentials
         """
         raise NotImplementedError("Subclasses must implement extract_credentials")
-    
+
     def validate_credentials(self, credentials: Dict[str, Any]) -> AuthenticationResult:
         """
         Validate extracted credentials.
-        
+
         Args:
             credentials: Dict[str, Any] - Credentials extracted from request
-            
+
         Returns:
             AuthenticationResult - Result of credential validation
         """
         raise NotImplementedError("Subclasses must implement validate_credentials")
-    
+
     def handle_authentication_failure(self, request: Dict[str, Any], error: Exception) -> Dict[str, Any]:
         """
         Handle authentication failure.
-        
+
         Args:
             request: Dict[str, Any] - Original request data
             error: Exception - Error that occurred during authentication
-            
+
         Returns:
             Dict[str, Any] - Response to send back for authentication failure
         """
@@ -1402,39 +1402,39 @@ class A2AAuthHandler(ProtocolAuthHandler):
     def __init__(self, auth_config: Dict[str, Any]):
         self.auth_config = auth_config
         self.jwt_verifier = JWTVerifier(auth_config.get("jwt_verification", {}))
-        
+
     def extract_credentials(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract JWT credentials from A2A request.
         """
         headers = request.get("headers", {})
         auth_header = headers.get("Authorization", "")
-        
+
         # Check for Bearer token
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]  # Remove "Bearer " prefix
             return {"token_type": "jwt", "token": token}
-        
+
         # Check for API key
         api_key = headers.get("X-API-Key")
         if api_key:
             return {"token_type": "api_key", "token": api_key}
-        
+
         # No valid credentials found
         raise MalformedCredentialsError("No valid authentication credentials found in A2A request")
-    
+
     def validate_credentials(self, credentials: Dict[str, Any]) -> AuthenticationResult:
         """
         Validate A2A credentials.
         """
         token_type = credentials.get("token_type")
         token = credentials.get("token")
-        
+
         if token_type == "jwt":
             try:
                 # Verify JWT token
                 jwt_claims = self.jwt_verifier.verify(token)
-                
+
                 # Create security principal from JWT claims
                 principal = SecurityPrincipal(
                     id=jwt_claims.get("sub"),
@@ -1453,7 +1453,7 @@ class A2AAuthHandler(ProtocolAuthHandler):
                         "audience": jwt_claims.get("aud")
                     }
                 )
-                
+
                 return AuthenticationResult(
                     is_authenticated=True,
                     principal=principal,
@@ -1461,7 +1461,7 @@ class A2AAuthHandler(ProtocolAuthHandler):
                     protocol_type="a2a",
                     auth_provider="jwt"
                 )
-                
+
             except Exception as e:
                 # JWT validation failed
                 return AuthenticationResult(
@@ -1472,15 +1472,15 @@ class A2AAuthHandler(ProtocolAuthHandler):
                     protocol_type="a2a",
                     auth_provider="jwt"
                 )
-        
+
         elif token_type == "api_key":
             # Validate API key (simplified for example)
             api_key_valid = self.validate_api_key(token)
-            
+
             if api_key_valid:
                 # Get principal information for API key
                 principal_info = self.get_principal_for_api_key(token)
-                
+
                 return AuthenticationResult(
                     is_authenticated=True,
                     principal=principal_info,
@@ -1497,7 +1497,7 @@ class A2AAuthHandler(ProtocolAuthHandler):
                     protocol_type="a2a",
                     auth_provider="api_key"
                 )
-        
+
         else:
             # Unsupported token type
             return AuthenticationResult(
@@ -1508,19 +1508,19 @@ class A2AAuthHandler(ProtocolAuthHandler):
                 protocol_type="a2a",
                 auth_provider="none"
             )
-    
+
     def handle_authentication_failure(self, request: Dict[str, Any], error: Exception) -> Dict[str, Any]:
         """
         Handle A2A authentication failure.
         """
         error_message = str(error)
         error_code = "authentication_failed"
-        
+
         if isinstance(error, MalformedCredentialsError):
             error_code = "malformed_credentials"
         elif isinstance(error, UnsupportedAuthMechanismError):
             error_code = "unsupported_auth_mechanism"
-        
+
         # Create A2A error response
         return {
             "error": {
@@ -1532,12 +1532,12 @@ class A2AAuthHandler(ProtocolAuthHandler):
                 }
             }
         }
-    
+
     # Helper methods
     def validate_api_key(self, api_key: str) -> bool:
         # Implementation for API key validation
         pass
-    
+
     def get_principal_for_api_key(self, api_key: str) -> SecurityPrincipal:
         # Implementation to get principal info for API key
         pass
@@ -1559,9 +1559,9 @@ try:
             "cache_duration_seconds": 300
         }
     }
-    
+
     a2a_auth_handler = A2AAuthHandler(a2a_auth_config)
-    
+
     # Configure registration options
     registration_options = HandlerRegistrationOptions(
         override_existing=True,  # Replace any existing handler
@@ -1574,17 +1574,17 @@ try:
             "api_key_header_name": "X-API-Key"
         }
     )
-    
+
     # Register the handler
     registration_result = protocol_layer.register_protocol_authentication_handler(
         protocol_type="a2a",
         handler=a2a_auth_handler,
         registration_options=registration_options
     )
-    
+
     if registration_result.success:
         logger.info(f"Successfully registered A2A authentication handler. Handler ID: {registration_result.handler_id}")
-        
+
         # Emit event for handler registration
         event_system.emit("protocol_security_handler_registered", {
             "protocol_type": "a2a",
@@ -1618,41 +1618,41 @@ class MCPAuthHandler(ProtocolAuthHandler):
     def __init__(self, auth_config: Dict[str, Any]):
         self.auth_config = auth_config
         self.api_key_validator = APIKeyValidator(auth_config.get("api_key_validation", {}))
-    
+
     def extract_credentials(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         Extract API key credentials from MCP request.
         """
         headers = request.get("headers", {})
         api_key = headers.get("X-MCP-API-Key")
-        
+
         if api_key:
             return {"token_type": "api_key", "token": api_key}
-        
+
         # Check for alternative location in header
         api_key = headers.get("X-API-Key")
         if api_key:
             return {"token_type": "api_key", "token": api_key}
-        
+
         # Check for API key in query parameters
         query_params = request.get("query_params", {})
         api_key = query_params.get("api_key")
         if api_key:
             return {"token_type": "api_key", "token": api_key, "location": "query"}
-        
+
         # No valid credentials found
         raise MalformedCredentialsError("No valid API key found in MCP request")
-    
+
     def validate_credentials(self, credentials: Dict[str, Any]) -> AuthenticationResult:
         """
         Validate MCP credentials (primarily API key).
         """
         token = credentials.get("token")
-        
+
         try:
             # Validate API key
             validation_result = self.api_key_validator.validate(token)
-            
+
             if validation_result.is_valid:
                 # Create security principal from API key info
                 principal = SecurityPrincipal(
@@ -1667,7 +1667,7 @@ class MCPAuthHandler(ProtocolAuthHandler):
                     scope=validation_result.scope,
                     attributes=validation_result.attributes
                 )
-                
+
                 return AuthenticationResult(
                     is_authenticated=True,
                     principal=principal,
@@ -1689,7 +1689,7 @@ class MCPAuthHandler(ProtocolAuthHandler):
                     protocol_type="mcp",
                     auth_provider="api_key"
                 )
-                
+
         except Exception as e:
             # API key validation failed
             return AuthenticationResult(
@@ -1700,18 +1700,18 @@ class MCPAuthHandler(ProtocolAuthHandler):
                 protocol_type="mcp",
                 auth_provider="api_key"
             )
-    
+
     def handle_authentication_failure(self, request: Dict[str, Any], error: Exception) -> Dict[str, Any]:
         """
         Handle MCP authentication failure.
         """
         error_message = str(error)
         error_code = "authentication_failed"
-        
+
         if isinstance(error, MalformedCredentialsError):
             error_code = "missing_api_key"
             error_message = "API key is missing or malformed"
-        
+
         # Create MCP error response
         return {
             "error": {
@@ -1738,9 +1738,9 @@ try:
             }
         }
     }
-    
+
     mcp_auth_handler = MCPAuthHandler(mcp_auth_config)
-    
+
     # Configure registration options
     registration_options = HandlerRegistrationOptions(
         override_existing=False,  # Don't replace existing handler
@@ -1752,14 +1752,14 @@ try:
             "apply_rate_limiting": True
         }
     )
-    
+
     # Register the handler
     registration_result = protocol_layer.register_protocol_authentication_handler(
         protocol_type="mcp",
         handler=mcp_auth_handler,
         registration_options=registration_options
     )
-    
+
     if registration_result.success:
         logger.info(f"Successfully registered MCP authentication handler. Handler ID: {registration_result.handler_id}")
     else:
@@ -1770,20 +1770,20 @@ except Exception as e:
 ```
 
 ```python
-def register_protocol_security_validator(protocol_type: str, 
+def register_protocol_security_validator(protocol_type: str,
                                       validator: ProtocolSecurityValidator,
                                       registration_options: Optional[ValidatorRegistrationOptions] = None) -> RegistrationResult:
     """
     Register a security validator for a specific protocol.
-    
+
     Args:
         protocol_type: str - Protocol identifier (e.g., "a2a", "mcp", "http")
         validator: ProtocolSecurityValidator - Security validator implementation
         registration_options: Optional[ValidatorRegistrationOptions] - Options for validator registration
-        
+
     Returns:
         RegistrationResult - Result of validator registration with details
-        
+
     Raises:
         ValidatorRegistrationError - If registration fails
         ValidatorAlreadyRegisteredError - If a validator is already registered for the protocol
@@ -1801,36 +1801,36 @@ class ProtocolSecurityValidator:
     def validate_message_integrity(self, message: Dict[str, Any]) -> ValidationResult:
         """
         Validate the integrity of a protocol message.
-        
+
         Args:
             message: Dict[str, Any] - Protocol message to validate
-            
+
         Returns:
             ValidationResult - Result of message integrity validation
         """
         raise NotImplementedError("Subclasses must implement validate_message_integrity")
-    
+
     def validate_security_constraints(self, message: Dict[str, Any], principal: SecurityPrincipal) -> ValidationResult:
         """
         Validate security constraints for a protocol message.
-        
+
         Args:
             message: Dict[str, Any] - Protocol message to validate
             principal: SecurityPrincipal - The authenticated principal
-            
+
         Returns:
             ValidationResult - Result of security constraints validation
         """
         raise NotImplementedError("Subclasses must implement validate_security_constraints")
-    
+
     def handle_validation_failure(self, message: Dict[str, Any], error: Exception) -> Dict[str, Any]:
         """
         Handle validation failure.
-        
+
         Args:
             message: Dict[str, Any] - Original message
             error: Exception - Error that occurred during validation
-            
+
         Returns:
             Dict[str, Any] - Response to send back for validation failure
         """
@@ -1892,7 +1892,7 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
         self.validator_config = validator_config
         self.signature_verifier = SignatureVerifier(validator_config.get("signature_verification", {}))
         self.content_validator = ContentValidator(validator_config.get("content_validation", {}))
-        
+
     def validate_message_integrity(self, message: Dict[str, Any]) -> ValidationResult:
         """
         Validate the integrity of an MCP message.
@@ -1901,7 +1901,7 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
             # Extract message signature
             headers = message.get("headers", {})
             signature = headers.get("X-MCP-Signature")
-            
+
             if not signature:
                 return ValidationResult(
                     is_valid=False,
@@ -1910,14 +1910,14 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                     validation_time=datetime.now(),
                     validator_id="mcp_security_validator"
                 )
-            
+
             # Verify signature
             payload = message.get("body", {})
             sender_id = payload.get("sender_id")
-            
+
             # Get sender's public key or shared secret
             key_info = self.get_key_for_sender(sender_id)
-            
+
             if not key_info:
                 return ValidationResult(
                     is_valid=False,
@@ -1926,14 +1926,14 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                     validation_time=datetime.now(),
                     validator_id="mcp_security_validator"
                 )
-            
+
             # Verify signature using the sender's key
             is_valid = self.signature_verifier.verify(
                 payload=json.dumps(payload),
                 signature=signature,
                 key_info=key_info
             )
-            
+
             if not is_valid:
                 return ValidationResult(
                     is_valid=False,
@@ -1946,7 +1946,7 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                         "key_id": key_info.get("key_id")
                     }
                 )
-            
+
             # Message integrity is valid
             return ValidationResult(
                 is_valid=True,
@@ -1959,7 +1959,7 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                     "signature_algorithm": key_info.get("algorithm")
                 }
             )
-            
+
         except Exception as e:
             return ValidationResult(
                 is_valid=False,
@@ -1968,7 +1968,7 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                 validation_time=datetime.now(),
                 validator_id="mcp_security_validator"
             )
-    
+
     def validate_security_constraints(self, message: Dict[str, Any], principal: SecurityPrincipal) -> ValidationResult:
         """
         Validate security constraints for an MCP message.
@@ -1978,7 +1978,7 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
             message_type = payload.get("type")
             content = payload.get("content", {})
             capability = payload.get("capability")
-            
+
             # Validate content based on message type
             if message_type == "capability_invocation":
                 # Validate capability invocation
@@ -1990,10 +1990,10 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                         validation_time=datetime.now(),
                         validator_id="mcp_security_validator"
                     )
-                
+
                 # Check if principal has permission to invoke this capability
                 has_permission = self.check_capability_permission(principal, capability)
-                
+
                 if not has_permission:
                     return ValidationResult(
                         is_valid=False,
@@ -2007,13 +2007,13 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                             "principal_roles": principal.roles
                         }
                     )
-                
+
                 # Validate capability parameters
                 params_validation = self.content_validator.validate_capability_params(
                     capability=capability,
                     params=content.get("params", {})
                 )
-                
+
                 if not params_validation.is_valid:
                     return ValidationResult(
                         is_valid=False,
@@ -2023,12 +2023,12 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                         validator_id="mcp_security_validator",
                         validation_details=params_validation.validation_details
                     )
-            
+
             elif message_type == "resource_access":
                 # Validate resource access
                 resource_id = content.get("resource_id")
                 access_type = content.get("access_type")
-                
+
                 if not resource_id or not access_type:
                     return ValidationResult(
                         is_valid=False,
@@ -2037,10 +2037,10 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                         validation_time=datetime.now(),
                         validator_id="mcp_security_validator"
                     )
-                
+
                 # Check if principal has permission to access this resource
                 has_permission = self.check_resource_permission(principal, resource_id, access_type)
-                
+
                 if not has_permission:
                     return ValidationResult(
                         is_valid=False,
@@ -2055,12 +2055,12 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                             "principal_roles": principal.roles
                         }
                     )
-            
+
             # Additional security checks based on configuration
             if self.validator_config.get("enable_content_scanning", False):
                 # Scan message content for security threats
                 content_scan_result = self.scan_content_for_threats(content)
-                
+
                 if content_scan_result.has_threats:
                     return ValidationResult(
                         is_valid=False,
@@ -2074,7 +2074,7 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                             "threat_severity": content_scan_result.threat_severity
                         }
                     )
-            
+
             # All security constraints passed
             return ValidationResult(
                 is_valid=True,
@@ -2087,7 +2087,7 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                     "checks_performed": ["signature", "permissions", "content"]
                 }
             )
-            
+
         except Exception as e:
             return ValidationResult(
                 is_valid=False,
@@ -2096,21 +2096,21 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                 validation_time=datetime.now(),
                 validator_id="mcp_security_validator"
             )
-    
+
     def handle_validation_failure(self, message: Dict[str, Any], error: Exception) -> Dict[str, Any]:
         """
         Handle MCP validation failure.
         """
         error_message = str(error)
         error_code = "validation_failed"
-        
+
         if isinstance(error, SignatureVerificationError):
             error_code = "signature_verification_failed"
         elif isinstance(error, ContentValidationError):
             error_code = "content_validation_failed"
         elif isinstance(error, SecurityConstraintViolationError):
             error_code = "security_constraint_violation"
-        
+
         # Create MCP error response
         return {
             "error": {
@@ -2120,20 +2120,20 @@ class MCPSecurityValidator(ProtocolSecurityValidator):
                 "timestamp": datetime.now().isoformat()
             }
         }
-    
+
     # Helper methods
     def get_key_for_sender(self, sender_id: str) -> Dict[str, Any]:
         # Implementation to get key information for a sender
         pass
-    
+
     def check_capability_permission(self, principal: SecurityPrincipal, capability: str) -> bool:
         # Implementation to check if principal has permission to invoke capability
         pass
-    
+
     def check_resource_permission(self, principal: SecurityPrincipal, resource_id: str, access_type: str) -> bool:
         # Implementation to check if principal has permission to access resource
         pass
-    
+
     def scan_content_for_threats(self, content: Dict[str, Any]) -> ContentScanResult:
         # Implementation to scan content for security threats
         pass
@@ -2155,9 +2155,9 @@ try:
         "enable_content_scanning": True,
         "security_level": "standard"
     }
-    
+
     mcp_security_validator = MCPSecurityValidator(mcp_validator_config)
-    
+
     # Configure registration options
     registration_options = ValidatorRegistrationOptions(
         override_existing=False,  # Don't replace existing validator
@@ -2170,17 +2170,17 @@ try:
             "timestamp_tolerance_seconds": 300  # 5 minutes
         }
     )
-    
+
     # Register the validator
     registration_result = protocol_layer.register_protocol_security_validator(
         protocol_type="mcp",
         validator=mcp_security_validator,
         registration_options=registration_options
     )
-    
+
     if registration_result.success:
         logger.info(f"Successfully registered MCP security validator. Validator ID: {registration_result.handler_id}")
-        
+
         # Emit event for validator registration
         event_system.emit("protocol_security_validator_registered", {
             "protocol_type": "mcp",
@@ -2202,17 +2202,17 @@ class A2ASecurityValidator(ProtocolSecurityValidator):
     def __init__(self, validator_config: Dict[str, Any]):
         self.validator_config = validator_config
         # Initialize A2A-specific validation components
-        
+
     def validate_message_integrity(self, message: Dict[str, Any]) -> ValidationResult:
         # A2A-specific message integrity validation
         # Similar structure to MCP validator but with A2A-specific logic
         pass
-    
+
     def validate_security_constraints(self, message: Dict[str, Any], principal: SecurityPrincipal) -> ValidationResult:
         # A2A-specific security constraints validation
         # Similar structure to MCP validator but with A2A-specific logic
         pass
-    
+
     def handle_validation_failure(self, message: Dict[str, Any], error: Exception) -> Dict[str, Any]:
         # A2A-specific validation failure handling
         # Similar structure to MCP validator but with A2A-specific error response format
@@ -2224,21 +2224,21 @@ try:
     a2a_validator_config = {
         # A2A-specific configuration
     }
-    
+
     a2a_security_validator = A2ASecurityValidator(a2a_validator_config)
-    
+
     # Configure registration options
     registration_options = ValidatorRegistrationOptions(
         # A2A-specific registration options
     )
-    
+
     # Register the validator
     registration_result = protocol_layer.register_protocol_security_validator(
         protocol_type="a2a",
         validator=a2a_security_validator,
         registration_options=registration_options
     )
-    
+
     if registration_result.success:
         logger.info(f"Successfully registered A2A security validator. Validator ID: {registration_result.handler_id}")
     else:
@@ -2247,20 +2247,20 @@ except Exception as e:
     logger.error(f"Error registering A2A security validator: {str(e)}")
 
 ```python
-def notify_security_policy_update(protocol_type: str, 
+def notify_security_policy_update(protocol_type: str,
                              policy_update: SecurityPolicyUpdate,
                              notification_options: Optional[PolicyNotificationOptions] = None) -> PolicyUpdateResult:
     """
     Notify Protocol Layer of security policy updates.
-    
+
     Args:
         protocol_type: str - Protocol identifier (e.g., "a2a", "mcp", "http")
         policy_update: SecurityPolicyUpdate - Security policy update details
         notification_options: Optional[PolicyNotificationOptions] - Options for policy notification
-        
+
     Returns:
         PolicyUpdateResult - Result of policy update notification with details
-        
+
     Raises:
         InvalidProtocolError - If the protocol type is invalid
         InvalidPolicyUpdateError - If the policy update is invalid
@@ -2442,7 +2442,7 @@ try:
             "risk_assessment": "low"
         }
     )
-    
+
     # Configure notification options
     notification_options = PolicyNotificationOptions(
         immediate_application=True,  # Apply immediately
@@ -2451,22 +2451,22 @@ try:
         update_reason="Enhanced security for JWT validation",
         update_source="security_compliance_review"
     )
-    
+
     # Notify protocol layer of the policy update
     result = protocol_layer.notify_security_policy_update(
         protocol_type="a2a",
         policy_update=auth_policy_update,
         notification_options=notification_options
     )
-    
+
     if result.success:
         logger.info(f"Successfully updated A2A authentication policy. Update ID: {result.update_id}")
         logger.info(f"Policy will be effective from: {result.effective_time}")
-        
+
         # If acknowledgment is required, store the acknowledgment ID
         if result.acknowledgment_required:
             logger.info(f"Acknowledgment required. ID: {result.acknowledgment_id}")
-            
+
             # Store acknowledgment requirement for later verification
             acknowledgment_registry.add_pending_acknowledgment(
                 acknowledgment_id=result.acknowledgment_id,
@@ -2474,7 +2474,7 @@ try:
                 protocol_type="a2a",
                 deadline=datetime.now() + timedelta(hours=24)  # 24-hour deadline
             )
-        
+
         # Emit event for policy update
         event_system.emit("security_policy_updated", {
             "policy_id": auth_policy_update.policy_id,
@@ -2560,7 +2560,7 @@ try:
             "risk_assessment": "low"
         }
     )
-    
+
     # Configure notification options
     notification_options = PolicyNotificationOptions(
         immediate_application=False,  # Don't apply immediately, respect effective_from
@@ -2569,18 +2569,18 @@ try:
         update_reason="Implementing rate limiting to ensure fair API usage",
         update_source="api_governance_team"
     )
-    
+
     # Notify protocol layer of the new policy
     result = protocol_layer.notify_security_policy_update(
         protocol_type="mcp",
         policy_update=rate_limit_policy,
         notification_options=notification_options
     )
-    
+
     if result.success:
         logger.info(f"Successfully created MCP rate limiting policy. Update ID: {result.update_id}")
         logger.info(f"Policy will be effective from: {result.effective_time}")
-        
+
         # Since this affects many principals, prepare notifications
         if result.affected_principals_count > 0:
             # Send notifications to affected principals
@@ -2599,7 +2599,7 @@ try:
                     "acknowledgment_deadline": (datetime.now() + timedelta(days=5)).isoformat()  # 5-day deadline
                 }
             )
-            
+
             logger.info(f"Sent notifications to {result.affected_principals_count} affected principals")
     else:
         logger.error(f"Failed to create MCP rate limiting policy: {result.error}")
@@ -2621,7 +2621,7 @@ class ProtocolSecurityHandlerRegisteredEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         protocol_type: str  # Protocol type for which the handler was registered
         handler_type: str  # Type of handler ("authentication", "authorization", "validation")
@@ -2642,7 +2642,7 @@ class ProtocolSecurityHandlerRegisteredEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         protocol_type: str  # Protocol type to which the policy was applied
         policy_id: str  # ID of the applied policy
@@ -2661,7 +2661,7 @@ class ProtocolSecurityHandlerRegisteredEvent:
         policy_priority: int  # Priority of the policy
         replaced_policy_id: Optional[str] = None  # ID of the policy that was replaced
         metadata: Dict[str, Any] = {}  # Additional metadata about the policy application
-        
+
         class PolicyDetails:
             """
             Detailed information about the security policy.
@@ -2673,7 +2673,7 @@ class ProtocolSecurityHandlerRegisteredEvent:
             notification_level: str = "warning"  # Level of notification on policy violation
             audit_level: str = "standard"  # Level of auditing for the policy
             reasoning_approach_constraints: Dict[str, Any] = {}  # Constraints specific to reasoning approaches
-            
+
         class ProtocolSpecificDetails:
             """
             Protocol-specific details about the security policy application.
@@ -2694,9 +2694,9 @@ def handle_security_policy_application(event: SecurityPolicyAppliedEvent):
     protocol_type = payload.protocol_type
     policy_id = payload.policy_id
     policy_type = payload.policy_type
-    
+
     logger.info(f"Security policy applied to {protocol_type} protocol: {policy_type} (ID: {policy_id})")
-    
+
     # Record policy application in observability system
     observability_system.record_policy_application(
         timestamp=event.timestamp,
@@ -2708,7 +2708,7 @@ def handle_security_policy_application(event: SecurityPolicyAppliedEvent):
         affected_principals=payload.affected_principals_count,
         affected_resources=payload.affected_resources_count
     )
-    
+
     # Log metric for security policy application
     metrics_system.increment(
         metric_name="security_policies_applied",
@@ -2719,11 +2719,11 @@ def handle_security_policy_application(event: SecurityPolicyAppliedEvent):
             "policy_id": policy_id
         }
     )
-    
+
     # If policy is effective immediately, perform additional actions
     if payload.effective_time is None or payload.effective_time <= datetime.now():
         logger.info(f"Policy {policy_id} is effective immediately")
-        
+
         # Record policy effectiveness
         observability_system.record_policy_effectiveness(
             timestamp=datetime.now(),
@@ -2731,7 +2731,7 @@ def handle_security_policy_application(event: SecurityPolicyAppliedEvent):
             policy_id=policy_id,
             status="effective"
         )
-        
+
         # If notifications are needed for affected principals
         if payload.affected_principals_count > 0 and payload.metadata.get("notify_principals", False):
             # Send notifications to affected principals
@@ -2759,7 +2759,7 @@ def handle_security_policy_application(event: SecurityPolicyAppliedEvent):
                 "policy_type": policy_type
             }
         )
-        
+
         logger.info(f"Scheduled effectiveness tracking for policy {policy_id} at {payload.effective_time}")
 ```
 
@@ -2774,7 +2774,7 @@ class SecurityPolicyUpdatedEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         protocol_type: str  # Protocol type for which the policy was updated
         policy_id: str  # ID of the updated policy
@@ -2800,19 +2800,19 @@ class SecurityPolicyUpdatedEvent:
 def update_authentication_policy(policy_id: str, protocol_type: str, changes: Dict[str, Any]) -> bool:
     # Update the policy in the database or configuration
     policy = policy_repository.get_policy(policy_id)
-    
+
     if policy is None:
         logger.error(f"Cannot update policy {policy_id}: policy not found")
         return False
-    
+
     # Apply changes to the policy
     previous_version = policy.version
     updated_policy = policy_repository.update_policy(policy_id, changes)
-    
+
     if updated_policy is None:
         logger.error(f"Failed to update policy {policy_id}")
         return False
-    
+
     # Emit policy updated event
     event_system.emit(
         event_name="security_policy_updated",
@@ -2838,7 +2838,7 @@ def update_authentication_policy(policy_id: str, protocol_type: str, changes: Di
             }
         )
     )
-    
+
     logger.info(f"Security policy {policy_id} updated and event emitted")
     return True
 ```
@@ -2854,7 +2854,7 @@ class SecurityViolationEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "warning"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         protocol_type: str  # Protocol type where violation was detected
         violation_type: str  # Type of security violation
@@ -2882,9 +2882,9 @@ def handle_security_violation(event: SecurityViolationEvent):
     protocol_type = payload.protocol_type
     violation_type = payload.violation_type
     severity = payload.severity
-    
+
     logger.warning(f"Security violation detected in {protocol_type} protocol: {violation_type} (Severity: {severity})")
-    
+
     # Record the violation in the security monitoring system
     security_monitoring.record_violation(
         violation_id=payload.violation_id,
@@ -2900,7 +2900,7 @@ def handle_security_violation(event: SecurityViolationEvent):
         ip_address=payload.ip_address,
         evidence=payload.evidence
     )
-    
+
     # Take appropriate action based on severity
     if severity == "critical" or severity == "high":
         # Alert security team for high-severity violations
@@ -2917,7 +2917,7 @@ def handle_security_violation(event: SecurityViolationEvent):
                 "timestamp": event.timestamp.isoformat()
             }
         )
-        
+
         # For critical violations, take immediate protective action
         if severity == "critical":
             if payload.principal_id:
@@ -2928,7 +2928,7 @@ def handle_security_violation(event: SecurityViolationEvent):
                     lock_duration_minutes=30
                 )
                 logger.info(f"Locked principal {payload.principal_id} due to critical security violation")
-            
+
             if payload.ip_address:
                 # Temporarily block the IP address
                 security_system.block_ip(
@@ -2937,7 +2937,7 @@ def handle_security_violation(event: SecurityViolationEvent):
                     reason=f"Critical security violation: {violation_type}"
                 )
                 logger.info(f"Blocked IP address {payload.ip_address} due to critical security violation")
-    
+
     # Record metrics about security violations
     metrics_system.increment(
         metric_name="security_violations",
@@ -2948,7 +2948,7 @@ def handle_security_violation(event: SecurityViolationEvent):
             "severity": severity
         }
     )
-    
+
     # Create an incident ticket for tracking and resolution
     if severity in ["medium", "high", "critical"]:
         incident_id = incident_management.create_incident(
@@ -2999,7 +2999,7 @@ protocol_layer:
       http: true
       mqtt: false
       grpc: true
-    
+
     credential_extraction:
       a2a:
         header_name: "Authorization"
@@ -3009,7 +3009,7 @@ protocol_layer:
       http:
         header_name: "Authorization"
         token_prefix: "Bearer "
-    
+
     rate_limiting_enabled:
       a2a: true
       mcp: true
@@ -3034,7 +3034,7 @@ security:
       agent_card_validation:
         enabled: true
         validation_level: "strict"
-    
+
     mcp:
       authentication:
         provider: "api_key"
@@ -3081,11 +3081,11 @@ security:
          def extract_credentials(self, request: Dict[str, Any]) → Dict[str, Any]:
              # Extract credentials from protocol-specific request
              pass
-         
+
          def create_auth_challenge(self, auth_method: str) → Dict[str, Any]:
              # Create authentication challenge for specified method
              pass
-             
+
          def format_auth_error(self, error: AuthError) → Dict[str, Any]:
              # Format authentication error for protocol response
              pass
@@ -3169,7 +3169,7 @@ class A2AAuthHandler(ProtocolAuthHandler):
                 "token": token
             }
         return {"type": "none"}
-    
+
     def create_auth_challenge(self, auth_method: str) → Dict[str, Any]:
         """Create A2A authentication challenge"""
         if auth_method == "oauth2":
@@ -3180,7 +3180,7 @@ class A2AAuthHandler(ProtocolAuthHandler):
                 "error_description": "Authentication required"
             }
         return {}
-    
+
     def format_auth_error(self, error: AuthError) → Dict[str, Any]:
         """Format A2A authentication error"""
         return {
@@ -3199,7 +3199,7 @@ class MCPAuthHandler(ProtocolAuthHandler):
                 "api_key": api_key
             }
         return {"type": "none"}
-    
+
     def create_auth_challenge(self, auth_method: str) → Dict[str, Any]:
         """Create MCP authentication challenge"""
         if auth_method == "api_key":
@@ -3209,7 +3209,7 @@ class MCPAuthHandler(ProtocolAuthHandler):
                 "error_description": "API key required"
             }
         return {}
-    
+
     def format_auth_error(self, error: AuthError) → Dict[str, Any]:
         """Format MCP authentication error"""
         return {

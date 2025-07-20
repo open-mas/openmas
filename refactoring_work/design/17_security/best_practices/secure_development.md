@@ -53,14 +53,14 @@ def handle_message(message):
 def handle_message(message):
     if not isinstance(message, dict):
         raise ValueError("Message must be a dictionary")
-    
+
     content = message.get("content")
     if content is None:
         raise ValueError("Message must contain 'content'")
-    
+
     # Validate content structure
     validate_content_schema(content)
-    
+
     # Process validated content
     process_content(content)
 ```
@@ -109,11 +109,11 @@ async def handle_function_call(agent, function_name, parameters):
     # Check if agent is authorized to call this function
     if not await agent.is_authorized_for_function(function_name):
         raise PermissionError(f"Agent not authorized to call {function_name}")
-    
+
     # Check if parameters are valid for this function
     if not await validate_function_parameters(function_name, parameters):
         raise ValueError(f"Invalid parameters for {function_name}")
-    
+
     # Execute function with validated parameters
     return await agent.execute_function(function_name, parameters)
 ```
@@ -141,17 +141,17 @@ def encrypt_message(message, key):
 def encrypt_message(message, key):
     # Generate a random IV
     iv = os.urandom(16)
-    
+
     # Use GCM mode for authenticated encryption
     cipher = Cipher(algorithms.AES(key), modes.GCM(iv))
     encryptor = cipher.encryptor()
-    
+
     # Add authenticated data if needed
     # encryptor.authenticate_additional_data(associated_data)
-    
+
     # Encrypt the message
     ciphertext = encryptor.update(message) + encryptor.finalize()
-    
+
     # Return IV, ciphertext, and tag for verification
     return {
         "iv": base64.b64encode(iv).decode("utf-8"),
@@ -260,12 +260,12 @@ async def handle_a2a_message(message, sender_card):
     # Verify the agent card signature
     if not verify_agent_card_signature(sender_card):
         raise SecurityError("Invalid agent card signature")
-    
+
     # Check required capabilities
     required_capability = "conversation"
     if required_capability not in sender_card.get("capabilities", []):
         raise PermissionError(f"Agent lacks required capability: {required_capability}")
-    
+
     # Process the message with validated capabilities
     return await process_a2a_message(message, sender_card)
 ```
@@ -309,7 +309,7 @@ Implement secure MQTT-based agents:
 # Good practice - secure MQTT client
 def create_secure_mqtt_client(client_id, broker_host, broker_port):
     client = mqtt.Client(client_id=client_id)
-    
+
     # Configure TLS
     client.tls_set(
         ca_certs="/path/to/ca.crt",
@@ -317,13 +317,13 @@ def create_secure_mqtt_client(client_id, broker_host, broker_port):
         keyfile="/path/to/client.key",
         tls_version=ssl.PROTOCOL_TLS_CLIENT
     )
-    
+
     # Set username and password
     client.username_pw_set("username", "password")
-    
+
     # Add secure callback handlers
     client.on_message = secure_on_message
-    
+
     return client
 ```
 
@@ -348,14 +348,14 @@ def create_secure_grpc_server(server_cert, server_key, ca_cert):
         root_certificates=ca_cert,
         require_client_auth=True
     )
-    
+
     # Create server with credentials
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     server.add_secure_port("[::]:50051", server_credentials)
-    
+
     # Add secure service handlers
     add_secure_services(server)
-    
+
     return server
 ```
 
@@ -379,15 +379,15 @@ def test_token_verification():
     # Test with valid token
     valid_token = generate_test_token("user1", ["read"])
     assert verify_token(valid_token) is True
-    
+
     # Test with expired token
     expired_token = generate_expired_test_token("user1", ["read"])
     assert verify_token(expired_token) is False
-    
+
     # Test with tampered token
     tampered_token = tamper_with_token(valid_token)
     assert verify_token(tampered_token) is False
-    
+
     # Test with token using wrong key
     wrong_key_token = generate_token_with_wrong_key("user1", ["read"])
     assert verify_token(wrong_key_token) is False
@@ -411,17 +411,17 @@ async def test_cross_protocol_security():
     # Create agents using different protocols
     agent1 = await create_test_agent("agent1", protocol="a2a")
     agent2 = await create_test_agent("agent2", protocol="mcp")
-    
+
     # Test secure communication between protocols
     message = {"content": "secure test", "sensitive": True}
-    
+
     # Send message from agent1 to agent2
     response = await agent1.send_to(agent2.id, message)
-    
+
     # Verify security properties
     assert response["success"] is True
     assert verify_message_integrity(response["message"]) is True
-    
+
     # Test with insufficient permissions
     limited_agent = await create_test_agent("limited", protocol="a2a", roles=["limited"])
     response = await limited_agent.send_to(agent2.id, message)
@@ -511,11 +511,11 @@ def load_security_config():
             "algorithm": os.environ.get("ENCRYPTION_ALGORITHM", "AES-256-GCM")
         }
     }
-    
+
     # Validate required configuration
     if not config["auth"]["key_id"] or not config["auth"]["key_secret"]:
         raise ConfigError("Missing required authentication configuration")
-    
+
     return config
 ```
 
@@ -537,25 +537,25 @@ def validate_security_config(config):
     # Check TLS configuration
     if config.get("tls", {}).get("enabled", False):
         tls_config = config["tls"]
-        
+
         # Validate TLS version
         valid_versions = ["1.2", "1.3"]
         if tls_config.get("version") not in valid_versions:
             raise ConfigError(f"TLS version must be one of: {valid_versions}")
-        
+
         # Validate certificate paths
         cert_file = tls_config.get("cert_file")
         key_file = tls_config.get("key_file")
-        
+
         if not cert_file or not os.path.exists(cert_file):
             raise ConfigError(f"TLS certificate file not found: {cert_file}")
-        
+
         if not key_file or not os.path.exists(key_file):
             raise ConfigError(f"TLS key file not found: {key_file}")
-    
+
     # Additional validation for other security settings
     # ...
-    
+
     return True
 ```
 
@@ -588,24 +588,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install bandit safety
-      
+
       - name: Run Bandit (SAST)
         run: bandit -r ./src -f json -o bandit-results.json
-      
+
       - name: Check dependencies for vulnerabilities
         run: safety check -r requirements.txt
-      
+
       - name: Run security unit tests
         run: pytest -xvs tests/security
 ```
@@ -635,31 +635,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install build twine
-      
+
       - name: Build package
         run: python -m build
-      
+
       - name: Generate checksums
         run: |
           sha256sum dist/*.tar.gz dist/*.whl > dist/checksums.txt
-      
+
       - name: Sign package
         run: |
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --import
           gpg --detach-sign -a dist/*.tar.gz
           gpg --detach-sign -a dist/*.whl
-      
+
       - name: Upload to PyPI
         run: twine upload dist/*
         env:

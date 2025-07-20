@@ -115,7 +115,7 @@ agents:
     # Agent reasoning configuration
     reasoning:
       type: "llm"
-      config: 
+      config:
         # LLM-specific configuration
     # Protocol configurations
     protocols:

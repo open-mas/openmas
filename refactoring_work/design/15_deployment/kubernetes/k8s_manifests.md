@@ -44,18 +44,18 @@ data:
           mcp:
             text-generation: "mcp-completion"
             function-calling: "mcp-function-calling"
-      
+
     communication:
       protocol: "a2a"
       endpoint: "http://0.0.0.0:8080"
-      
+
     reasoning:
       type: "llm"
       settings:
         model: "gpt-4"
         temperature: 0.7
         max_tokens: 1024
-    
+
     observability:
       logging:
         level: "info"

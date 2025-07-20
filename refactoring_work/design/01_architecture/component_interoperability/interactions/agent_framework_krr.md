@@ -19,14 +19,14 @@ The Agent Framework does not directly interact with the KR&R System. Instead, it
 def process_message(message: InternalMessage, context: ReasoningContext) -> InternalMessage:
     """
     Process a message using the reasoning engine.
-    
+
     Args:
         message: InternalMessage - The message to process in the Standard Internal Message Format
         context: ReasoningContext - A context object containing additional information for reasoning
-        
+
     Returns:
         InternalMessage - Response message in the Standard Internal Message Format
-        
+
     Raises:
         ReasoningError - If the reasoning process fails
         SecurityViolationError - If a security violation is detected during processing
@@ -119,17 +119,17 @@ response = reasoning_engine.process_message(
 ```
 
 ```python
-def initialize(config: ReasoningEngineConfig, knowledge_client: KnowledgeClient, 
+def initialize(config: ReasoningEngineConfig, knowledge_client: KnowledgeClient,
               reasoning_security_interface: Optional[ReasoningSecurityInterface] = None) -> None:
     """
     Initialize the reasoning engine with configuration and necessary client interfaces.
-    
+
     Args:
         config: ReasoningEngineConfig - Engine-specific configuration parameters
         knowledge_client: KnowledgeClient - Client to access knowledge bases managed by the KR&R System
         reasoning_security_interface: Optional[ReasoningSecurityInterface] - Interface for security-related
             operations during reasoning
-            
+
     Raises:
         InvalidConfigurationError - If the provided configuration is invalid
         KnowledgeClientInitializationError - If the knowledge client cannot be initialized
@@ -148,7 +148,7 @@ class ReasoningEngineConfig:
     security_integration: SecurityIntegrationConfig = SecurityIntegrationConfig()  # Security integration settings
     resources: Dict[str, str] = {}  # External resources needed by this engine
     performance_constraints: Optional[PerformanceConstraints] = None  # Performance requirements
-    
+
     # Engine-specific sections based on the 'approach'
     llm_config: Optional[LLMReasoningConfig] = None  # Only for LLM-based reasoning
     bdi_config: Optional[BDIReasoningConfig] = None  # Only for BDI reasoning
@@ -171,38 +171,38 @@ class KnowledgeClient:
     def __init__(self, knowledge_management_config: KnowledgeManagementConfig):
         """
         Initialize the knowledge client with the specified configuration.
-        
+
         Args:
             knowledge_management_config: KnowledgeManagementConfig - Configuration for knowledge management
         """
         pass
-        
+
     def get_knowledge_base(self, kb_id: str) -> IKnowledgeBase:
         """
         Get a specific knowledge base by ID.
-        
+
         Args:
             kb_id: str - The identifier of the knowledge base
-            
+
         Returns:
             IKnowledgeBase - Interface to the requested knowledge base
-            
+
         Raises:
             KnowledgeBaseNotFoundError - If the requested knowledge base doesn't exist
         """
         pass
-    
+
     def query(self, kb_id: str, query: KRRQuery) -> KRRResult:
         """
         Query a specific knowledge base.
-        
+
         Args:
             kb_id: str - The identifier of the knowledge base
             query: KRRQuery - The query to execute
-            
+
         Returns:
             KRRResult - The result of the query
-            
+
         Raises:
             KnowledgeBaseNotFoundError - If the requested knowledge base doesn't exist
             QueryExecutionError - If the query execution fails
@@ -245,7 +245,7 @@ The Agent Framework passes security context information to reasoning engines, al
    def process_message(self, message, context):
        # Access security principal information from the context
        principal = context.security_principal_info
-       
+
        # Use the RSI for fine-grained security checks
        if self.rsi:
            # Check if principal has permission to access certain knowledge
@@ -254,10 +254,10 @@ The Agent Framework passes security context information to reasoning engines, al
                resource_identifier="knowledge:sensitive_data",
                context={"message_type": message.message_type}
            )
-           
+
            if permission_result.is_allowed():
                # Access the sensitive knowledge
-               sensitive_data = self.knowledge_client.query("sensitive_data_kb", "...") 
+               sensitive_data = self.knowledge_client.query("sensitive_data_kb", "...")
            else:
                # Handle permission denied case
                pass
@@ -365,7 +365,7 @@ All parameters and return values are defined as Pydantic models and enums (see `
 > If knowledge base status/metadata is needed, propose as an extension to the canonical interface and flag for review.
 
         Get the status of the knowledge base.
-        
+
         Returns:
             KnowledgeBaseStatus - Current status of the knowledge base
         """
@@ -553,10 +553,10 @@ class KnowledgeOperationType(Enum):
 def perception_update(self, perception_data: PerceptionData) -> None:
     """
     Updates the agent's perception data with new information from the environment.
-    
+
     Args:
         perception_data: PerceptionData - Dictionary containing new perception data
-        
+
     Raises:
         InvalidPerceptionDataError - If the perception data format is invalid
         AgentNotReadyError - If the agent is not in a state to receive perception updates
@@ -593,13 +593,13 @@ agent.perception_update(
 def execute_action(self, action: Action) -> ActionResult:
     """
     Execute an action determined by the reasoning engine.
-    
+
     Args:
         action: Action - Object representing the action to take
-        
+
     Returns:
         ActionResult - Result of the action execution
-        
+
     Raises:
         InvalidActionError - If the action is not valid
         ActionExecutionError - If the action execution fails
@@ -657,12 +657,12 @@ result = agent.execute_action(
 def goal_status_update(self, goal_id: str, status: GoalStatus, progress: Optional[float] = None) -> None:
     """
     Update the status of a goal in the agent framework.
-    
+
     Args:
         goal_id: str - Unique identifier for the goal
         status: GoalStatus - New status of the goal
         progress: Optional[float] - Optional progress indicator (0.0-1.0)
-        
+
     Raises:
         GoalNotFoundError - If the goal with the specified ID is not found
         InvalidStatusTransitionError - If the status transition is not valid
@@ -758,7 +758,7 @@ agents:
       options:
         rule_files: ["rules/basic.rules", "rules/domain.rules"]
         inference_depth: 5
-    
+
     # Knowledge management configuration - how the reasoning engine uses the KR&R System
     knowledge_management_config:
       enabled: true
@@ -780,12 +780,12 @@ krr_system:
       connection:
         uri: "bolt://localhost:7687"
         credentials_secret: "neo4j_credentials"
-    
+
     - id: "domain_rules"
       type: "symbolic_facts"
       storage: "prolog"
       file_path: "kb/domain_rules.pl"
-    
+
     - id: "vector_store"
       type: "vector"
       storage: "qdrant"
@@ -820,11 +820,11 @@ krr_system:
          def decide_action(self, context: Context) → Action:
              # Determine appropriate action based on context
              pass
-         
+
          def evaluate_goal(self, goal: Goal, context: Context) → GoalStatus:
              # Evaluate if a goal is achieved or achievable
              pass
-             
+
          def update_knowledge(self, perception: Perception) → None:
              # Update internal knowledge based on new perception
              pass

@@ -115,7 +115,7 @@ For sensitive information like credentials and API keys, always use environment 
 # GOOD - Reference environment variable
 security:
   api_key: "${API_KEY}"
-  
+
 # BAD - Hardcoded sensitive information
 security:
   api_key: "a1b2c3d4e5f6g7h8i9j0"
@@ -159,7 +159,7 @@ environments:
       user: "${PROD_DB_USER:?DB user required}"
       password: "${PROD_DB_PASSWORD:?DB password required}"
       ssl: true
-  
+
   staging:
     database:
       host: "${STAGING_DB_HOST:-staging-db}"
@@ -167,7 +167,7 @@ environments:
       user: "${STAGING_DB_USER:-openmas}"
       password: "${STAGING_DB_PASSWORD:?Staging DB password required}"
       ssl: true
-  
+
   development:
     database:
       host: "${DEV_DB_HOST:-localhost}"

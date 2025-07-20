@@ -156,4 +156,4 @@ Progress Notes:
 
 **Task Status**: COMPLETE
 
-All deliverables completed and verification criteria satisfied. The IProtocolAdapter interface is ready for immediate implementation. 
+All deliverables completed and verification criteria satisfied. The IProtocolAdapter interface is ready for immediate implementation.

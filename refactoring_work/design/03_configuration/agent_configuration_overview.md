@@ -146,14 +146,14 @@ agents:
     class: "openmas.agents.LlmAgent"
     type: "llm"
     description: "A conversational assistant"
-    
+
     protocols:
       - type: "mcp-sse"
         enabled: true
         options:
           server_mode: true
           http_port: 8000
-          
+
     capabilities:
       answer_question:
         description: "Answers user questions on various topics"
@@ -164,12 +164,12 @@ agents:
             question:
               type: "string"
           required: ["question"]
-          
+
     state:
       storage: "redis"
       persistence: true
       ttl: 86400
-      
+
     sessions:
       timeout: 3600
       max_history: 50
@@ -183,13 +183,13 @@ agents:
     class: "openmas.agents.RuleBasedAgent"
     type: "rule_based"
     description: "Processes data according to predefined rules"
-    
+
     protocols:
       - type: "a2a-http"
         enabled: true
         options:
           base_url: "http://localhost:8001"
-          
+
     capabilities:
       process_data:
         description: "Processes structured data according to rules"
@@ -200,7 +200,7 @@ agents:
             data:
               type: "object"
           required: ["data"]
-          
+
     rules_file: "data_processing_rules.yaml"
 ```
 
@@ -212,7 +212,7 @@ agents:
     class: "openmas.agents.GatewayAgent"
     type: "hybrid"
     description: "Gateway agent exposing multiple protocols"
-    
+
     protocols:
       - type: "a2a-http"
         enabled: true
@@ -220,19 +220,19 @@ agents:
           base_url: "http://localhost:9000"
           agent_card:
             name: "Gateway Agent"
-            
+
       - type: "mcp-sse"
         enabled: true
         options:
           server_mode: true
           http_port: 9001
-          
+
       - type: "mqtt"
         enabled: true
         options:
           broker_url: "mqtt://localhost:1883"
           topic_prefix: "openmas/gateway"
-          
+
     capability_exposure:
       - capability: "route_message"
         protocols: ["a2a-http", "mqtt"]

@@ -207,34 +207,34 @@ When implementing topology discovery:
 discovery:
   # Primary mechanism
   mechanism: "registry"  # Options: configuration, registry, broadcast, hierarchical, capability
-  
+
   # General settings
   refresh_interval: 60  # Seconds between discovery attempts
   cache_ttl: 300  # Seconds to cache discovery results
-  
+
   # Registry-specific settings
   registry:
     service_url: "https://registry.example.com"
     credentials:
       auth_type: "jwt"
       token: "${ENV_REGISTRY_TOKEN}"
-    
+
   # Broadcast-specific settings
   broadcast:
     channel: "discovery"
     protocol: "multicast"  # Options: multicast, broadcast, gossip
     interval: 30  # Seconds
-    
+
   # Hierarchical-specific settings
   hierarchical:
     levels:
       - name: "global"
         mechanism: "registry"
         scope: "system"
-      - name: "local" 
+      - name: "local"
         mechanism: "broadcast"
         scope: "subnet"
-        
+
   # Capability-specific settings
   capability:
     query_params:
@@ -242,7 +242,7 @@ discovery:
         min_score: 0.8
       - capability: "response_time"
         max_value: 200  # ms
-        
+
   # Filters
   filters:
     roles: ["worker", "coordinator"]

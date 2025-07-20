@@ -11,19 +11,19 @@
 #### Methods/Functions
 
 ```python
-def get_pattern_implementation(pattern_name: str, context: PatternContext, 
+def get_pattern_implementation(pattern_name: str, context: PatternContext,
                              options: Optional[PatternOptions] = None) -> PatternImplementationResult:
     """
     Request a communication pattern implementation.
-    
+
     Args:
         pattern_name: str - Name of the requested pattern
         context: PatternContext - Context information for pattern initialization
         options: Optional[PatternOptions] - Additional options for pattern instantiation
-        
+
     Returns:
         PatternImplementationResult - Result containing the instantiated pattern and metadata
-        
+
     Raises:
         PatternNotFoundError - If the requested pattern is not available
         PatternInitializationError - If the pattern fails to initialize
@@ -173,26 +173,26 @@ if result.initialization_success:
     print(f"Pattern variant: {result.pattern_variant}")
     print(f"Pattern status: {pattern.state.status.value}")
     print(f"Expected timeout: {pattern.timeout_time}")
-    
+
     # Access pattern-specific features based on the variant
     if result.pattern_variant == "branching":
         print(f"Maximum chain length: {pattern.options.configuration_overrides.get('max_chain_length')}")
         print(f"Maximum branch depth: {pattern.options.configuration_overrides.get('branch_depth_limit')}")
-    
+
     # Check for any initialization warnings
     if result.initialization_warnings:
         print("\nInitialization warnings:")
         for warning in result.initialization_warnings:
             print(f"- {warning}")
-    
+
     # Begin using the pattern
     # (Next steps would involve starting the pattern execution)
 else:
     print(f"Failed to initialize {result.original_pattern_name or result.pattern_name} pattern")
-    
+
     if result.fallback_applied:
         print(f"Fallback to {result.pattern_name} was applied")
-    
+
     if result.initialization_warnings:
         print("\nInitialization errors:")
         for warning in result.initialization_warnings:
@@ -200,19 +200,19 @@ else:
 ```
 
 ```python
-def validate_message_sequence(pattern_id: str, messages: List[Message], 
+def validate_message_sequence(pattern_id: str, messages: List[Message],
                           validation_options: Optional[ValidationOptions] = None) -> ValidationResult:
     """
     Validate if a sequence of messages follows the pattern constraints.
-    
+
     Args:
         pattern_id: str - Identifier of the pattern to validate against
         messages: List[Message] - List of messages to validate
         validation_options: Optional[ValidationOptions] - Options for the validation process
-        
+
     Returns:
         ValidationResult - Result of the validation process with details
-        
+
     Raises:
         PatternNotFoundError - If the pattern with the given ID is not found
         InvalidMessageFormatError - If any message in the sequence has an invalid format
@@ -366,7 +366,7 @@ if validation_result.is_valid:
     print(f"Message sequence is valid against pattern {validation_result.pattern_id}")
     print(f"Validation completed in {validation_result.validation_time_ms}ms")
     print(f"Pattern completion: {validation_result.completion_percentage:.1f}%")
-    
+
     # If there's a current pattern state, check what's expected next
     if validation_result.current_pattern_state:
         state = validation_result.current_pattern_state
@@ -377,17 +377,17 @@ if validation_result.is_valid:
 else:
     print(f"Message sequence is invalid against pattern {validation_result.pattern_id}")
     print(f"Found {len(validation_result.violations)} violations")
-    
+
     # Display violations
     for i, violation in enumerate(validation_result.violations, 1):
         print(f"\nViolation {i} ({violation.severity}): {violation.violation_type}")
         print(f"Description: {violation.description}")
         print(f"Expected: {violation.expected}")
         print(f"Actual: {violation.actual}")
-        
+
         if violation.is_correctable and violation.suggested_correction:
             print(f"Suggested correction: {violation.suggested_correction}")
-    
+
     # Check if all violations can be automatically corrected
     if validation_result.is_correctable:
         print("\nAll violations can be automatically corrected.")
@@ -396,19 +396,19 @@ else:
 ```
 
 ```python
-def get_next_actions(pattern_id: str, current_state: PatternState, 
+def get_next_actions(pattern_id: str, current_state: PatternState,
                   action_options: Optional[ActionOptions] = None) -> NextActionsResult:
     """
     Get possible next actions within a communication pattern.
-    
+
     Args:
         pattern_id: str - Identifier of the pattern
         current_state: PatternState - Current state of the pattern interaction
         action_options: Optional[ActionOptions] - Options for action retrieval
-        
+
     Returns:
         NextActionsResult - Result containing possible next actions and metadata
-        
+
     Raises:
         PatternNotFoundError - If the pattern with the given ID is not found
         InvalidPatternStateError - If the provided pattern state is invalid
@@ -496,38 +496,38 @@ if next_actions_result.actions:
     print(f"Found {next_actions_result.returned_actions_count} possible next actions")
     print(f"Pattern progress: {next_actions_result.pattern_progress:.1f}%")
     print(f"Remaining required actions: {next_actions_result.remaining_required_actions}")
-    
+
     # Display the expected participants
     if next_actions_result.expected_participants:
         print(f"Expected participants: {', '.join(next_actions_result.expected_participants)}")
-    
+
     # Display the possible actions
     print("\nPossible next actions:")
     for i, action in enumerate(next_actions_result.actions, 1):
         print(f"\n{i}. {action.action_type}: {action.description}")
         print(f"   Actor: {action.actor_id}")
         print(f"   Priority: {action.priority}")
-        
+
         if action.required:
             print("   [Required for pattern progression]")
-        
+
         if action.allowed_recipients:
             print(f"   Recipients: {', '.join(action.allowed_recipients)}")
-        
+
         if action.content_requirements:
             print("   Content requirements:")
             for key, value in action.content_requirements.items():
                 print(f"      - {key}: {value}")
-        
+
         if action.alternatives:
             print(f"   Alternatives: {', '.join(action.alternatives)}")
-    
+
     # If there are decision points in the pattern, show them
     if next_actions_result.decision_points:
         print("\nDecision points:")
         for point in next_actions_result.decision_points:
             print(f"- {point['description']} (Options: {', '.join(point['options'])})")
-    
+
     # Show the path taken so far
     if next_actions_result.path_taken:
         print("\nPath taken so far:")
@@ -535,7 +535,7 @@ if next_actions_result.actions:
             print(f"- Step {step['step_index']}: {step['action_type']} by {step['actor_id']}")
 else:
     print("No further actions available in this pattern")
-    
+
     if next_actions_result.pattern_progress >= 100.0:
         print("Pattern is complete!")
     else:
@@ -698,19 +698,19 @@ class PatternViolationDetectedEvent:
 #### Methods/Functions
 
 ```python
-def register_pattern_handler(pattern_name: str, handler: PatternHandler, 
+def register_pattern_handler(pattern_name: str, handler: PatternHandler,
                            registration_options: Optional[PatternHandlerRegistrationOptions] = None) -> RegistrationResult:
     """
     Register a handler for a specific communication pattern.
-    
+
     Args:
         pattern_name: str - Name of the pattern to handle
         handler: PatternHandler - Handler implementation for the pattern
         registration_options: Optional[PatternHandlerRegistrationOptions] - Options for handler registration
-        
+
     Returns:
         RegistrationResult - Result of the registration operation
-        
+
     Raises:
         PatternAlreadyRegisteredError - If a handler is already registered for this pattern
         InvalidPatternHandlerError - If the provided handler doesn't implement required methods
@@ -725,26 +725,26 @@ class PatternHandler:
     """
     Interface for pattern handlers that can process pattern-related events and actions.
     """
-    def handle_state_change(self, pattern_id: str, old_state: PatternState, 
+    def handle_state_change(self, pattern_id: str, old_state: PatternState,
                           new_state: PatternState, change_context: StateChangeContext) -> None:
         """
         Handle a state change in a pattern.
         """
         pass
-    
-    def handle_pattern_completion(self, pattern_id: str, final_state: PatternState, 
+
+    def handle_pattern_completion(self, pattern_id: str, final_state: PatternState,
                                 result: PatternCompletionResult) -> None:
         """
         Handle the completion of a pattern.
         """
         pass
-    
+
     def handle_pattern_error(self, pattern_id: str, error_info: PatternErrorInfo) -> None:
         """
         Handle an error in a pattern.
         """
         pass
-    
+
     def get_supported_pattern_variants(self) -> List[str]:
         """
         Get the pattern variants supported by this handler.
@@ -782,23 +782,23 @@ class RegistrationResult:
 ```python
 # Create a custom pattern handler for sequential thinking patterns
 class SequentialThinkingHandler(PatternHandler):
-    def handle_state_change(self, pattern_id: str, old_state: PatternState, 
+    def handle_state_change(self, pattern_id: str, old_state: PatternState,
                           new_state: PatternState, change_context: StateChangeContext) -> None:
         # Process state changes for sequential thinking patterns
         logger.info(f"Sequential thinking pattern {pattern_id} state changed: "
                     f"{old_state.state_name} -> {new_state.state_name}")
-        
+
         # Track pattern progression metrics
         if new_state.state_name == "reasoning_phase":
             metrics_service.track_reasoning_phase_start(pattern_id, new_state.active_participants)
         elif new_state.state_name == "response_formulation":
             metrics_service.track_response_formulation_start(pattern_id, new_state.active_participants)
-    
-    def handle_pattern_completion(self, pattern_id: str, final_state: PatternState, 
+
+    def handle_pattern_completion(self, pattern_id: str, final_state: PatternState,
                                 result: PatternCompletionResult) -> None:
         # Handle successful completion of sequential thinking patterns
         logger.info(f"Sequential thinking pattern {pattern_id} completed successfully")
-        
+
         # Record completion metrics
         metrics_service.record_pattern_completion(
             pattern_id=pattern_id,
@@ -806,7 +806,7 @@ class SequentialThinkingHandler(PatternHandler):
             completion_time_ms=result.total_execution_time_ms,
             participants=final_state.active_participants
         )
-        
+
         # Notify interested components
         event_bus.publish("pattern.completed", {
             "pattern_id": pattern_id,
@@ -814,11 +814,11 @@ class SequentialThinkingHandler(PatternHandler):
             "final_state": final_state,
             "result": result
         })
-    
+
     def handle_pattern_error(self, pattern_id: str, error_info: PatternErrorInfo) -> None:
         # Handle errors in sequential thinking patterns
         logger.error(f"Error in sequential thinking pattern {pattern_id}: {error_info.error_message}")
-        
+
         # Implement error recovery if possible
         if error_info.is_recoverable:
             recovery_service.attempt_pattern_recovery(
@@ -829,7 +829,7 @@ class SequentialThinkingHandler(PatternHandler):
         else:
             # Notify about unrecoverable error
             alert_service.send_alert(f"Unrecoverable error in pattern {pattern_id}: {error_info.error_message}")
-    
+
     def get_supported_pattern_variants(self) -> List[str]:
         # Return the variants of sequential thinking pattern supported by this handler
         return ["basic", "recursive", "branching"]
@@ -858,11 +858,11 @@ registration_result = agent_framework.register_pattern_handler(
 
 if registration_result.success:
     logger.info(f"Successfully registered sequential thinking handler with ID: {registration_result.handler_id}")
-    
+
     # If this replaced an existing handler, log that information
     if registration_result.is_overwrite:
         logger.info(f"Replaced previous handler with ID: {registration_result.previous_handler_id}")
-    
+
     # Print registration metadata
     print(f"Handler registered at: {registration_result.registration_timestamp}")
     print(f"Supported variants: {', '.join(registration_result.supported_variants)}")
@@ -870,7 +870,7 @@ else:
     logger.error(f"Failed to register sequential thinking handler")
 ```
 
-- `agent_framework.notify_pattern_state_change(pattern_id: str, new_state: PatternState, 
+- `agent_framework.notify_pattern_state_change(pattern_id: str, new_state: PatternState,
                              change_context: Optional[StateChangeContext] = None,
                              notification_options: Optional[NotificationOptions] = None) → NotificationResult`
   - **Purpose**: Notify the Agent Framework of pattern state changes
@@ -1016,7 +1016,7 @@ if notification_result.status == "delivered":
         f"Successfully notified {len(notification_result.target_components)} components "
         f"about pattern state change in {notification_result.delivery_time_ms}ms"
     )
-    
+
     # Log the notification details
     logger.debug(f"Notification ID: {notification_result.notification_id}")
     logger.debug(f"Notification timestamp: {notification_result.timestamp}")
@@ -1027,7 +1027,7 @@ else:
         f"Failed to notify components about pattern state change: "
         f"{notification_result.error_message} (Attempts: {notification_result.delivery_attempts})"
     )
-    
+
     # Take remedial action
     if notification_result.delivery_attempts < notification_options.max_retries:
         logger.info("Will retry notification automatically")
@@ -1272,24 +1272,24 @@ communication_patterns:
     - name: "request_response"
       implementation_class: "RequestResponsePattern"
       timeout_seconds: 30
-    
+
     - name: "sequential_thinking"
       implementation_class: "SequentialThinkingPattern"
       config:
         max_steps: 10
         history_validation: true
-    
+
     - name: "chain_of_thought"
       implementation_class: "ChainOfThoughtPattern"
       config:
         max_chain_length: 5
         allow_branching: true
-  
+
   pattern_validation:
     enabled: true
     validation_level: "strict"  # strict, lenient, none
     auto_correction: false
-  
+
   custom_patterns_path: "patterns/"
 
 agent_framework:
@@ -1329,90 +1329,90 @@ class CommunicationPattern:
     def initialize(self, context: PatternContext) -> str:
         """
         Initialize the pattern with context information and return a unique pattern instance ID.
-        
+
         Args:
             context: PatternContext - Context information for pattern initialization
-            
+
         Returns:
             str - Unique identifier for this pattern instance
-            
+
         Raises:
             InvalidPatternContextError - If the provided context is invalid for this pattern
             PatternInitializationError - If the pattern could not be initialized
         """
         pass
-    
-    def validate_message(self, pattern_id: str, message: Message, 
+
+    def validate_message(self, pattern_id: str, message: Message,
                         validation_options: Optional[ValidationOptions] = None) -> MessageValidationResult:
         """
         Validate if a message conforms to the pattern constraints.
-        
+
         Args:
             pattern_id: str - ID of the pattern instance
             message: Message - Message to validate
             validation_options: Optional[ValidationOptions] - Options for validation
-            
+
         Returns:
             MessageValidationResult - Result of the message validation
-            
+
         Raises:
             PatternNotFoundError - If the pattern with the given ID is not found
             ValidationError - If validation fails critically
         """
         pass
-    
+
     def get_next_valid_actions(self, pattern_id: str, current_state: PatternState,
                               action_options: Optional[ActionOptions] = None) -> NextActionsResult:
         """
         Get actions that are valid in the current pattern state.
-        
+
         Args:
             pattern_id: str - ID of the pattern instance
             current_state: PatternState - Current state of the pattern
             action_options: Optional[ActionOptions] - Options for action retrieval
-            
+
         Returns:
             NextActionsResult - Result containing valid next actions
-            
+
         Raises:
             PatternNotFoundError - If the pattern with the given ID is not found
             InvalidPatternStateError - If the provided pattern state is invalid
         """
         pass
-    
+
     def update_state(self, pattern_id: str, message: Message,
                     update_options: Optional[StateUpdateOptions] = None) -> PatternState:
         """
         Update pattern state based on a new message or action.
-        
+
         Args:
             pattern_id: str - ID of the pattern instance
             message: Message - Message that triggers the state update
             update_options: Optional[StateUpdateOptions] - Options for state update
-            
+
         Returns:
             PatternState - Updated pattern state
-            
+
         Raises:
             PatternNotFoundError - If the pattern with the given ID is not found
             InvalidMessageError - If the message is invalid for the current pattern state
             StateUpdateError - If the state update fails
         """
         pass
-    
+
     def get_supported_protocols(self) -> List[str]:
         """
         Get the list of protocols supported by this pattern implementation.
-        
+
         Returns:
             List[str] - List of supported protocol identifiers (e.g., ["a2a", "mcp"])
         """
         pass
-    
+
     def get_metadata(self) -> PatternMetadata:
         """
         Get metadata about this pattern implementation.
-        
+
         Returns:
             PatternMetadata - Metadata about the pattern
         """
@@ -1475,7 +1475,7 @@ class PatternMetadata:
 class SequentialThinkingPattern(CommunicationPattern):
     """
     Implementation of the Sequential Thinking pattern for structured reasoning.
-    
+
     This pattern enables sequential, step-by-step reasoning with validation at each step,
     supporting both A2A and MCP protocols.
     """
@@ -1485,10 +1485,10 @@ class SequentialThinkingPattern(CommunicationPattern):
             if context.protocol_type == "a2a":
                 # For A2A, we require a dedicated reasoning agent
                 raise InvalidPatternContextError("Sequential Thinking pattern requires a reasoning agent")
-        
+
         # Initialize pattern instance
         pattern_id = f"seq_thinking_{uuid.uuid4().hex[:8]}"
-        
+
         # Create initial state
         initial_state = PatternState(
             state_id=f"{pattern_id}_initial",
@@ -1513,36 +1513,36 @@ class SequentialThinkingPattern(CommunicationPattern):
                 "session_id": context.session_id
             }
         )
-        
+
         # Store the state
         self.states[pattern_id] = initial_state
         self.contexts[pattern_id] = context
-        
+
         # Log the initialization
         logger.info(f"Initialized Sequential Thinking pattern with ID: {pattern_id}")
         logger.debug(f"Pattern context: {context}")
-        
+
         return pattern_id
-    
+
     def validate_message(self, pattern_id: str, message: Message,
                         validation_options: Optional[ValidationOptions] = None) -> MessageValidationResult:
         # Implement message validation logic
         # ...
-        
+
     def get_next_valid_actions(self, pattern_id: str, current_state: PatternState,
                               action_options: Optional[ActionOptions] = None) -> NextActionsResult:
         # Implement next actions logic
         # ...
-        
+
     def update_state(self, pattern_id: str, message: Message,
                     update_options: Optional[StateUpdateOptions] = None) -> PatternState:
         # Implement state update logic
         # ...
-        
+
     def get_supported_protocols(self) -> List[str]:
         # This pattern supports both A2A and MCP
         return ["a2a", "mcp"]
-    
+
     def get_metadata(self) -> PatternMetadata:
         return PatternMetadata(
             pattern_name="sequential_thinking",
@@ -1575,45 +1575,45 @@ class PatternVisualizer:
     def initialize(self, pattern_id: str, pattern_metadata: PatternMetadata) -> str:
         """
         Initialize the visualizer for a specific pattern.
-        
+
         Args:
             pattern_id: str - ID of the pattern to visualize
             pattern_metadata: PatternMetadata - Metadata about the pattern
-            
+
         Returns:
             str - Unique identifier for this visualizer instance
         """
         pass
-    
+
     def update_visualization(self, pattern_id: str, current_state: PatternState) -> VisualizationResult:
         """
         Update the visualization based on the current pattern state.
-        
+
         Args:
             pattern_id: str - ID of the pattern
             current_state: PatternState - Current state of the pattern
-            
+
         Returns:
             VisualizationResult - Result of the visualization update
         """
         pass
-    
+
     def get_visualization_url(self, visualizer_id: str) -> str:
         """
         Get the URL where the visualization can be accessed.
-        
+
         Args:
             visualizer_id: str - ID of the visualizer instance
-            
+
         Returns:
             str - URL to access the visualization
         """
         pass
-    
+
     def get_supported_formats(self) -> List[str]:
         """
         Get the visualization formats supported by this visualizer.
-        
+
         Returns:
             List[str] - List of supported formats (e.g., ["web", "svg", "png"])
         """
@@ -1629,7 +1629,7 @@ class GraphPatternVisualizer(PatternVisualizer):
     """
     def initialize(self, pattern_id: str, pattern_metadata: PatternMetadata) -> str:
         visualizer_id = f"viz_{pattern_id}"
-        
+
         # Create a new visualization
         self.visualizations[visualizer_id] = {
             "pattern_id": pattern_id,
@@ -1642,21 +1642,21 @@ class GraphPatternVisualizer(PatternVisualizer):
             "created_at": datetime.now(),
             "last_updated": datetime.now()
         }
-        
+
         # Initialize the graph
         self._initialize_graph(visualizer_id)
-        
+
         return visualizer_id
-    
+
     def update_visualization(self, pattern_id: str, current_state: PatternState) -> VisualizationResult:
         visualizer_id = f"viz_{pattern_id}"
-        
+
         # Update the visualization with the new state
         self._update_graph(visualizer_id, current_state)
-        
+
         # Generate a snapshot of the current visualization
         snapshot_url = self._generate_snapshot(visualizer_id)
-        
+
         return VisualizationResult(
             visualizer_id=visualizer_id,
             pattern_id=pattern_id,
@@ -1672,22 +1672,22 @@ class GraphPatternVisualizer(PatternVisualizer):
                 "rendering_time_ms": 125
             }
         )
-    
+
     def get_visualization_url(self, visualizer_id: str) -> str:
         return f"{self.base_url}/visualize/{visualizer_id}"
-    
+
     def get_supported_formats(self) -> List[str]:
         return ["web", "svg", "png", "json"]
-    
+
     # Private helper methods
     def _initialize_graph(self, visualizer_id: str) -> None:
         # Initialize the graph structure
         # ...
-    
+
     def _update_graph(self, visualizer_id: str, current_state: PatternState) -> None:
         # Update the graph with the new state
         # ...
-    
+
     def _generate_snapshot(self, visualizer_id: str) -> str:
         # Generate a snapshot of the current visualization
         # ...
@@ -1727,19 +1727,19 @@ class SequentialThinkingPattern(CommunicationPattern):
             "status": "initialized"
         }
         return pattern_id
-        
+
     def validate_message(self, message: Message) → bool:
         # Validate if message conforms to sequential thinking format
         if message.type != "sequential_thinking_step":
             return False
-            
+
         required_fields = ["thought", "thoughtNumber", "totalThoughts"]
         return all(field in message.content for field in required_fields)
-        
+
     def get_next_valid_actions(self, current_state: PatternState) → List[PatternAction]:
         # Get valid next actions for sequential thinking
         actions = []
-        
+
         if current_state.status == "initialized" or current_state.status == "in_progress":
             if current_state.thought_number < current_state.total_thoughts:
                 actions.append(PatternAction(
@@ -1749,7 +1749,7 @@ class SequentialThinkingPattern(CommunicationPattern):
                         "total_thoughts": current_state.total_thoughts
                     }
                 ))
-                
+
             # Allow for revisions of previous thoughts
             if current_state.thought_number > 0:
                 actions.append(PatternAction(
@@ -1759,7 +1759,7 @@ class SequentialThinkingPattern(CommunicationPattern):
                         "revises_thought": list(range(1, current_state.thought_number))
                     }
                 ))
-                
+
             # Allow for adjustment of total thoughts
             actions.append(PatternAction(
                 type="adjust_total_thoughts",
@@ -1767,20 +1767,20 @@ class SequentialThinkingPattern(CommunicationPattern):
                     "new_total": range(current_state.thought_number + 1, current_state.thought_number + 10)
                 }
             ))
-            
+
         return actions
-        
+
     def update_state(self, message: Message) → PatternState:
         # Update state based on new sequential thinking message
         if message.type == "sequential_thinking_step":
             self.state["thought_number"] = message.content["thoughtNumber"]
             self.state["total_thoughts"] = message.content["totalThoughts"]
             self.state["thoughts"].append(message.content["thought"])
-            
+
             if not message.content.get("nextThoughtNeeded", True):
                 self.state["status"] = "completed"
             else:
                 self.state["status"] = "in_progress"
-                
+
         return PatternState(**self.state)
 ```

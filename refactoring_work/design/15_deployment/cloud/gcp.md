@@ -46,10 +46,10 @@ def handle_agent_request(request):
         communicator=A2ACommunicator(),
         reasoning=get_reasoning_engine()  # Implementation-specific
     )
-    
+
     # Process request
     result = agent.process_request(request.json)
-    
+
     # Return response
     return result
 ```
@@ -134,7 +134,7 @@ Components:
 
 GCP deployments maintain OpenMAS's reasoning-agnostic architecture through:
 
-1. **Communication Layer ("Body")**: 
+1. **Communication Layer ("Body")**:
    - Deployed as Cloud Functions or Cloud Run services
    - Handles protocol-specific messaging (A2A, MCP, HTTP, etc.)
    - Manages service discovery and routing
@@ -200,7 +200,7 @@ components:
       type: cloud_function
       memory: 512
       timeout: 540
-  
+
   agent2:
     type: agent
     config: config/agent2_config.yaml

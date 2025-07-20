@@ -45,28 +45,28 @@ async def solve_problem(agent, problem_description):
             "log_level": "detailed"
         }
     )
-    
+
     # Add reasoning steps
     step1 = await thinking_process.add_step({
         "step_name": "problem_understanding",
         "reasoning": "First, I need to understand the key components of the problem..."
     })
-    
+
     step2 = await thinking_process.add_step({
         "step_name": "identify_constraints",
         "reasoning": "The problem has the following constraints...",
         "constraints": ["constraint1", "constraint2"]
     })
-    
+
     # Continue with more steps...
-    
+
     # Conclude reasoning
     conclusion = await thinking_process.conclude({
         "final_answer": "The solution is...",
         "confidence": 0.95,
         "reasoning_summary": "By following steps 1-5, I determined that..."
     })
-    
+
     return conclusion
 ```
 

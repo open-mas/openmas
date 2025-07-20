@@ -206,7 +206,7 @@ nav:
     - Capabilities: agents/capabilities.md
     - Topologies: agents/topologies.md
     - Lifecycle: agents/lifecycle.md
-  - Assets: 
+  - Assets:
     - Overview: assets/index.md
     - Loaders: assets/loaders.md
     - Resources: assets/resources.md

@@ -92,7 +92,7 @@ import json
 
 class WebSocketCommunicator(BaseCommunicator):
     """WebSocket communicator implementation."""
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.uri = config.get("uri", "ws://localhost:8765")
@@ -100,7 +100,7 @@ class WebSocketCommunicator(BaseCommunicator):
         self.connected = False
         self.message_queue = asyncio.Queue()
         self.receive_task = None
-    
+
     async def connect(self):
         """Connect to the WebSocket server."""
         try:
@@ -111,7 +111,7 @@ class WebSocketCommunicator(BaseCommunicator):
         except Exception as e:
             self.logger.error(f"Failed to connect to WebSocket server: {e}")
             return False
-    
+
     async def disconnect(self):
         """Disconnect from the WebSocket server."""
         if self.connection:
@@ -120,23 +120,23 @@ class WebSocketCommunicator(BaseCommunicator):
             if self.receive_task:
                 self.receive_task.cancel()
         return True
-    
+
     async def send_message(self, message):
         """Send a message to the WebSocket server."""
         if not self.connected:
             await self.connect()
-        
+
         try:
             await self.connection.send(json.dumps(message.to_dict()))
             return True
         except Exception as e:
             self.logger.error(f"Failed to send message: {e}")
             return False
-    
+
     async def receive_message(self):
         """Receive a message from the queue."""
         return await self.message_queue.get()
-    
+
     async def _receive_loop(self):
         """Background task to receive messages."""
         while self.connected:
@@ -152,34 +152,34 @@ class WebSocketCommunicator(BaseCommunicator):
 
 class WebSocketCommunicatorExtension(CommunicatorExtension):
     """Extension that adds WebSocket communication support."""
-    
+
     extension_type = "communicator"
     extension_name = "websocket"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.protocols = config.get("options", {}).get("protocols", ["websocket"])
-    
+
     def validate_config(self):
         """Validate the extension configuration."""
         options = self.config.get("options", {})
         if "protocols" not in options:
             raise ValueError("WebSocket communicator extension requires 'protocols' in options")
-    
+
     def get_supported_protocols(self):
         """Get list of supported protocols."""
         return self.protocols
-    
+
     def create_communicator(self, agent_config):
         """Create a WebSocket communicator instance."""
         # Extract WebSocket-specific configuration
         communicator_config = agent_config.get("communicator", {})
         websocket_config = communicator_config.get("websocket", {})
-        
+
         # Create communicator instance
         return WebSocketCommunicator(websocket_config)
-    
+
     def pre_message_send(self, communicator, message):
         """Called before a message is sent."""
         # Add a timestamp if not present

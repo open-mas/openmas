@@ -44,11 +44,11 @@ Interface evolution maintains backward compatibility while adding new capabiliti
 ```python
 class RequestResponsePatternV2(BasePattern):
     """Request-Response pattern with versioned interfaces."""
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.version = config.get("version", "2.0")
-        
+
     # Original interface (v1.x compatible)
     async def send_request(self, target_agent_id, request_type, content):
         """Send a request (compatibility with v1.x)."""
@@ -59,15 +59,15 @@ class RequestResponsePatternV2(BasePattern):
             content=content,
             options=None
         )
-        
+
     # Enhanced interface (v2.x)
     async def send_request_v2(self, target_agent_id, request_type, content, options=None):
         """Send a request with enhanced options (v2.x)."""
         options = options or {}
-        
+
         # Implementation with enhanced features
         # ...
-        
+
     # Original interface (v1.x compatible)
     async def register_handler(self, request_type, handler):
         """Register a request handler (compatibility with v1.x)."""
@@ -77,12 +77,12 @@ class RequestResponsePatternV2(BasePattern):
             handler=handler,
             options=None
         )
-        
+
     # Enhanced interface (v2.x)
     async def register_handler_v2(self, request_type, handler, options=None):
         """Register a request handler with enhanced options (v2.x)."""
         options = options or {}
-        
+
         # Implementation with enhanced features
         # ...
 ```
@@ -96,13 +96,13 @@ The pattern registry supports retrieving specific versions of patterns:
 async def initialize(self, context):
     # Get pattern registry
     pattern_registry = context.get_pattern_registry()
-    
+
     # Get the latest version of a pattern
     self.latest_pattern = await pattern_registry.get_pattern(
         "request_response",
         self.config.get("patterns", {}).get("request_response")
     )
-    
+
     # Get a specific version of a pattern
     self.v1_pattern = await pattern_registry.get_pattern(
         "request_response",
@@ -118,11 +118,11 @@ Protocol adapters evolve to support new protocol features while maintaining comp
 ```python
 class A2AProtocolAdapter:
     """Protocol adapter for A2A with versioning support."""
-    
+
     def __init__(self, config):
         self.config = config
         self.protocol_version = config.get("protocol_version", "1.0")
-        
+
     async def adapt_message(self, pattern_message, target_protocol="a2a"):
         """Adapt a pattern message to the target protocol version."""
         if self.protocol_version.startswith("1."):
@@ -131,12 +131,12 @@ class A2AProtocolAdapter:
             return await self.adapt_message_v2(pattern_message)
         else:
             raise ValueError(f"Unsupported protocol version: {self.protocol_version}")
-            
+
     async def adapt_message_v1(self, pattern_message):
         """Adapt message for A2A protocol v1.x."""
         # v1.x adaptation logic
         # ...
-        
+
     async def adapt_message_v2(self, pattern_message):
         """Adapt message for A2A protocol v2.x."""
         # v2.x adaptation logic with enhanced features
@@ -157,7 +157,7 @@ async def establish_connection(self, target_agent_id):
         "event_based": "3.0",
         "delegation": "1.0"
     }
-    
+
     # Send capability message
     response = await self.communicator.send_capability_request(
         target_agent_id,
@@ -166,15 +166,15 @@ async def establish_connection(self, target_agent_id):
             "preferred_versions": local_versions
         }
     )
-    
+
     # Process response
     if not response or "supported_patterns" not in response:
         # Use default lowest common versions
         return self.default_pattern_versions
-        
+
     # Negotiate compatible versions
     negotiated_versions = {}
-    
+
     for pattern_type, local_version in local_versions.items():
         if pattern_type in response["supported_patterns"]:
             remote_version = response["supported_patterns"][pattern_type]
@@ -184,37 +184,37 @@ async def establish_connection(self, target_agent_id):
         else:
             # Remote agent doesn't support this pattern
             negotiated_versions[pattern_type] = None
-            
+
     return negotiated_versions
-    
+
 def negotiate_version(self, pattern_type, local_version, remote_version):
     """Negotiate the highest compatible version between agents."""
     local_parts = [int(p) for p in local_version.split(".")]
     remote_parts = [int(p) for p in remote_version.split(".")]
-    
+
     # Ensure major versions are compatible
     if local_parts[0] != remote_parts[0]:
         # Major version mismatch - use the lower major version
         major = min(local_parts[0], remote_parts[0])
-        
+
         # Get the highest minor version for this major version
         pattern_registry = self.context.get_pattern_registry()
         available_versions = pattern_registry.get_available_versions(pattern_type)
-        
-        compatible_versions = [v for v in available_versions 
+
+        compatible_versions = [v for v in available_versions
                               if v.startswith(f"{major}.")]
-        
+
         if not compatible_versions:
             # No compatible versions available
             return None
-            
+
         # Use the highest compatible version
         return max(compatible_versions)
     else:
         # Major versions match, use the minimum of each component
-        negotiated = [min(local_parts[i], remote_parts[i]) 
+        negotiated = [min(local_parts[i], remote_parts[i])
                      for i in range(min(len(local_parts), len(remote_parts)))]
-        
+
         return ".".join(str(p) for p in negotiated)
 ```
 
@@ -230,11 +230,11 @@ import warnings
 
 class EventBasedPattern:
     """Event-Based pattern implementation."""
-    
+
     async def subscribe(self, event_type, callback):
         """
         Subscribe to events of a specific type.
-        
+
         This method is still supported but will be removed in version 3.0.
         Use subscribe_v2 instead which provides additional filtering options.
         """
@@ -244,14 +244,14 @@ class EventBasedPattern:
             DeprecationWarning,
             stacklevel=2
         )
-        
+
         # Forward to new implementation
         return await self.subscribe_v2(event_type, callback)
-        
+
     async def subscribe_v2(self, event_type, callback, filters=None):
         """
         Subscribe to events of a specific type with optional filters.
-        
+
         This is the preferred subscription method as of version 2.0.
         """
         # Enhanced implementation
@@ -387,12 +387,12 @@ Pattern versioning also handles evolution of the underlying protocols:
 ```python
 class MCPProtocolAdapter:
     """Protocol adapter for MCP with versioning support."""
-    
+
     def __init__(self, config):
         self.config = config
         self.protocol_version = config.get("protocol_version", "1.0")
         self.features = self.get_supported_features()
-        
+
     def get_supported_features(self):
         """Get features supported by this protocol version."""
         if self.protocol_version.startswith("1.0"):
@@ -413,7 +413,7 @@ class MCPProtocolAdapter:
                 "binary_attachments": True,
                 "enhanced_security": True
             }
-            
+
     async def adapt_pattern_message(self, pattern_message):
         """Adapt a pattern message for the MCP protocol."""
         # Adaptation based on protocol version
@@ -422,7 +422,7 @@ class MCPProtocolAdapter:
             raise PatternNotSupportedError(
                 f"Streaming pattern not supported in MCP {self.protocol_version}"
             )
-        
+
         # Adaptation logic based on protocol version
         if self.protocol_version.startswith("1.0"):
             return await self.adapt_for_v1_0(pattern_message)
@@ -448,7 +448,7 @@ When evolving patterns, follow these best practices:
    # Less robust:
    if self.pattern_version >= "2.0":
        # Use v2.0 features
-   
+
    # More robust:
    if hasattr(self.pattern, "subscribe_v2"):
        # Use enhanced subscription

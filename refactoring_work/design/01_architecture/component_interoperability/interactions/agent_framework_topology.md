@@ -11,18 +11,18 @@
 #### Methods/Functions
 
 ```python
-def discover_agents(criteria: AgentCriteria, 
+def discover_agents(criteria: AgentCriteria,
                  discovery_options: Optional[DiscoveryOptions] = None) -> DiscoveryResult:
     """
     Discover agents matching specific criteria in the topology.
-    
+
     Args:
         criteria: AgentCriteria - Filtering criteria for agent discovery
         discovery_options: Optional[DiscoveryOptions] - Additional options for discovery process
-        
+
     Returns:
         DiscoveryResult - Result containing matching agents and metadata
-        
+
     Raises:
         TopologyAccessError - If there's an error accessing the topology system
         InvalidCriteriaError - If the provided criteria are invalid
@@ -142,7 +142,7 @@ discovery_result = topology.discover_agents(
 
 if discovery_result.agents:
     print(f"Found {discovery_result.returned_count} of {discovery_result.total_count} matching agents in {discovery_result.discovery_time_ms}ms")
-    
+
     # Process each agent
     for agent in discovery_result.agents:
         print(f"\nAgent: {agent.name} (ID: {agent.id})")
@@ -150,22 +150,22 @@ if discovery_result.agents:
         print(f"Capabilities: {', '.join(agent.capabilities)}")
         print(f"Protocols: {', '.join(agent.protocols)}")
         print(f"Last active: {agent.last_active}")
-        
+
         # Check if the agent has a specific capability
         if "reasoning" in agent.capabilities:
             reasoning_details = agent.capability_details.get("reasoning", {})
             print(f"Reasoning type: {reasoning_details.get('type', 'unknown')}")
             print(f"Reasoning version: {reasoning_details.get('version', 'unknown')}")
-        
+
         # Get endpoints for communication
         if "a2a" in agent.protocols:
             print(f"A2A endpoint: {agent.endpoints.get('a2a', 'unknown')}")
-            
+
         # Check performance metrics if available
         if agent.metrics:
             print(f"Average response time: {agent.metrics.get('avg_response_time_ms', 'unknown')}ms")
             print(f"Reliability score: {agent.metrics.get('reliability_score', 'unknown')}")
-    
+
     # Check if there are more results available
     if not discovery_result.is_complete:
         print(f"\nShowing {discovery_result.returned_count} of {discovery_result.total_count} results.")
@@ -176,18 +176,18 @@ else:
 ```
 
 ```python
-def register_agent(agent: AgentInfo, 
+def register_agent(agent: AgentInfo,
                 registration_options: Optional[RegistrationOptions] = None) -> RegistrationResult:
     """
     Register an agent in the topology system.
-    
+
     Args:
         agent: AgentInfo - Information about the agent to register
         registration_options: Optional[RegistrationOptions] - Additional options for registration
-        
+
     Returns:
         RegistrationResult - Result of the registration operation
-        
+
     Raises:
         TopologyAccessError - If there's an error accessing the topology system
         InvalidAgentInfoError - If the provided agent information is invalid
@@ -300,16 +300,16 @@ if registration_result.success:
     print(f"Agent {registration_result.agent_id} registered successfully")
     print(f"Registration ID: {registration_result.registration_id}")
     print(f"Registration time: {registration_result.registration_time}")
-    
+
     if registration_result.expiration_time:
         print(f"Registration expires at: {registration_result.expiration_time}")
-        
+
     print(f"Heartbeat token: {registration_result.heartbeat_token}")
     print(f"Registration scope: {registration_result.registration_scope}")
-    
+
     if registration_result.override_applied:
         print("Note: Existing registration was overridden")
-        
+
     if registration_result.warnings:
         print("\nWarnings:")
         for warning in registration_result.warnings:
@@ -323,19 +323,19 @@ else:
 ```
 
 ```python
-def get_agent_path(source_id: str, target_id: str, 
+def get_agent_path(source_id: str, target_id: str,
                path_options: Optional[PathOptions] = None) -> PathResult:
     """
     Find a communication path between two agents in the topology.
-    
+
     Args:
         source_id: str - ID of the source agent
         target_id: str - ID of the target agent
         path_options: Optional[PathOptions] - Options for path finding
-        
+
     Returns:
         PathResult - Result containing the path information if found
-        
+
     Raises:
         TopologyAccessError - If there's an error accessing the topology system
         AgentNotFoundError - If either the source or target agent is not found
@@ -436,10 +436,10 @@ if path_result.success:
     print(f"Path length: {path_result.path_length} hops")
     print(f"Common protocols: {', '.join(path_result.common_protocols)}")
     print(f"Path security level: {path_result.path_security_level}")
-    
+
     if path_result.total_estimated_latency_ms:
         print(f"Estimated total latency: {path_result.total_estimated_latency_ms}ms")
-    
+
     print("\nPath Details:")
     for i, node in enumerate(path_result.nodes):
         print(f"[{i}] Agent: {node.agent_id} (Type: {node.agent_type}, Status: {node.status})")
@@ -448,7 +448,7 @@ if path_result.success:
             print(f"   → Protocol: {hop.protocol}, Security: {hop.security_level}")
             if hop.estimated_latency_ms:
                 print(f"   → Estimated latency: {hop.estimated_latency_ms}ms")
-    
+
     print(f"\nPath will expire at: {path_result.expiration_time}")
     if path_result.alternatives_available:
         print("Alternative paths are available. Use 'get_alternative_paths' for details.")
@@ -561,18 +561,18 @@ class AgentRegistrationChangedEvent:
 #### Methods/Functions
 
 ```python
-def notify_topology_change(change: TopologyChange, 
+def notify_topology_change(change: TopologyChange,
                          notification_options: Optional[TopologyNotificationOptions] = None) -> TopologyNotificationResult:
     """
     Notify Agent Framework of changes in the topology.
-    
+
     Args:
         change: TopologyChange - Object describing the topology change
         notification_options: Optional[TopologyNotificationOptions] - Options for the notification
-        
+
     Returns:
         TopologyNotificationResult - Result of the notification operation
-        
+
     Raises:
         InvalidTopologyChangeError - If the topology change is invalid
         NotificationDeliveryError - If there's an error delivering the notification
@@ -688,15 +688,15 @@ if notification_result.success:
     print(f"Topology change notification sent successfully at {notification_result.timestamp}")
     print(f"Delivered to: {', '.join(notification_result.delivered_to)}")
     print(f"Topology update status: {notification_result.topology_update_status}")
-    
+
     if notification_result.affected_routing_tables:
         print(f"Affected routing tables: {', '.join(notification_result.affected_routing_tables)}")
-    
+
     if notification_result.acknowledgments:
         print("Received acknowledgments:")
         for ack in notification_result.acknowledgments:
             print(f"- From: {ack['component']} at {ack['timestamp']}")
-            
+
     if notification_result.pending_deliveries:
         print(f"Pending deliveries: {', '.join(notification_result.pending_deliveries)}")
 else:
@@ -708,18 +708,18 @@ else:
 ```
 
 ```python
-def validate_agent_status(agent_id: str, 
+def validate_agent_status(agent_id: str,
                       validation_options: Optional[StatusValidationOptions] = None) -> AgentStatusResult:
     """
     Verify the current status of an agent in the framework.
-    
+
     Args:
         agent_id: str - Identifier of the agent to validate
         validation_options: Optional[StatusValidationOptions] - Options for status validation
-        
+
     Returns:
         AgentStatusResult - Result containing the agent status and related information
-        
+
     Raises:
         AgentNotFoundError - If the agent is not found in the framework
         ValidationError - If there's an error during validation
@@ -802,13 +802,13 @@ if status_result.last_heartbeat_time:
 
 if status_result.status == AgentStatusEnum.ACTIVE:
     print("Agent is active and operational")
-    
+
     # Check detailed status if available
     if status_result.detailed_status:
         print("\nDetailed Status:")
         for key, value in status_result.detailed_status.items():
             print(f"- {key}: {value}")
-    
+
     # Check connectivity if tested
     if status_result.connectivity_check_result:
         if status_result.connectivity_check_result.get("successful", False):
@@ -817,21 +817,21 @@ if status_result.status == AgentStatusEnum.ACTIVE:
         else:
             print("\nConnectivity check failed:")
             print(f"Reason: {status_result.connectivity_check_result.get('failure_reason', 'unknown')}")
-    
+
     # Check capability validation if performed
     if status_result.capability_validation_results:
         print("\nCapability Validation:")
         for capability, valid in status_result.capability_validation_results.items():
             status = "Valid" if valid else "Invalid"
             print(f"- {capability}: {status}")
-    
+
     # Check protocol validation if performed
     if status_result.protocol_validation_results:
         print("\nProtocol Validation:")
         for protocol, valid in status_result.protocol_validation_results.items():
             status = "Valid" if valid else "Invalid"
             print(f"- {protocol}: {status}")
-    
+
     # Check health metrics if available
     if status_result.health_metrics:
         print("\nHealth Metrics:")
@@ -843,7 +843,7 @@ else:
     if status_result.since_time:
         in_current_state = (status_result.validation_time - status_result.since_time).total_seconds()
         print(f"In current state for {in_current_state} seconds")
-    
+
     # Check for errors
     if status_result.errors:
         print("\nErrors:")
@@ -994,12 +994,12 @@ topology:
     refresh_interval_seconds: 300
     caching_enabled: true
     cache_ttl_seconds: 60
-  
+
   registration:
     heartbeat_interval_seconds: 30
     timeout_threshold_seconds: 90
     automatic_deregistration: true
-  
+
   routing:
     path_finding_algorithm: "shortest_path"
     max_path_length: 5
@@ -1039,7 +1039,7 @@ agent_framework:
          def discover_agents(self, criteria: AgentCriteria) → List[AgentInfo]:
              # Discover agents matching criteria
              pass
-         
+
          def get_agent_details(self, agent_id: str) → Optional[AgentInfo]:
              # Get detailed information about a specific agent
              pass

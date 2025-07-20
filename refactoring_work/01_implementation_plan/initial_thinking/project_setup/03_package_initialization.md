@@ -83,7 +83,7 @@ from openmas.agent.core import Agent
 
 __all__ = [
     "Agent",
-    "AgentCapabilities", 
+    "AgentCapabilities",
     "AgentLifecycle",
     "AgentTopology",
 ]
@@ -120,7 +120,7 @@ Define consistent import patterns to ensure clean, maintainable code:
    from typing import Dict, List, Optional
    ```
 
-2. Third-Party Dependencies  
+2. Third-Party Dependencies
    ```python
    import pydantic
    import yaml

@@ -14,16 +14,16 @@ def log_protocol_message(protocol_type: str, direction: MessageDirection, messag
                         logging_options: Optional[ProtocolLoggingOptions] = None) -> LoggingResult:
     """
     Log protocol-specific message data for observability.
-    
+
     Args:
         protocol_type: str - Protocol identifier (e.g., "a2a", "mcp")
         direction: MessageDirection - Direction of message (INCOMING or OUTGOING)
         message_data: ProtocolMessageData - Protocol-specific message data
         logging_options: Optional[ProtocolLoggingOptions] - Options for message logging
-        
+
     Returns:
         LoggingResult - Result of the logging operation
-        
+
     Raises:
         LoggingFailureError - If the logging operation fails
         InvalidMessageDataError - If the message data is invalid
@@ -166,17 +166,17 @@ try:
         message_data=a2a_message_data,
         logging_options=logging_options
     )
-    
+
     # Check the logging result
     if logging_result.success:
         logger.debug(f"Successfully logged A2A message with ID: {logging_result.log_id}")
         logger.debug(f"Log stored at: {logging_result.storage_location}")
         logger.debug(f"Log retention until: {logging_result.retention_until}")
-        
+
         # Check if any fields were sanitized
         if logging_result.sanitized_fields:
             logger.debug(f"Sanitized fields: {', '.join(logging_result.sanitized_fields)}")
-        
+
         # Check forwarding results
         for system, success in logging_result.forward_results.items():
             if success:
@@ -185,11 +185,11 @@ try:
                 logger.warning(f"Failed to forward to {system}")
     else:
         logger.warning("Logging operation was marked as unsuccessful")
-        
+
         # Check for warnings
         for warning in logging_result.warnings:
             logger.warning(f"Logging warning: {warning}")
-    
+
     # Now log an MCP message to demonstrate multi-protocol support
     mcp_message_data = ProtocolMessageData(
         message_id="mcp_msg_d5e6f789",
@@ -222,7 +222,7 @@ try:
             "priority": "high"
         }
     )
-    
+
     # Configure logging options for MCP
     mcp_logging_options = ProtocolLoggingOptions(
         log_level="INFO",
@@ -243,7 +243,7 @@ try:
             "compliance_requirement": "api_usage_audit"
         }
     )
-    
+
     # Log the MCP message
     logging_result = observability_system.log_protocol_message(
         protocol_type="mcp",
@@ -251,12 +251,12 @@ try:
         message_data=mcp_message_data,
         logging_options=mcp_logging_options
     )
-    
+
     logger.debug(f"Successfully logged MCP message with ID: {logging_result.log_id}")
-    
+
 except LoggingFailureError as e:
     logger.error(f"Failed to log protocol message: {str(e)}")
-    
+
     # Try with reduced logging options if full logging fails
     simplified_options = ProtocolLoggingOptions(
         log_level="WARNING",
@@ -265,7 +265,7 @@ except LoggingFailureError as e:
         include_trace_context=True,
         forward_to_external_systems=[]
     )
-    
+
     try:
         # Retry with simplified options
         logging_result = observability_system.log_protocol_message(
@@ -279,10 +279,10 @@ except LoggingFailureError as e:
         logger.critical(f"Critical logging failure, even with simplified options: {str(retry_error)}")
         # Use local fallback logging
         local_logger.critical(f"Protocol message {a2a_message_data.message_id} could not be logged to observability system")
-        
+
 except InvalidMessageDataError as e:
     logger.error(f"Invalid message data: {str(e)}")
-    
+
     # Create a minimal valid message
     minimal_message_data = ProtocolMessageData(
         message_id=a2a_message_data.message_id if hasattr(a2a_message_data, 'message_id') else "unknown",
@@ -298,7 +298,7 @@ except InvalidMessageDataError as e:
             "error_details": str(e)
         }
     )
-    
+
     # Try logging the minimal message
     logging_result = observability_system.log_protocol_message(
         protocol_type="a2a",
@@ -306,27 +306,27 @@ except InvalidMessageDataError as e:
         message_data=minimal_message_data,
         logging_options=ProtocolLoggingOptions(log_level="ERROR")
     )
-    
+
     logger.info(f"Logged minimal message for invalid data, log ID: {logging_result.log_id}")
 ```
 
 ```python
-def record_protocol_metric(protocol_type: str, metric_name: str, value: Union[float, int], 
-                          labels: Optional[Dict[str, str]] = None, 
+def record_protocol_metric(protocol_type: str, metric_name: str, value: Union[float, int],
+                          labels: Optional[Dict[str, str]] = None,
                           metric_options: Optional[MetricRecordingOptions] = None) -> MetricRecordingResult:
     """
     Record a protocol-specific metric for observability.
-    
+
     Args:
         protocol_type: str - Protocol identifier (e.g., "a2a", "mcp")
         metric_name: str - Name of the metric
         value: Union[float, int] - Metric value
         labels: Optional[Dict[str, str]] - Additional metric labels
         metric_options: Optional[MetricRecordingOptions] - Options for metric recording
-        
+
     Returns:
         MetricRecordingResult - Result of the metric recording operation
-        
+
     Raises:
         MetricRecordingError - If the metric recording operation fails
         InvalidMetricError - If the metric definition is invalid
@@ -415,7 +415,7 @@ try:
             "subsystem": "a2a_processor"
         }
     )
-    
+
     # Record the metric
     result = observability_system.record_protocol_metric(
         protocol_type="a2a",
@@ -429,26 +429,26 @@ try:
         },
         metric_options=a2a_metric_options
     )
-    
+
     # Check the recording result
     if result.success:
         logger.debug(f"Successfully recorded A2A metric {result.metric_name} with value {result.value}")
         logger.debug(f"Effective labels: {result.effective_labels}")
-        
+
         if result.sampled:
             logger.debug("Metric was sampled")
-            
+
         if result.aggregated:
             logger.debug("Metric was aggregated with existing values")
     else:
         logger.warning("Metric recording was marked as unsuccessful")
-        
+
         # Check for warnings
         for warning in result.warnings:
             logger.warning(f"Metric recording warning: {warning}")
-    
+
     # Record multiple A2A-related metrics to demonstrate different metric types
-    
+
     # 1. Counter metric for total tool invocations
     tool_invocation_options = MetricRecordingOptions(
         metric_type=MetricType.COUNTER,
@@ -456,7 +456,7 @@ try:
         description="Total number of A2A tool invocations",
         cumulative=True
     )
-    
+
     result = observability_system.record_protocol_metric(
         protocol_type="a2a",
         metric_name="tool_invocation_count",
@@ -468,14 +468,14 @@ try:
         },
         metric_options=tool_invocation_options
     )
-    
+
     # 2. Gauge metric for active A2A conversations
     active_conversations_options = MetricRecordingOptions(
         metric_type=MetricType.GAUGE,
         unit=MetricUnit.COUNT,
         description="Number of active A2A conversations"
     )
-    
+
     result = observability_system.record_protocol_metric(
         protocol_type="a2a",
         metric_name="active_conversations",
@@ -486,9 +486,9 @@ try:
         },
         metric_options=active_conversations_options
     )
-    
+
     # Now record MCP metrics to demonstrate multi-protocol support
-    
+
     # Configure metric options for MCP request processing
     mcp_metric_options = MetricRecordingOptions(
         metric_type=MetricType.HISTOGRAM,
@@ -500,7 +500,7 @@ try:
             "subsystem": "mcp_processor"
         }
     )
-    
+
     # Record MCP processing time metric
     result = observability_system.record_protocol_metric(
         protocol_type="mcp",
@@ -514,9 +514,9 @@ try:
         },
         metric_options=mcp_metric_options
     )
-    
+
     logger.debug(f"Successfully recorded MCP metric {result.metric_name} with value {result.value}")
-    
+
     # Record MCP capability invocation count
     capability_invocation_options = MetricRecordingOptions(
         metric_type=MetricType.COUNTER,
@@ -524,7 +524,7 @@ try:
         description="Total number of MCP capability invocations",
         cumulative=True
     )
-    
+
     result = observability_system.record_protocol_metric(
         protocol_type="mcp",
         metric_name="capability_invocation_count",
@@ -536,14 +536,14 @@ try:
         },
         metric_options=capability_invocation_options
     )
-    
+
     # Record MCP reasoning quality metric (specific to sequential thinking capability)
     reasoning_quality_options = MetricRecordingOptions(
         metric_type=MetricType.GAUGE,
         unit=MetricUnit.PERCENTAGE,
         description="Quality score for sequential thinking reasoning"
     )
-    
+
     result = observability_system.record_protocol_metric(
         protocol_type="mcp",
         metric_name="sequential_thinking_quality",
@@ -555,12 +555,12 @@ try:
         },
         metric_options=reasoning_quality_options
     )
-    
+
     logger.debug(f"Successfully recorded MCP quality metric with value {result.value}%")
-    
+
 except MetricRecordingError as e:
     logger.error(f"Failed to record protocol metric: {str(e)}")
-    
+
     # Try with simplified options
     try:
         simplified_options = MetricRecordingOptions(
@@ -569,7 +569,7 @@ except MetricRecordingError as e:
             create_if_not_exists=True,
             standard_labels=False  # Minimize label cardinality
         )
-        
+
         # Record a simplified metric
         result = observability_system.record_protocol_metric(
             protocol_type="a2a",
@@ -578,16 +578,16 @@ except MetricRecordingError as e:
             labels={"status": "success"},  # Minimal labels
             metric_options=simplified_options
         )
-        
+
         logger.info(f"Recorded simplified metric after failure, ID: {result.metric_id}")
     except Exception as retry_error:
         logger.critical(f"Critical metric recording failure: {str(retry_error)}")
         # Use local metrics store as fallback
         local_metrics.record("a2a.message_processing_time", 123.45)
-        
+
 except InvalidMetricError as e:
     logger.error(f"Invalid metric definition: {str(e)}")
-    
+
     # Try with a standard predefined metric instead
     result = observability_system.record_protocol_metric(
         protocol_type="a2a",
@@ -595,15 +595,15 @@ except InvalidMetricError as e:
         value=123.45,
         labels={"operation": "tool_invocation"}
     )
-    
+
     logger.info(f"Recorded using standard metric after validation error, ID: {result.metric_id}")
-    
+
 except LabelCardinalityError as e:
     logger.error(f"Label cardinality exceeded: {str(e)}")
-    
+
     # Try with reduced labels
     minimal_labels = {"operation": "tool_invocation"}  # Just the essential label
-    
+
     result = observability_system.record_protocol_metric(
         protocol_type="a2a",
         metric_name="message_processing_time",
@@ -611,26 +611,26 @@ except LabelCardinalityError as e:
         labels=minimal_labels,
         metric_options=MetricRecordingOptions(max_label_cardinality=10)  # Reduce cardinality limit
     )
-    
+
     logger.info(f"Recorded with minimal labels after cardinality error, ID: {result.metric_id}")
 ```
 
 ```python
-def start_protocol_span(protocol_type: str, operation_name: str, 
+def start_protocol_span(protocol_type: str, operation_name: str,
                         parent_context: Optional[SpanContext] = None,
                         span_options: Optional[ProtocolSpanOptions] = None) -> ProtocolSpan:
     """
     Start a distributed tracing span for protocol operations.
-    
+
     Args:
         protocol_type: str - Protocol identifier (e.g., "a2a", "mcp")
         operation_name: str - Name of the operation being traced
         parent_context: Optional[SpanContext] - Optional parent span context for trace continuity
         span_options: Optional[ProtocolSpanOptions] - Options for span creation and configuration
-        
+
     Returns:
         ProtocolSpan - Active span object for the protocol operation
-        
+
     Raises:
         SpanCreationError - If the span cannot be created
         TracingSystemUnavailableError - If the tracing system is unavailable
@@ -660,7 +660,7 @@ class SpanContext:
     trace_flags: int  # Flags for this trace (e.g., sampled flag)
     trace_state: Optional[str] = None  # Vendor-specific trace information
     is_remote: bool = False  # Whether this context was created from remote parent
-    
+
     def is_valid(self) -> bool:
         """
         Check if this context is valid.
@@ -719,42 +719,42 @@ class ProtocolSpan:
     links: List[SpanLink] = []  # Links to other spans
     parent_span_id: Optional[str] = None  # ID of the parent span
     kind: SpanKind  # Kind of span
-    
+
     def set_attribute(self, key: str, value: Any) -> None:
         """
         Set an attribute on this span.
         """
         # Implementation details
         pass
-    
+
     def add_event(self, name: str, attributes: Optional[Dict[str, Any]] = None) -> None:
         """
         Add an event to this span.
         """
         # Implementation details
         pass
-    
+
     def record_exception(self, exception: Exception, attributes: Optional[Dict[str, Any]] = None) -> None:
         """
         Record an exception that occurred during the operation.
         """
         # Implementation details
         pass
-    
+
     def set_status(self, status: str, description: Optional[str] = None) -> None:
         """
         Set the status of this span.
         """
         # Implementation details
         pass
-    
+
     def end(self, end_time: Optional[datetime] = None) -> None:
         """
         End this span.
         """
         # Implementation details
         pass
-    
+
     def update_name(self, new_name: str) -> None:
         """
         Update the name of this span.
@@ -813,73 +813,73 @@ try:
         parent_context=extracted_context,
         span_options=a2a_span_options
     )
-    
+
     try:
         # Add an event marking the start of request validation
         span.add_event("validation_started", {
             "validation_type": "tool_invocation",
             "timestamp_ms": int(time.time() * 1000)
         })
-        
+
         # Validate the A2A request
         validation_result = validate_a2a_request(incoming_a2a_request)
-        
+
         # Add an event marking the end of request validation
         span.add_event("validation_completed", {
             "validation_success": validation_result.success,
             "validation_duration_ms": validation_result.duration_ms
         })
-        
+
         # Set validation result attributes
         span.set_attribute("validation.success", validation_result.success)
         span.set_attribute("validation.duration_ms", validation_result.duration_ms)
-        
+
         if not validation_result.success:
             span.set_status("error", f"Validation failed: {validation_result.error_message}")
             raise ValidationError(validation_result.error_message)
-        
+
         # Process the A2A tool invocation
         span.add_event("tool_invocation_started")
-        
+
         # Record tool-specific attributes
         span.set_attribute("tool.name", incoming_a2a_request.get("tool_name"))
         span.set_attribute("tool.version", incoming_a2a_request.get("tool_version", "unknown"))
-        
+
         # Invoke the tool
         tool_result = invoke_tool(
             tool_name=incoming_a2a_request.get("tool_name"),
             parameters=incoming_a2a_request.get("parameters", {}),
             context=incoming_a2a_request.get("context", {})
         )
-        
+
         span.add_event("tool_invocation_completed", {
             "success": tool_result.success,
             "duration_ms": tool_result.duration_ms
         })
-        
+
         # Record result attributes
         span.set_attribute("result.success", tool_result.success)
         span.set_attribute("result.duration_ms", tool_result.duration_ms)
         span.set_attribute("result.size_bytes", tool_result.size_bytes)
-        
+
         if tool_result.success:
             span.set_status("ok")
         else:
             span.set_status("error", f"Tool invocation failed: {tool_result.error_message}")
-        
+
         # Create and format A2A response
         span.add_event("response_creation_started")
-        
+
         a2a_response = create_a2a_response(
             request=incoming_a2a_request,
             tool_result=tool_result
         )
-        
+
         span.add_event("response_creation_completed")
-        
+
         # Return the A2A response
         return a2a_response
-        
+
     except ValidationError as e:
         span.record_exception(e)
         span.set_status("error", str(e))
@@ -895,12 +895,12 @@ try:
     finally:
         # Always end the span
         span.end()
-        
+
 except SpanCreationError as e:
     logger.error(f"Failed to create A2A protocol span: {str(e)}")
     # Continue processing without tracing
     return process_a2a_request_without_tracing(incoming_a2a_request)
-    
+
 except TracingSystemUnavailableError as e:
     logger.error(f"Tracing system unavailable: {str(e)}")
     # Continue processing without tracing
@@ -946,50 +946,50 @@ try:
         parent_context=extracted_context,
         span_options=mcp_span_options
     )
-    
+
     try:
         # Add an event marking the start of capability invocation
         span.add_event("capability_invocation_started", {
             "capability": "sequential_thinking",
             "parameters_count": len(incoming_mcp_request.get("parameters", {}))
         })
-        
+
         # Record capability-specific attributes
         span.set_attribute("capability.name", "sequential_thinking")
         span.set_attribute("capability.version", incoming_mcp_request.get("capability_version", "1.0"))
-        
+
         # Process the sequential thinking capability request
         capability_result = process_sequential_thinking(
             parameters=incoming_mcp_request.get("parameters", {}),
             context=incoming_mcp_request.get("context", {})
         )
-        
+
         span.add_event("capability_invocation_completed", {
             "success": capability_result.success,
             "steps_generated": len(capability_result.thinking_steps),
             "duration_ms": capability_result.duration_ms
         })
-        
+
         # Record result attributes
         span.set_attribute("result.success", capability_result.success)
         span.set_attribute("result.steps_count", len(capability_result.thinking_steps))
         span.set_attribute("result.duration_ms", capability_result.duration_ms)
         span.set_attribute("result.confidence", capability_result.confidence)
-        
+
         if capability_result.success:
             span.set_status("ok")
         else:
             span.set_status("error", f"Capability invocation failed: {capability_result.error_message}")
-        
+
         # Create and format MCP response
         mcp_response = create_mcp_response(
             request=incoming_mcp_request,
             capability_result=capability_result
         )
-        
+
         # Return the MCP response
         return mcp_response
-        
+
     except Exception as e:
         span.record_exception(e)
         span.set_status("error", str(e))
@@ -997,7 +997,7 @@ try:
     finally:
         # Always end the span
         span.end()
-        
+
 except SpanCreationError as e:
     logger.error(f"Failed to create MCP protocol span: {str(e)}")
     # Continue processing without tracing
@@ -1023,15 +1023,15 @@ def extract_trace_context(protocol_type: str, request_data: Dict[str, Any],
                         extraction_options: Optional[TraceContextExtractionOptions] = None) -> Optional[SpanContext]:
     """
     Extract distributed tracing context from a protocol request.
-    
+
     Args:
         protocol_type: str - Protocol identifier (e.g., "a2a", "mcp", "http")
         request_data: Dict[str, Any] - Protocol-specific request data
         extraction_options: Optional[TraceContextExtractionOptions] - Options for context extraction
-        
+
     Returns:
         Optional[SpanContext] - Extracted span context or None if no context could be extracted
-        
+
     Raises:
         ProtocolNotSupportedError - If the specified protocol is not supported
         InvalidRequestDataError - If the request data is invalid or malformed
@@ -1123,38 +1123,38 @@ try:
         request_data=a2a_request,
         extraction_options=a2a_extraction_options
     )
-    
+
     if span_context:
         logger.debug(f"Successfully extracted trace context from A2A request")
         logger.debug(f"Trace ID: {span_context.trace_id}")
         logger.debug(f"Span ID: {span_context.span_id}")
-        
+
         # Use the extracted context for creating a new span
         span = observability_system.start_protocol_span(
             protocol_type="a2a",
             operation_name="process_a2a_tool_invocation",
             parent_context=span_context
         )
-        
+
         # Process A2A request with the new span
         # ...
     else:
         logger.debug("No trace context found in A2A request, created new context")
-        
+
         # Create a new root span
         span = observability_system.start_protocol_span(
             protocol_type="a2a",
             operation_name="process_a2a_tool_invocation"
         )
-        
+
         # Process A2A request with the new span
         # ...
-    
+
 except ProtocolNotSupportedError as e:
     logger.error(f"Protocol not supported for trace context extraction: {str(e)}")
     # Process without tracing
     process_a2a_request_without_tracing(a2a_request)
-    
+
 except InvalidRequestDataError as e:
     logger.error(f"Invalid A2A request data for trace context extraction: {str(e)}")
     # Process with a new trace context
@@ -1164,7 +1164,7 @@ except InvalidRequestDataError as e:
     )
     # Process A2A request with the new span
     # ...
-    
+
 except TraceContextExtractionError as e:
     logger.error(f"Error extracting trace context from A2A request: {str(e)}")
     # Process with a new trace context
@@ -1219,33 +1219,33 @@ try:
         request_data=mcp_request,
         extraction_options=mcp_extraction_options
     )
-    
+
     if span_context:
         logger.debug(f"Successfully extracted trace context from MCP request")
         logger.debug(f"Trace ID: {span_context.trace_id}")
         logger.debug(f"Span ID: {span_context.span_id}")
-        
+
         # Use the extracted context for creating a new span
         span = observability_system.start_protocol_span(
             protocol_type="mcp",
             operation_name="process_mcp_sequential_thinking",
             parent_context=span_context
         )
-        
+
         # Process MCP request with the new span
         # ...
     else:
         logger.debug("No trace context found in MCP request, created new context")
-        
+
         # Create a new root span
         span = observability_system.start_protocol_span(
             protocol_type="mcp",
             operation_name="process_mcp_sequential_thinking"
         )
-        
+
         # Process MCP request with the new span
         # ...
-    
+
 except Exception as e:
     logger.error(f"Error in MCP trace context extraction: {str(e)}")
     # Process without tracing
@@ -1290,25 +1290,25 @@ span_context = protocol_layer.extract_trace_context(
 
 if span_context:
     logger.debug(f"Successfully extracted trace context from HTTP request")
-    
+
     # Use the extracted context
     span = observability_system.start_protocol_span(
         protocol_type="http",
         operation_name="process_http_request",
         parent_context=span_context
     )
-    
+
     # Process HTTP request with the new span
     # ...
 else:
     logger.debug("No trace context found in HTTP request")
-    
+
     # Create a new root span
     span = observability_system.start_protocol_span(
         protocol_type="http",
         operation_name="process_http_request"
     )
-    
+
     # Process HTTP request with the new span
     # ...
 ```
@@ -1318,16 +1318,16 @@ def inject_trace_context(protocol_type: str, span_context: SpanContext, carrier:
                        injection_options: Optional[TraceContextInjectionOptions] = None) -> Dict[str, Any]:
     """
     Inject distributed tracing context into a protocol message.
-    
+
     Args:
         protocol_type: str - Protocol identifier (e.g., "a2a", "mcp", "http")
         span_context: SpanContext - Current span context to inject
         carrier: Dict[str, Any] - Protocol message carrier to inject context into
         injection_options: Optional[TraceContextInjectionOptions] - Options for context injection
-        
+
     Returns:
         Dict[str, Any] - Modified carrier with trace context injected
-        
+
     Raises:
         ProtocolNotSupportedError - If the specified protocol is not supported
         InvalidSpanContextError - If the span context is invalid
@@ -1436,34 +1436,34 @@ try:
         carrier=a2a_response_carrier,
         injection_options=a2a_injection_options
     )
-    
+
     logger.debug(f"Successfully injected trace context into A2A response")
-    
+
     # Verify the trace context was injected correctly
     trace_context = a2a_response_with_context.get("trace_context", {})
     if trace_context:
         logger.debug(f"Injected trace ID: {trace_context.get('trace_id')}")
         logger.debug(f"Injected span ID: {trace_context.get('span_id')}")
-    
+
     # Send the A2A response with trace context
     send_a2a_response(a2a_response_with_context)
-    
+
 except ProtocolNotSupportedError as e:
     logger.error(f"Protocol not supported for trace context injection: {str(e)}")
     # Send response without trace context
     send_a2a_response(a2a_response_carrier)
-    
+
 except InvalidSpanContextError as e:
     logger.error(f"Invalid span context for trace context injection: {str(e)}")
     # Send response without trace context
     send_a2a_response(a2a_response_carrier)
-    
+
 except InvalidCarrierError as e:
     logger.error(f"Invalid carrier for trace context injection: {str(e)}")
     # Create a valid carrier and send response
     valid_carrier = fix_a2a_carrier(a2a_response_carrier)
     send_a2a_response(valid_carrier)
-    
+
 except TraceContextInjectionError as e:
     logger.error(f"Error injecting trace context into A2A response: {str(e)}")
     # Send response without trace context
@@ -1521,17 +1521,17 @@ try:
         carrier=mcp_response_carrier,
         injection_options=mcp_injection_options
     )
-    
+
     logger.debug(f"Successfully injected trace context into MCP response")
-    
+
     # Verify the trace context was injected correctly
     headers = mcp_response_with_context.get("headers", {})
     if "traceparent" in headers:
         logger.debug(f"Injected W3C traceparent: {headers.get('traceparent')}")
-    
+
     # Send the MCP response with trace context
     send_mcp_response(mcp_response_with_context)
-    
+
 except Exception as e:
     logger.error(f"Error injecting trace context into MCP response: {str(e)}")
     # Send response without trace context
@@ -1581,18 +1581,18 @@ send_http_response(http_response_with_context)
 ```
 
 ```python
-def get_observable_protocol_attributes(protocol_type: str, 
+def get_observable_protocol_attributes(protocol_type: str,
                                      attribute_options: Optional[ProtocolAttributeOptions] = None) -> List[ProtocolAttribute]:
     """
     Get observable attributes for a protocol.
-    
+
     Args:
         protocol_type: str - Protocol identifier (e.g., "a2a", "mcp", "http")
         attribute_options: Optional[ProtocolAttributeOptions] - Options for attribute retrieval
-        
+
     Returns:
         List[ProtocolAttribute] - List of observable protocol attributes
-        
+
     Raises:
         ProtocolNotSupportedError - If the specified protocol is not supported
         AttributeRetrievalError - If an error occurs during attribute retrieval
@@ -1696,15 +1696,15 @@ try:
         protocol_type="a2a",
         attribute_options=a2a_attribute_options
     )
-    
+
     logger.info(f"Retrieved {len(a2a_attributes)} observable attributes for A2A protocol")
-    
+
     # Process the attributes
     for attr in a2a_attributes:
         logger.debug(f"Attribute: {attr.name} ({attr.category.value}, {attr.data_type.value})")
         logger.debug(f"  Path: {attr.path}")
         logger.debug(f"  Description: {attr.description}")
-        
+
         # Configure monitoring for this attribute
         if attr.category == AttributeCategory.PERFORMANCE:
             # Set up performance monitoring for this attribute
@@ -1718,7 +1718,7 @@ try:
                 }
             )
             logger.info(f"Configured performance monitoring for {attr.name}")
-        
+
         # Set up tracing for message attributes
         if attr.category == AttributeCategory.MESSAGE and "tracing" in attr.tags:
             observability_system.add_span_attribute_mapping(
@@ -1728,16 +1728,16 @@ try:
                 span_attribute_name=f"a2a.{attr.name}"
             )
             logger.info(f"Added span attribute mapping for {attr.name}")
-    
+
     # Use the attributes to configure dashboards
     dashboard_config = generate_protocol_dashboard_config("a2a", a2a_attributes)
     observability_system.create_protocol_dashboard("a2a", dashboard_config)
-    
+
 except ProtocolNotSupportedError as e:
     logger.error(f"Protocol not supported for attribute retrieval: {str(e)}")
     # Use default attributes
     a2a_attributes = get_default_a2a_attributes()
-    
+
 except AttributeRetrievalError as e:
     logger.error(f"Error retrieving A2A protocol attributes: {str(e)}")
     # Use default attributes
@@ -1762,15 +1762,15 @@ try:
         protocol_type="mcp",
         attribute_options=mcp_attribute_options
     )
-    
+
     logger.info(f"Retrieved {len(mcp_attributes)} observable attributes for MCP protocol")
-    
+
     # Filter for sequential thinking specific attributes
-    sequential_thinking_attributes = [attr for attr in mcp_attributes 
+    sequential_thinking_attributes = [attr for attr in mcp_attributes
                                      if "sequential_thinking" in attr.tags]
-    
+
     logger.info(f"Found {len(sequential_thinking_attributes)} attributes for sequential thinking capability")
-    
+
     # Configure monitoring specifically for sequential thinking
     for attr in sequential_thinking_attributes:
         # Set up capability-specific monitoring
@@ -1784,15 +1784,15 @@ try:
                 "sampling_rate": attr.sampling_rate
             }
         )
-        
+
         # Add example values for documentation
         if attr.example_values:
             logger.debug(f"Example values for {attr.name}: {attr.example_values}")
-    
+
     # Create MCP-specific dashboard
     mcp_dashboard_config = generate_protocol_dashboard_config("mcp", mcp_attributes)
     observability_system.create_protocol_dashboard("mcp", mcp_dashboard_config)
-    
+
 except Exception as e:
     logger.error(f"Error handling MCP protocol attributes: {str(e)}")
     # Use default attributes
@@ -1855,7 +1855,7 @@ class ObservabilityConfigurationUpdatedEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         configuration_type: str  # Type of configuration updated ("logging", "metrics", "tracing")
         protocol_types: List[str]  # Protocol types affected by the update
@@ -1877,68 +1877,68 @@ def handle_observability_config_update(event: ObservabilityConfigurationUpdatedE
     payload = event.payload
     config_type = payload.configuration_type
     protocol_types = payload.protocol_types
-    
+
     logger.info(f"Observability configuration update received for {config_type}")
     logger.info(f"Affected protocols: {', '.join(protocol_types)}")
-    
+
     # Handle different configuration types
     if config_type == "logging":
         # Update protocol message logging configuration
         for protocol_type in protocol_types:
             # Get protocol-specific changes
             protocol_changes = payload.changes.get(protocol_type, {})
-            
+
             if protocol_changes:
                 logger.info(f"Updating logging configuration for {protocol_type} protocol")
-                
+
                 # Update log levels if changed
                 if "log_level" in protocol_changes:
                     old_level = protocol_changes["log_level"].get("old")
                     new_level = protocol_changes["log_level"].get("new")
                     logger.info(f"Changing log level from {old_level} to {new_level} for {protocol_type}")
                     protocol_logger.set_level(protocol_type, new_level)
-                
+
                 # Update sensitive field handling if changed
                 if "sensitive_field_handling" in protocol_changes:
                     old_handling = protocol_changes["sensitive_field_handling"].get("old")
                     new_handling = protocol_changes["sensitive_field_handling"].get("new")
                     logger.info(f"Changing sensitive field handling from {old_handling} to {new_handling}")
                     protocol_logger.update_sensitive_field_handling(protocol_type, new_handling)
-    
+
     elif config_type == "metrics":
         # Update protocol metrics configuration
         for protocol_type in protocol_types:
             protocol_changes = payload.changes.get(protocol_type, {})
-            
+
             if protocol_changes:
                 logger.info(f"Updating metrics configuration for {protocol_type} protocol")
-                
+
                 # Update collection interval if changed
                 if "collection_interval_seconds" in protocol_changes:
                     old_interval = protocol_changes["collection_interval_seconds"].get("old")
                     new_interval = protocol_changes["collection_interval_seconds"].get("new")
                     logger.info(f"Changing metrics collection interval from {old_interval}s to {new_interval}s")
                     metrics_collector.set_collection_interval(protocol_type, new_interval)
-    
+
     elif config_type == "tracing":
         # Update protocol tracing configuration
         for protocol_type in protocol_types:
             protocol_changes = payload.changes.get(protocol_type, {})
-            
+
             if protocol_changes:
                 logger.info(f"Updating tracing configuration for {protocol_type} protocol")
-                
+
                 # Update sampling rate if changed
                 if "sampling_rate" in protocol_changes:
                     old_rate = protocol_changes["sampling_rate"].get("old")
                     new_rate = protocol_changes["sampling_rate"].get("new")
                     logger.info(f"Changing trace sampling rate from {old_rate} to {new_rate}")
                     tracer.set_sampling_rate(protocol_type, new_rate)
-    
+
     # Check if restart is required
     if payload.requires_restart:
         logger.warning(f"Configuration update requires component restart")
-        
+
         # Notify other components about required restart
         event_system.emit("component_restart_required", {
             "component": "protocol_observability",
@@ -1957,7 +1957,7 @@ class TraceSamplingChangedEvent:
     event_id: str  # Unique identifier for this event instance
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
-    
+
     class Payload:
         protocol_type: str  # Protocol type affected by the sampling change
         old_sampling_rate: float  # Previous sampling rate (0.0-1.0)
@@ -1983,38 +1983,38 @@ def handle_trace_sampling_change(event: TraceSamplingChangedEvent):
     protocol_type = payload.protocol_type
     old_rate = payload.old_sampling_rate
     new_rate = payload.new_sampling_rate
-    
+
     logger.info(f"Trace sampling rate changed for {protocol_type} protocol")
     logger.info(f"Old rate: {old_rate}, New rate: {new_rate}")
-    
+
     # Apply the new sampling rate to the protocol tracer
     protocol_tracer = get_protocol_tracer(protocol_type)
     protocol_tracer.set_base_sampling_rate(new_rate)
-    
+
     # Apply pattern-specific sampling rates if any
     if payload.pattern_specific_rates:
         for pattern, rate in payload.pattern_specific_rates.items():
             logger.info(f"Setting pattern-specific sampling rate for {pattern}: {rate}")
             protocol_tracer.set_pattern_sampling_rate(pattern, rate)
-    
+
     # Apply operation-specific sampling rates if any
     if payload.operation_specific_rates:
         for operation, rate in payload.operation_specific_rates.items():
             logger.info(f"Setting operation-specific sampling rate for {operation}: {rate}")
             protocol_tracer.set_operation_sampling_rate(operation, rate)
-    
+
     # Configure sampling strategy
     strategy = payload.sampling_strategy
     strategy_params = payload.strategy_parameters
     logger.info(f"Setting sampling strategy to {strategy} with parameters: {strategy_params}")
     protocol_tracer.set_sampling_strategy(strategy, strategy_params)
-    
+
     # Handle temporary changes
     if payload.temporary and payload.duration_seconds:
         # Schedule a task to revert the sampling rate after the specified duration
         duration_seconds = payload.duration_seconds
         logger.info(f"Temporary sampling change will be reverted after {duration_seconds} seconds")
-        
+
         # Set up a scheduled task to revert the change
         scheduler.schedule_task(
             task_name=f"revert_sampling_rate_{protocol_type}_{event.event_id}",
@@ -2026,14 +2026,14 @@ def handle_trace_sampling_change(event: TraceSamplingChangedEvent):
                 "event_id": event.event_id
             }
         )
-    
+
     # Update metrics to track sampling rate changes
     metrics.gauge(
         name="trace_sampling_rate",
         value=new_rate,
         tags=[f"protocol:{protocol_type}", f"reason:{payload.change_reason}"]
     )
-    
+
     # Log the change for auditing
     audit_logger.info(
         message="Trace sampling rate changed",
@@ -2051,20 +2051,20 @@ def handle_trace_sampling_change(event: TraceSamplingChangedEvent):
 # Helper function to revert sampling rate changes
 def revert_sampling_rate(protocol_type: str, sampling_rate: float, event_id: str):
     logger.info(f"Reverting temporary sampling rate change for {protocol_type} protocol")
-    
+
     # Get the current tracer
     protocol_tracer = get_protocol_tracer(protocol_type)
-    
+
     # Set the sampling rate back to the original value
     protocol_tracer.set_base_sampling_rate(sampling_rate)
-    
+
     # Clear any pattern-specific and operation-specific sampling rates
     protocol_tracer.clear_pattern_sampling_rates()
     protocol_tracer.clear_operation_sampling_rates()
-    
+
     # Reset the sampling strategy to default
     protocol_tracer.set_sampling_strategy("random", {})
-    
+
     # Log the reversion for auditing
     audit_logger.info(
         message="Temporary trace sampling rate reverted",
@@ -2074,14 +2074,14 @@ def revert_sampling_rate(protocol_type: str, sampling_rate: float, event_id: str
             "original_event_id": event_id
         }
     )
-    
+
     # Update metrics to reflect the reversion
     metrics.gauge(
         name="trace_sampling_rate",
         value=sampling_rate,
         tags=[f"protocol:{protocol_type}", "reason:temporary_reversion"]
     )
-    
+
     # Emit an event to notify about the reversion
     event_system.emit("trace_sampling_reverted", {
         "protocol_type": protocol_type,
@@ -2101,7 +2101,7 @@ class ProtocolObservabilityCapabilityDiscoveredEvent:
     event_id: str  # Unique identifier for this event instance
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
-    
+
     class Payload:
         protocol_type: str  # Protocol type with new observability capabilities
         protocol_version: str  # Version of the protocol
@@ -2123,18 +2123,18 @@ def handle_capability_discovery(event: ProtocolObservabilityCapabilityDiscovered
     protocol_version = payload.protocol_version
     capability_type = payload.capability_type
     capabilities = payload.capabilities
-    
+
     logger.info(f"New {capability_type} observability capabilities discovered for {protocol_type} v{protocol_version}")
     logger.info(f"Discovered {len(capabilities)} capabilities")
-    
+
     # Register the capabilities in the observability system
     for capability in capabilities:
         capability_name = capability.get("name")
         capability_description = capability.get("description")
         capability_attributes = capability.get("attributes", [])
-        
+
         logger.info(f"Registering capability: {capability_name} - {capability_description}")
-        
+
         # Register the capability based on its type
         if capability_type == "metrics":
             # Register metrics capabilities
@@ -2144,9 +2144,9 @@ def handle_capability_discovery(event: ProtocolObservabilityCapabilityDiscovered
                 metric_description = attr.get("description")
                 metric_unit = attr.get("unit")
                 metric_labels = attr.get("labels", [])
-                
+
                 logger.info(f"Registering metric: {metric_name} ({metric_type})")
-                
+
                 # Register the metric in the metrics registry
                 metrics_registry.register_metric(
                     protocol_type=protocol_type,
@@ -2157,16 +2157,16 @@ def handle_capability_discovery(event: ProtocolObservabilityCapabilityDiscovered
                     labels=metric_labels,
                     auto_enable=payload.auto_enabled
                 )
-        
+
         elif capability_type == "tracing":
             # Register tracing capabilities
             for attr in capability_attributes:
                 span_name = attr.get("name")
                 span_attributes = attr.get("attributes", [])
                 sampling_priority = attr.get("sampling_priority", "normal")
-                
+
                 logger.info(f"Registering tracing span: {span_name}")
-                
+
                 # Register the span in the tracing registry
                 tracing_registry.register_span(
                     protocol_type=protocol_type,
@@ -2175,16 +2175,16 @@ def handle_capability_discovery(event: ProtocolObservabilityCapabilityDiscovered
                     sampling_priority=sampling_priority,
                     auto_enable=payload.auto_enabled
                 )
-        
+
         elif capability_type == "logging":
             # Register logging capabilities
             for attr in capability_attributes:
                 log_event = attr.get("name")
                 log_level = attr.get("level", "INFO")
                 sensitive_fields = attr.get("sensitive_fields", [])
-                
+
                 logger.info(f"Registering log event: {log_event} (level: {log_level})")
-                
+
                 # Register the log event in the logging registry
                 logging_registry.register_log_event(
                     protocol_type=protocol_type,
@@ -2193,7 +2193,7 @@ def handle_capability_discovery(event: ProtocolObservabilityCapabilityDiscovered
                     sensitive_fields=sensitive_fields,
                     auto_enable=payload.auto_enabled
                 )
-    
+
     # Update the capabilities dashboard
     if payload.auto_enabled:
         observability_system.update_capabilities_dashboard(
@@ -2201,9 +2201,9 @@ def handle_capability_discovery(event: ProtocolObservabilityCapabilityDiscovered
             capability_type=capability_type,
             capabilities=capabilities
         )
-        
+
         logger.info("Updated capabilities dashboard with newly discovered capabilities")
-    
+
     # Notify admins about the discovery if configured to do so
     if observability_config.get("notify_on_capability_discovery", False):
         notification_service.notify_admins(
@@ -2275,7 +2275,7 @@ class ProtocolMessageTelemetryFlow:
     session_id: str  # Session identifier
     protocol_attributes: Dict[str, Any]  # Protocol-specific attributes
     message_size_bytes: int  # Size of the message in bytes
-    
+
     # Protocol-agnostic observability data
     observability_context: Dict[str, Any]  # Context for observability
     logging_level: str  # Level for logging
@@ -2295,7 +2295,7 @@ def process_a2a_message_for_observability(a2a_message, direction):
     content_type = a2a_message.get("contentType", "unknown")
     turn_id = a2a_message.get("turnId", "unknown")
     task_id = a2a_message.get("taskId", "unknown")
-    
+
     # Transform into protocol-agnostic telemetry
     telemetry = ProtocolMessageTelemetryFlow(
         protocol_message=a2a_message,
@@ -2325,7 +2325,7 @@ def process_a2a_message_for_observability(a2a_message, direction):
         trace_context=extract_trace_context("a2a", a2a_message),
         sensitive_data_handling="mask"
     )
-    
+
     # Send to observability system
     observability_system.log_protocol_message(
         protocol_type=telemetry.protocol_type,
@@ -2339,7 +2339,7 @@ def process_a2a_message_for_observability(a2a_message, direction):
             sensitive_data_handling=telemetry.sensitive_data_handling
         )
     )
-    
+
     # Record metrics
     observability_system.record_protocol_metric(
         protocol_type=telemetry.protocol_type,
@@ -2347,7 +2347,7 @@ def process_a2a_message_for_observability(a2a_message, direction):
         value=telemetry.message_size_bytes,
         labels=telemetry.metric_labels
     )
-    
+
     # Start span if not already in a trace
     if not telemetry.trace_context:
         span = observability_system.start_protocol_span(
@@ -2368,7 +2368,7 @@ def process_a2a_message_for_observability(a2a_message, direction):
             operation_name=f"{direction.value.lower()}_message",
             parent_context=telemetry.trace_context
         )
-    
+
     return span
 
 # Example for MCP protocol
@@ -2378,11 +2378,11 @@ def process_mcp_message_for_observability(mcp_message, direction):
     request_id = mcp_message.get("requestId", "unknown")
     capability = mcp_message.get("capability", "unknown")
     timestamp = mcp_message.get("timestamp", datetime.now())
-    
+
     # Check if this is a tool call/result
     is_tool_call = "toolCall" in mcp_message
     is_tool_result = "toolResult" in mcp_message
-    
+
     # Transform into protocol-agnostic telemetry
     telemetry = ProtocolMessageTelemetryFlow(
         protocol_message=mcp_message,
@@ -2413,7 +2413,7 @@ def process_mcp_message_for_observability(mcp_message, direction):
         trace_context=extract_trace_context("mcp", mcp_message),
         sensitive_data_handling="mask"
     )
-    
+
     # Send to observability system
     observability_system.log_protocol_message(
         protocol_type=telemetry.protocol_type,
@@ -2427,7 +2427,7 @@ def process_mcp_message_for_observability(mcp_message, direction):
             sensitive_data_handling=telemetry.sensitive_data_handling
         )
     )
-    
+
     # Record metrics
     observability_system.record_protocol_metric(
         protocol_type=telemetry.protocol_type,
@@ -2435,7 +2435,7 @@ def process_mcp_message_for_observability(mcp_message, direction):
         value=telemetry.message_size_bytes,
         labels=telemetry.metric_labels
     )
-    
+
     # For tool calls, record specific metrics
     if is_tool_call:
         observability_system.record_protocol_metric(
@@ -2444,7 +2444,7 @@ def process_mcp_message_for_observability(mcp_message, direction):
             value=1,
             labels={**telemetry.metric_labels, "tool_name": telemetry.protocol_attributes["tool_name"]}
         )
-    
+
     # Start span if not already in a trace
     if not telemetry.trace_context:
         span = observability_system.start_protocol_span(
@@ -2466,7 +2466,7 @@ def process_mcp_message_for_observability(mcp_message, direction):
             operation_name=f"{direction.value.lower()}_message",
             parent_context=telemetry.trace_context
         )
-    
+
     return span
 ```
 
@@ -2480,27 +2480,27 @@ def collect_protocol_performance_metrics(protocol_type: str):
     """
     # Get the protocol adapter
     adapter = protocol_registry.get_adapter(protocol_type)
-    
+
     # Collect protocol-specific metrics
     metrics_data = adapter.collect_performance_metrics()
-    
+
     # Record each metric in the observability system
     for metric_name, metric_value in metrics_data.items():
         labels = {
             "protocol": protocol_type,
             "component": "protocol_adapter"
         }
-        
+
         observability_system.record_protocol_metric(
             protocol_type=protocol_type,
             metric_name=metric_name,
             value=metric_value,
             labels=labels
         )
-        
+
     # Log collection completion
     logger.debug(f"Collected {len(metrics_data)} performance metrics for {protocol_type} protocol")
-    
+
     return len(metrics_data)
 ```
 
@@ -2515,21 +2515,21 @@ def apply_protocol_observability_configuration(protocol_type: str, config: Dict[
     """
     # Get the current configuration
     current_config = observability_system.get_protocol_observability_config(protocol_type)
-    
+
     # Track changes for event emission
     changes = {}
-    
+
     # Apply configuration updates
     for key, new_value in config.items():
         old_value = current_config.get(key)
         if old_value != new_value:
             changes[key] = {"old": old_value, "new": new_value}
             current_config[key] = new_value
-    
+
     # If there are changes, save the updated configuration
     if changes:
         observability_system.set_protocol_observability_config(protocol_type, current_config)
-        
+
         # Emit configuration updated event
         event_system.emit(
             event_name="observability_configuration_updated",
@@ -2543,9 +2543,9 @@ def apply_protocol_observability_configuration(protocol_type: str, config: Dict[
                 requires_restart=any(key in ["restart_required_setting1", "restart_required_setting2"] for key in changes)
             )
         )
-        
+
         logger.info(f"Applied {len(changes)} configuration updates to {protocol_type} protocol observability")
-        
+
         # Return the applied changes
         return changes
     else:
@@ -2564,7 +2564,7 @@ def adjust_protocol_sampling_rates(traffic_metrics: Dict[str, Dict[str, float]])
         current_rate = observability_system.get_protocol_sampling_rate(protocol_type)
         message_rate = metrics.get("messages_per_second", 0)
         error_rate = metrics.get("error_rate", 0)
-        
+
         # Calculate new sampling rate based on traffic and error rates
         new_rate = calculate_optimal_sampling_rate(
             protocol_type=protocol_type,
@@ -2572,14 +2572,14 @@ def adjust_protocol_sampling_rates(traffic_metrics: Dict[str, Dict[str, float]])
             error_rate=error_rate,
             current_rate=current_rate
         )
-        
+
         # Only update if the rate change is significant
         if abs(new_rate - current_rate) > 0.05:  # 5% threshold for change
             logger.info(f"Adjusting sampling rate for {protocol_type} from {current_rate} to {new_rate}")
-            
+
             # Apply the new sampling rate
             observability_system.set_protocol_sampling_rate(protocol_type, new_rate)
-            
+
             # Emit trace sampling changed event
             event_system.emit(
                 event_name="trace_sampling_changed",
@@ -2619,11 +2619,11 @@ def handle_incoming_message(protocol_type: str, message: Dict[str, Any]):
             protocol_type=protocol_type,
             operation_name="incoming_message"
         )
-    
+
     try:
         # Step 2: Protocol-agnostic message conversion (bridge layer)
         internal_message = protocol_adapter.to_internal_format(protocol_type, message)
-        
+
         # Step 3: Reasoning engine observability (handles the "brain")
         # This is deliberately separate from protocol observability to maintain reasoning agnosticism
         reasoning_span = observability_system.start_reasoning_span(
@@ -2631,11 +2631,11 @@ def handle_incoming_message(protocol_type: str, message: Dict[str, Any]):
             operation_name="process_message",
             parent_context=protocol_span.context if protocol_span else None
         )
-        
+
         try:
             # Process the message with the appropriate reasoning engine
             response_data = reasoning_engine.process_message(internal_message)
-            
+
             # Record reasoning-specific metrics
             observability_system.record_reasoning_metric(
                 reasoning_type=agent_config.reasoning_engine_type,
@@ -2646,22 +2646,22 @@ def handle_incoming_message(protocol_type: str, message: Dict[str, Any]):
                     "message_type": internal_message.type
                 }
             )
-            
+
             # Step 4: Convert response back to protocol-specific format
             protocol_response = protocol_adapter.from_internal_format(protocol_type, response_data)
-            
+
             # Step 5: Protocol-specific observability for the response
             if protocol_type == "a2a":
                 process_a2a_message_for_observability(protocol_response, MessageDirection.OUTGOING)
             elif protocol_type == "mcp":
                 process_mcp_message_for_observability(protocol_response, MessageDirection.OUTGOING)
-            
+
             return protocol_response
-            
+
         finally:
             # End the reasoning span
             reasoning_span.end()
-    
+
     finally:
         # End the protocol span
         if protocol_span:
@@ -2699,7 +2699,7 @@ observability:
         - "password"
         - "api_key"
         - "token"
-    
+
     metrics:
       enabled: true
       collection_interval_seconds: 15
@@ -2708,19 +2708,19 @@ observability:
           type: "counter"
           description: "Number of protocol messages processed"
           labels: ["protocol", "direction", "status"]
-        
+
         - name: "protocol_message_size"
           type: "histogram"
           description: "Size of protocol messages in bytes"
           labels: ["protocol", "direction"]
           buckets: [100, 1000, 10000, 100000, 1000000]
-        
+
         - name: "protocol_processing_time"
           type: "histogram"
           description: "Time to process protocol messages"
           labels: ["protocol", "message_type"]
           buckets: [1, 10, 50, 100, 500, 1000, 5000]
-    
+
     tracing:
       enabled: true
       sampling_rate: 0.1  # 10% of transactions
@@ -2751,7 +2751,7 @@ protocol_layer:
             - name: "a2a_tool_invocation_count"
               type: "counter"
               labels: ["tool_name", "status"]
-      
+
       mcp:
         message_logging:
           enabled: true
@@ -2792,11 +2792,11 @@ protocol_layer:
          def initialize(self, config: Dict[str, Any]) → bool:
              # Initialize monitor with configuration
              pass
-         
+
          def monitor_message(self, direction: MessageDirection, message: Any) → None:
              # Monitor protocol-specific message
              pass
-             
+
          def collect_metrics(self) → List[Metric]:
              # Collect protocol-specific metrics
              pass
@@ -2845,7 +2845,7 @@ metrics:
   - name: "a2a_tool_invocation_count"
     type: "counter"
     labels: ["tool_name", "status"]
-  
+
   - name: "a2a_agent_card_validation_time"
     type: "histogram"
     labels: ["validation_result"]
@@ -2866,7 +2866,7 @@ metrics:
   - name: "mcp_capability_invocation_count"
     type: "counter"
     labels: ["capability_name", "status"]
-  
+
   - name: "mcp_sequential_thinking_quality"
     type: "gauge"
     labels: ["agent_id"]
@@ -2899,7 +2899,7 @@ class CrossProtocolObservabilityManager:
         self.protocol_adapters = {}
         self.initialize_protocol_adapters()
         self.logger = logging.getLogger("cross_protocol_observability")
-        
+
     def initialize_protocol_adapters(self):
         """
         Initialize protocol-specific adapters for observability.
@@ -2909,7 +2909,7 @@ class CrossProtocolObservabilityManager:
                 adapter_class = self._get_adapter_class_for_protocol(protocol_type)
                 self.protocol_adapters[protocol_type] = adapter_class(protocol_config)
                 self.logger.info(f"Initialized observability adapter for {protocol_type} protocol")
-    
+
     def _get_adapter_class_for_protocol(self, protocol_type: str) -> Type:
         """
         Get the appropriate adapter class for the protocol type.
@@ -2920,11 +2920,11 @@ class CrossProtocolObservabilityManager:
             "http": HTTPObservabilityAdapter,
             # Additional protocols can be added here
         }
-        
+
         # Return specific adapter if available, otherwise use generic
         return protocol_adapter_map.get(protocol_type, GenericProtocolObservabilityAdapter)
-    
-    def observe_message(self, protocol_type: str, message: Dict[str, Any], 
+
+    def observe_message(self, protocol_type: str, message: Dict[str, Any],
                        direction: MessageDirection, context: Optional[Dict[str, Any]] = None):
         """
         Observe a protocol message in a protocol-agnostic way.
@@ -2932,21 +2932,21 @@ class CrossProtocolObservabilityManager:
         # Check if we have an adapter for this protocol
         if protocol_type in self.protocol_adapters:
             adapter = self.protocol_adapters[protocol_type]
-            
+
             # Protocol-specific observation through the adapter
             observability_data = adapter.process_message(message, direction, context)
-            
+
             # Log the message using the adapter's protocol-specific logic
             logging_result = adapter.log_message(observability_data)
-            
+
             # Record protocol-specific metrics
             metrics_result = adapter.record_metrics(observability_data)
-            
+
             # Handle tracing
             span = None
             if observability_data.should_trace:
                 span = adapter.start_span(observability_data)
-            
+
             return {
                 "logging_result": logging_result,
                 "metrics_result": metrics_result,
@@ -2956,23 +2956,23 @@ class CrossProtocolObservabilityManager:
         else:
             self.logger.warning(f"No observability adapter for protocol {protocol_type}")
             return None
-    
-    def end_observation(self, protocol_type: str, observation_result: Dict[str, Any], 
+
+    def end_observation(self, protocol_type: str, observation_result: Dict[str, Any],
                        outcome: Dict[str, Any]):
         """
         End observation for a protocol operation.
         """
         if not observation_result:
             return
-            
+
         adapter = self.protocol_adapters.get(protocol_type)
         if not adapter:
             return
-            
+
         # End span if one was started
         if "span" in observation_result and observation_result["span"]:
             adapter.end_span(observation_result["span"], outcome)
-            
+
         # Record outcome metrics
         if "observability_data" in observation_result:
             adapter.record_outcome_metrics(observation_result["observability_data"], outcome)
@@ -2986,8 +2986,8 @@ class A2AObservabilityAdapter:
         self.config = config
         self.logger = logging.getLogger("a2a_observability_adapter")
         self.sensitive_fields = config.get("sensitive_fields", ["credentials", "password", "token"])
-        
-    def process_message(self, message: Dict[str, Any], direction: MessageDirection, 
+
+    def process_message(self, message: Dict[str, Any], direction: MessageDirection,
                         context: Optional[Dict[str, Any]] = None) -> ProtocolObservabilityData:
         """
         Process an A2A message for observability.
@@ -2998,7 +2998,7 @@ class A2AObservabilityAdapter:
         turn_id = message.get("turnId", "unknown")
         task_id = message.get("taskId", "unknown")
         content_type = message.get("contentType", "unknown")
-        
+
         # Create standardized observability data
         observability_data = ProtocolObservabilityData(
             protocol_type="a2a",
@@ -3020,9 +3020,9 @@ class A2AObservabilityAdapter:
             context=context or {},
             should_trace=self._should_trace(message, context)
         )
-        
+
         return observability_data
-    
+
     def _determine_message_type(self, message: Dict[str, Any]) -> str:
         """
         Determine the A2A message type.
@@ -3037,52 +3037,52 @@ class A2AObservabilityAdapter:
             return "function_response"
         else:
             return "other"
-    
+
     def _has_tool_calls(self, message: Dict[str, Any]) -> bool:
         """
         Check if the A2A message contains tool calls.
         """
         return "functionCall" in message or "functionResponse" in message
-    
+
     def _should_trace(self, message: Dict[str, Any], context: Optional[Dict[str, Any]]) -> bool:
         """
         Determine if this message should be traced.
         """
         # Implement trace sampling logic based on message content and sampling rate
         base_sampling_rate = self.config.get("tracing", {}).get("sampling_rate", 0.1)
-        
+
         # Always trace session start/end
         if message.get("type") in ["START_SESSION", "END_SESSION"]:
             return True
-            
+
         # Always trace errors
         if "error" in message:
             return True
-            
+
         # Apply sampling rate
         return random.random() < base_sampling_rate
-    
+
     def sanitize_message(self, message: Dict[str, Any]) -> Dict[str, Any]:
         """
         Sanitize sensitive data in the message.
         """
         sanitized = copy.deepcopy(message)
-        
+
         # Apply jsonpath-based sanitization for known sensitive fields
         for sensitive_path in self.sensitive_fields:
             jsonpath_expr = parse(sensitive_path)
             for match in jsonpath_expr.find(sanitized):
                 match.value = "[REDACTED]"
-        
+
         return sanitized
-    
+
     def log_message(self, observability_data: ProtocolObservabilityData) -> LoggingResult:
         """
         Log an A2A message.
         """
         # Sanitize the message
         sanitized_message = self.sanitize_message(observability_data.message)
-        
+
         # Create logging options
         logging_options = ProtocolLoggingOptions(
             level="INFO" if observability_data.metadata.get("is_error") else "DEBUG",
@@ -3090,7 +3090,7 @@ class A2AObservabilityAdapter:
             include_context=True,
             message_format="json"
         )
-        
+
         # Log the message using the observability system
         return observability_system.log_protocol_message(
             protocol_type=observability_data.protocol_type,
@@ -3106,13 +3106,13 @@ class A2AObservabilityAdapter:
             ),
             logging_options=logging_options
         )
-    
+
     def record_metrics(self, observability_data: ProtocolObservabilityData) -> List[MetricRecordingResult]:
         """
         Record metrics for an A2A message.
         """
         results = []
-        
+
         # Common labels for all metrics
         common_labels = {
             "protocol": "a2a",
@@ -3120,7 +3120,7 @@ class A2AObservabilityAdapter:
             "message_type": observability_data.message_type,
             "agent_id": observability_data.protocol_specific_ids.get("agent_id", "unknown")
         }
-        
+
         # Record message count
         results.append(observability_system.record_protocol_metric(
             protocol_type="a2a",
@@ -3128,7 +3128,7 @@ class A2AObservabilityAdapter:
             value=1,
             labels=common_labels
         ))
-        
+
         # Record message size
         results.append(observability_system.record_protocol_metric(
             protocol_type="a2a",
@@ -3136,7 +3136,7 @@ class A2AObservabilityAdapter:
             value=observability_data.message_size_bytes,
             labels=common_labels
         ))
-        
+
         # Record tool-specific metrics if applicable
         if observability_data.metadata.get("has_tool_calls"):
             results.append(observability_system.record_protocol_metric(
@@ -3148,9 +3148,9 @@ class A2AObservabilityAdapter:
                     "tool_name": self._extract_tool_name(observability_data.message)
                 }
             ))
-        
+
         return results
-    
+
     def _extract_tool_name(self, message: Dict[str, Any]) -> str:
         """
         Extract tool name from A2A message.
@@ -3158,7 +3158,7 @@ class A2AObservabilityAdapter:
         if "functionCall" in message:
             return message["functionCall"].get("name", "unknown")
         return "unknown"
-    
+
     def start_span(self, observability_data: ProtocolObservabilityData) -> ProtocolSpan:
         """
         Start a tracing span for an A2A message.
@@ -3170,7 +3170,7 @@ class A2AObservabilityAdapter:
                 protocol_type="a2a",
                 request_data=observability_data.message
             )
-        
+
         # Define span options
         span_options = ProtocolSpanOptions(
             kind=SpanKind.SERVER if observability_data.direction == MessageDirection.INCOMING else SpanKind.CLIENT,
@@ -3187,7 +3187,7 @@ class A2AObservabilityAdapter:
             events=[],
             start_timestamp=observability_data.timestamp
         )
-        
+
         # Start the span
         return observability_system.start_protocol_span(
             protocol_type="a2a",
@@ -3195,7 +3195,7 @@ class A2AObservabilityAdapter:
             parent_context=parent_context,
             span_options=span_options
         )
-    
+
     def end_span(self, span: ProtocolSpan, outcome: Dict[str, Any]):
         """
         End a tracing span for an A2A message.
@@ -3203,12 +3203,12 @@ class A2AObservabilityAdapter:
         # Add outcome attributes to the span
         span.set_attribute("outcome.success", outcome.get("success", True))
         span.set_attribute("outcome.status_code", outcome.get("status_code", 200))
-        
+
         if "error" in outcome:
             span.set_attribute("error", True)
             span.set_attribute("error.message", outcome["error"].get("message", "Unknown error"))
             span.set_attribute("error.type", outcome["error"].get("type", "Unknown"))
-        
+
         # Add events based on outcome
         if outcome.get("events"):
             for event in outcome["events"]:
@@ -3216,11 +3216,11 @@ class A2AObservabilityAdapter:
                     name=event["name"],
                     attributes=event.get("attributes", {})
                 )
-        
+
         # End the span
         span.end()
-    
-    def record_outcome_metrics(self, observability_data: ProtocolObservabilityData, 
+
+    def record_outcome_metrics(self, observability_data: ProtocolObservabilityData,
                               outcome: Dict[str, Any]):
         """
         Record metrics for the message processing outcome.
@@ -3232,7 +3232,7 @@ class A2AObservabilityAdapter:
             "agent_id": observability_data.protocol_specific_ids.get("agent_id", "unknown"),
             "success": str(outcome.get("success", True)).lower()
         }
-        
+
         # Record processing time if available
         if "processing_time_ms" in outcome:
             observability_system.record_protocol_metric(
@@ -3241,7 +3241,7 @@ class A2AObservabilityAdapter:
                 value=outcome["processing_time_ms"],
                 labels=common_labels
             )
-        
+
         # Record error count if applicable
         if not outcome.get("success", True):
             observability_system.record_protocol_metric(
@@ -3291,18 +3291,18 @@ class ObservabilityCoordinator:
         self.protocol_observability = CrossProtocolObservabilityManager(config.get("protocol_observability", {}))
         self.reasoning_observability = ReasoningObservabilityManager(config.get("reasoning_observability", {}))
         self.logger = logging.getLogger("observability_coordinator")
-    
-    def handle_incoming_message(self, protocol_type: str, message: Dict[str, Any], 
+
+    def handle_incoming_message(self, protocol_type: str, message: Dict[str, Any],
                                reasoning_type: str) -> Dict[str, Any]:
         """
         Handle observability for an incoming message across protocol and reasoning layers.
         This maintains separation of concerns while enabling end-to-end observability.
-        
+
         Args:
             protocol_type: Type of protocol (e.g., "a2a", "mcp")
             message: Protocol-specific message
             reasoning_type: Type of reasoning engine (e.g., "llm", "rule_based", "bdi")
-            
+
         Returns:
             Dictionary with observability results
         """
@@ -3312,16 +3312,16 @@ class ObservabilityCoordinator:
             message=message,
             direction=MessageDirection.INCOMING
         )
-        
+
         # Protocol-specific span for tracing
         protocol_span = protocol_observation.get("span") if protocol_observation else None
-        
+
         try:
             # Step 2: Protocol-agnostic message conversion
             # This is a key step in the reasoning-agnostic architecture
             protocol_adapter = protocol_registry.get_adapter(protocol_type)
             internal_message = protocol_adapter.to_internal_format(protocol_type, message)
-            
+
             # Step 3: Reasoning engine observability (handles the "brain")
             # This is deliberately separate from protocol observability
             reasoning_context = {
@@ -3329,28 +3329,28 @@ class ObservabilityCoordinator:
                 "message_id": internal_message.id,
                 "parent_span": protocol_span.context if protocol_span else None
             }
-            
+
             reasoning_observation = self.reasoning_observability.observe_reasoning_start(
                 reasoning_type=reasoning_type,
                 message=internal_message,
                 context=reasoning_context
             )
-            
+
             # Reasoning-specific span for tracing
             reasoning_span = reasoning_observation.get("span") if reasoning_observation else None
-            
+
             try:
                 # Step 4: Process with appropriate reasoning engine
                 # Note: This is where different reasoning approaches can be used
                 reasoning_engine = reasoning_registry.get_engine(reasoning_type)
                 start_time = time.time()
-                
+
                 # Process message with reasoning engine
                 # The reasoning engine could be LLM-based, rule-based, BDI, hybrid, etc.
                 response_data = reasoning_engine.process_message(internal_message)
-                
+
                 processing_time_ms = (time.time() - start_time) * 1000
-                
+
                 # Step 5: Reasoning engine observability for outcome
                 reasoning_outcome = {
                     "success": True,
@@ -3358,17 +3358,17 @@ class ObservabilityCoordinator:
                     "response_type": response_data.type,
                     "events": response_data.events
                 }
-                
+
                 if reasoning_observation:
                     self.reasoning_observability.observe_reasoning_end(
                         reasoning_type=reasoning_type,
                         observation_result=reasoning_observation,
                         outcome=reasoning_outcome
                     )
-                
+
                 # Step 6: Convert back to protocol-specific format
                 protocol_response = protocol_adapter.from_internal_format(protocol_type, response_data)
-                
+
                 # Step 7: Protocol layer observability for response
                 protocol_response_observation = self.protocol_observability.observe_message(
                     protocol_type=protocol_type,
@@ -3376,21 +3376,21 @@ class ObservabilityCoordinator:
                     direction=MessageDirection.OUTGOING,
                     context={"related_span": protocol_span.context if protocol_span else None}
                 )
-                
+
                 # Step 8: End protocol observation
                 protocol_outcome = {
                     "success": True,
                     "processing_time_ms": processing_time_ms,
                     "response_size_bytes": len(json.dumps(protocol_response))
                 }
-                
+
                 if protocol_observation:
                     self.protocol_observability.end_observation(
                         protocol_type=protocol_type,
                         observation_result=protocol_observation,
                         outcome=protocol_outcome
                     )
-                
+
                 return {
                     "protocol_response": protocol_response,
                     "protocol_observation": protocol_observation,
@@ -3398,7 +3398,7 @@ class ObservabilityCoordinator:
                     "reasoning_observation": reasoning_observation,
                     "processing_time_ms": processing_time_ms
                 }
-                
+
             except Exception as e:
                 # Handle reasoning errors
                 error_info = {
@@ -3406,7 +3406,7 @@ class ObservabilityCoordinator:
                     "message": str(e),
                     "traceback": traceback.format_exc()
                 }
-                
+
                 # End reasoning observation with error
                 if reasoning_observation:
                     self.reasoning_observability.observe_reasoning_end(
@@ -3417,7 +3417,7 @@ class ObservabilityCoordinator:
                             "error": error_info
                         }
                     )
-                
+
                 # End protocol observation with error
                 if protocol_observation:
                     self.protocol_observability.end_observation(
@@ -3428,14 +3428,14 @@ class ObservabilityCoordinator:
                             "error": error_info
                         }
                     )
-                
+
                 # Re-raise the exception
                 raise
-                
+
         except Exception as e:
             # Handle protocol errors
             self.logger.error(f"Error handling {protocol_type} message: {str(e)}")
-            
+
             # End protocol observation with error if not already ended
             if protocol_observation:
                 self.protocol_observability.end_observation(
@@ -3449,7 +3449,7 @@ class ObservabilityCoordinator:
                         }
                     }
                 )
-            
+
             # Re-raise the exception
             raise
 
@@ -3463,7 +3463,7 @@ class ReasoningObservabilityManager:
         self.reasoning_adapters = {}
         self.initialize_reasoning_adapters()
         self.logger = logging.getLogger("reasoning_observability")
-    
+
     def initialize_reasoning_adapters(self):
         """
         Initialize reasoning-specific adapters for observability.
@@ -3474,7 +3474,7 @@ class ReasoningObservabilityManager:
                 adapter_class = self._get_adapter_class_for_reasoning(reasoning_type)
                 self.reasoning_adapters[reasoning_type] = adapter_class(reasoning_config)
                 self.logger.info(f"Initialized observability adapter for {reasoning_type} reasoning")
-    
+
     def _get_adapter_class_for_reasoning(self, reasoning_type: str) -> Type:
         """
         Get the appropriate adapter class for the reasoning type.
@@ -3487,11 +3487,11 @@ class ReasoningObservabilityManager:
             "hybrid": HybridReasoningObservabilityAdapter,
             "kr_and_r": KRAndRReasoningObservabilityAdapter
         }
-        
+
         # Return specific adapter if available, otherwise use generic
         return reasoning_adapter_map.get(reasoning_type, GenericReasoningObservabilityAdapter)
-    
-    def observe_reasoning_start(self, reasoning_type: str, message: InternalMessage, 
+
+    def observe_reasoning_start(self, reasoning_type: str, message: InternalMessage,
                                context: Dict[str, Any]):
         """
         Start observability for a reasoning operation.
@@ -3501,11 +3501,11 @@ class ReasoningObservabilityManager:
         if not adapter:
             self.logger.warning(f"No observability adapter for reasoning type {reasoning_type}")
             return None
-        
+
         # Process the message with the adapter
         return adapter.observe_reasoning_start(message, context)
-    
-    def observe_reasoning_end(self, reasoning_type: str, observation_result: Dict[str, Any], 
+
+    def observe_reasoning_end(self, reasoning_type: str, observation_result: Dict[str, Any],
                              outcome: Dict[str, Any]):
         """
         End observability for a reasoning operation.
@@ -3513,7 +3513,7 @@ class ReasoningObservabilityManager:
         adapter = self.reasoning_adapters.get(reasoning_type)
         if not adapter:
             return
-            
+
         adapter.observe_reasoning_end(observation_result, outcome)
 
 # Example usage across different protocols and reasoning engines
@@ -3523,17 +3523,17 @@ def process_agent_request(request_data: Dict[str, Any]):
     """
     # Determine protocol type from request
     protocol_type = detect_protocol_type(request_data)
-    
+
     # Get agent configuration
     agent_config = get_agent_config_for_request(request_data)
-    
+
     # Get reasoning type from agent configuration
     # This demonstrates OpenMAS's reasoning agnosticism - different agents can use different reasoning
     reasoning_type = agent_config.get("reasoning_type", "llm")
-    
+
     # Create observability coordinator
     coordinator = ObservabilityCoordinator(get_observability_config())
-    
+
     # Process the request with full observability
     try:
         result = coordinator.handle_incoming_message(
@@ -3541,12 +3541,12 @@ def process_agent_request(request_data: Dict[str, Any]):
             message=request_data,
             reasoning_type=reasoning_type
         )
-        
+
         return result["protocol_response"]
-        
+
     except Exception as e:
         logger.error(f"Error processing agent request: {str(e)}")
-        
+
         # Create appropriate error response based on protocol type
         if protocol_type == "a2a":
             return create_a2a_error_response(request_data, str(e))
@@ -3556,7 +3556,7 @@ def process_agent_request(request_data: Dict[str, Any]):
             return {"error": str(e)}
 ```
 
-These examples demonstrate how OpenMAS implements protocol layer observability while maintaining both multi-protocol support and reasoning agnosticism - two key architectural principles of the framework.    
+These examples demonstrate how OpenMAS implements protocol layer observability while maintaining both multi-protocol support and reasoning agnosticism - two key architectural principles of the framework.
     for field in sensitive_fields:
         if field_exists(sanitized_message, field):
             if config.get("observability.protocol_monitoring.message_logging.sensitive_field_handling") == "mask":
@@ -3567,11 +3567,11 @@ These examples demonstrate how OpenMAS implements protocol layer observability w
                 value = get_field_value(sanitized_message, field)
                 hashed_value = hash_value(value)
                 set_field_value(sanitized_message, field, hashed_value)
-    
+
     # Ensure message doesn't exceed size limit
     content_size_limit = config.get("observability.protocol_monitoring.message_logging.content_logging.max_size_bytes", 1024)
     sanitized_content = truncate_if_needed(sanitized_message, content_size_limit)
-    
+
     # Log the message
     observability_system.log_protocol_message(
         protocol_type="a2a",

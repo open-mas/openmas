@@ -211,16 +211,16 @@ Components define their own metrics:
 class AgentManager:
     def __init__(self):
         self.metrics = metrics.get_recorder("agent_manager")
-        
+
     def create_agent(self, agent_type):
         with self.metrics.timer("agent_creation_duration", agent_type=agent_type):
             # Create the agent
             agent = self._create_agent_internal(agent_type)
-            
+
             # Track agent creation
             self.metrics.increment("agents_created_total", 1, agent_type=agent_type)
             self.metrics.gauge("agents_active", self._get_active_agent_count())
-            
+
             return agent
 ```
 

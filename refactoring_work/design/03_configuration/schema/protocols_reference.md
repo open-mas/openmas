@@ -14,18 +14,18 @@ All protocol configuration follows this basic structure in the unified schema:
 communicator:
   # Protocol selection
   protocol: "a2a" | "mcp" | "http" | "mqtt" | "grpc"
-  
+
   # Transport configuration
   transport:
     # Transport-specific settings
-    
+
   # Protocol-specific settings
   a2a: { ... }  # Only present when protocol is "a2a"
   mcp: { ... }  # Only present when protocol is "mcp"
   http: { ... } # Only present when protocol is "http"
   mqtt: { ... } # Only present when protocol is "mqtt"
   grpc: { ... } # Only present when protocol is "grpc"
-  
+
   # Common settings
   auth: { ... }
   discovery: { ... }
@@ -213,7 +213,7 @@ communicators:
     a2a:
       agent_card:
         name: "Multi-Protocol Agent"
-        
+
   - name: "mcp_communicator"
     protocol: "mcp"
     transport:

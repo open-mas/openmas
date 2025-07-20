@@ -163,7 +163,7 @@ security:
         settings:
           issuer: "https://auth.example.com"
           audience: "openmas-api"
-  
+
   # Authorization configuration
   authorization:
     model: "role_based"
@@ -172,7 +172,7 @@ security:
         permissions: ["read", "write", "execute"]
       - name: "user"
         permissions: ["read"]
-  
+
   # Encryption configuration
   encryption:
     data_at_rest:
@@ -181,7 +181,7 @@ security:
     data_in_transit:
       transport: "TLS_1.3"
       certificate_management: "auto"
-  
+
   # Protocol-specific security
   protocol_security:
     mcp:

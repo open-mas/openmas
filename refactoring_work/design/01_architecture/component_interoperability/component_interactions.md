@@ -36,7 +36,7 @@ sequenceDiagram
     participant AF as Agent Framework
     participant PL as Protocol Layer
     participant EC as External Component
-    
+
     EC->>PL: Protocol-specific message
     PL->>PL: Validate message format
     PL->>PL: Translate to internal format
@@ -56,7 +56,7 @@ sequenceDiagram
        def handle_message(self, message: InternalMessage) -> InternalResponse:
            # Process the message according to agent capabilities
            pass
-           
+
        def register_capability(self, capability: Capability) -> bool:
            # Register a capability that can be discovered via protocol
            pass
@@ -69,7 +69,7 @@ sequenceDiagram
        def send_message(self, message: InternalMessage, target: TargetInfo) -> bool:
            # Send a message via the protocol
            pass
-           
+
        def advertise_capability(self, capability: Capability) -> bool:
            # Make a capability available via the protocol
            pass
@@ -92,7 +92,7 @@ This interaction represents the critical "body-brain separation" at the core of 
 sequenceDiagram
     participant AF as Agent Framework
     participant KR as Knowledge & Reasoning
-    
+
     AF->>KR: Provide perception (context)
     KR->>KR: Process perception
     KR->>KR: Update beliefs
@@ -112,11 +112,11 @@ sequenceDiagram
        def decide_action(self, context: Context) -> Action:
            # Determine appropriate action based on context
            pass
-           
+
        def update_perception(self, perception: Perception) -> None:
            # Update internal knowledge based on new perception
            pass
-           
+
        def evaluate_goal(self, goal: Goal, context: Context) -> GoalStatus:
            # Evaluate if a goal is achieved or achievable
            pass
@@ -129,7 +129,7 @@ sequenceDiagram
        def execute_action(self, action: Action) -> ActionResult:
            # Execute an action determined by the reasoning engine
            pass
-           
+
        def register_belief_update(self, belief: Belief) -> None:
            # Notify agent framework of a significant belief update
            pass
@@ -152,7 +152,7 @@ The Configuration System interacts with all other components, providing configur
 sequenceDiagram
     participant CS as Configuration System
     participant C as Component
-    
+
     CS->>CS: Load configuration
     CS->>CS: Validate against schema
     CS->>C: Provide configuration
@@ -172,7 +172,7 @@ sequenceDiagram
        def configure(self, config: Dict[str, Any]) -> None:
            # Apply configuration to component
            pass
-           
+
        def notify_config_update(self, updated_keys: List[str]) -> None:
            # Notify component of configuration changes
            pass
@@ -185,11 +185,11 @@ sequenceDiagram
        def get_config(self, component_path: str) -> Dict[str, Any]:
            # Get configuration for a specific component
            pass
-           
+
        def register_schema(self, component_path: str, schema: Schema) -> None:
            # Register validation schema for component
            pass
-           
+
        def subscribe_to_updates(self, component_path: str, callback: Callable) -> None:
            # Subscribe to configuration updates
            pass
@@ -212,7 +212,7 @@ This interaction handles the adaptation of communication patterns to specific pr
 sequenceDiagram
     participant PL as Protocol Layer
     participant CPE as Communication Pattern Engine
-    
+
     PL->>CPE: Request pattern implementation
     CPE->>CPE: Select appropriate pattern
     CPE->>PL: Return protocol-specific pattern
@@ -231,7 +231,7 @@ sequenceDiagram
        def get_pattern(self, pattern_type: str, protocol: str) -> Pattern:
            # Get a pattern implementation for a specific protocol
            pass
-           
+
        def update_pattern_state(self, pattern_id: str, state_update: Dict[str, Any]) -> None:
            # Update the state of an active pattern
            pass
@@ -244,7 +244,7 @@ sequenceDiagram
        def apply_pattern_formatting(self, message: Message, pattern: Pattern) -> Message:
            # Apply pattern-specific formatting to a message
            pass
-           
+
        def validate_pattern_compliance(self, message: Message, pattern: Pattern) -> bool:
            # Validate that a message complies with a pattern
            pass
@@ -267,7 +267,7 @@ This interaction handles the provision of knowledge assets to reasoning componen
 sequenceDiagram
     participant KR as Knowledge & Reasoning
     participant AM as Asset Management
-    
+
     KR->>AM: Request knowledge asset
     AM->>AM: Locate asset
     AM->>AM: Load and validate asset
@@ -287,11 +287,11 @@ sequenceDiagram
        def get_asset(self, asset_id: str, asset_type: str) -> Asset:
            # Retrieve an asset by ID and type
            pass
-           
+
        def search_assets(self, query: Query) -> List[Asset]:
            # Search for assets matching query
            pass
-           
+
        def update_asset(self, asset_id: str, update: Dict[str, Any]) -> bool:
            # Update a mutable asset
            pass
@@ -304,7 +304,7 @@ sequenceDiagram
        def notify_asset_update(self, asset_id: str) -> None:
            # Notify that an asset has been updated
            pass
-           
+
        def validate_asset_update(self, asset_id: str, update: Dict[str, Any]) -> bool:
            # Validate a proposed asset update
            pass
@@ -331,7 +331,7 @@ sequenceDiagram
     participant PL as Protocol Layer
     participant KR as Knowledge & Reasoning
     participant CPE as Communication Pattern Engine
-    
+
     CS->>AF: Initialize agent framework
     AF->>CS: Load agent configuration
     CS->>AF: Return configuration
@@ -362,7 +362,7 @@ sequenceDiagram
     participant KR as Knowledge & Reasoning
     participant SM as Session Management
     participant AM as Asset Management
-    
+
     EC->>PL: Send protocol-specific message
     PL->>SM: Validate/create session
     SM->>PL: Return session context
@@ -394,7 +394,7 @@ sequenceDiagram
     participant PL2 as Protocol Layer 2
     participant AF2 as Agent Framework 2
     participant A2 as Agent 2
-    
+
     A1->>AF1: Initiate collaboration
     AF1->>TS: Discover collaborating agents
     TS->>AF1: Return agent 2 info
@@ -578,4 +578,4 @@ For more detailed information on specific component interactions, refer to the i
 - [Configuration System ↔ Agent Framework](./interactions/configuration_system_agent_framework.md)
 - And other individual interaction documents
 
-The [Component Matrix](./component_matrix.md) provides a high-level overview of all component relationships, while [Workflow Diagrams](./workflow_diagrams.md) illustrates end-to-end processes across components. [Component Boundaries](./component_boundaries.md) defines the clear responsibilities of each component. 
+The [Component Matrix](./component_matrix.md) provides a high-level overview of all component relationships, while [Workflow Diagrams](./workflow_diagrams.md) illustrates end-to-end processes across components. [Component Boundaries](./component_boundaries.md) defines the clear responsibilities of each component.

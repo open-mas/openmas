@@ -122,13 +122,13 @@ package openmas.agents;
 service WeatherService {
   // Get current weather conditions for a location
   rpc GetCurrentWeather (WeatherRequest) returns (WeatherResponse) {}
-  
+
   // Subscribe to weather updates for a location
   rpc SubscribeToWeatherUpdates (WeatherRequest) returns (stream WeatherResponse) {}
-  
+
   // Report weather observations from the field
   rpc ReportWeatherObservation (stream ObservationRequest) returns (ObservationResponse) {}
-  
+
   // Interactive weather conversation
   rpc WeatherChat (stream ChatMessage) returns (stream ChatMessage) {}
 }
@@ -295,13 +295,13 @@ class WeatherServiceAgent(Agent):
             "max_message_size": 10485760,  # 10MB
             "service_definitions": ["services/weather_service.proto"]
         })
-        
+
         # Register service implementations
         self.grpc_server.register_service(
             "openmas.agents.WeatherService",
             self.get_service_implementation()
         )
-        
+
     def get_service_implementation(self):
         return {
             "GetCurrentWeather": self.get_current_weather,
@@ -309,16 +309,16 @@ class WeatherServiceAgent(Agent):
             "ReportWeatherObservation": self.report_weather_observation,
             "WeatherChat": self.weather_chat
         }
-    
+
     async def get_current_weather(self, request, context):
         # Extract parameters
         location = request.location
         units = request.units
-        
+
         try:
             # Get weather data
             weather_data = await self.weather_service.get_current(location, units)
-            
+
             # Create response
             return proto_utils.create_message("WeatherResponse", {
                 "location": location,
@@ -341,15 +341,15 @@ class WeatherServiceAgent(Agent):
                 "location": location,
                 "error_message": str(e)
             })
-    
+
     async def subscribe_to_weather_updates(self, request, context):
         # Server streaming implementation
         location = request.location
         units = request.units
-        
+
         # Set up subscription
         subscription = await self.weather_service.subscribe(location, units)
-        
+
         try:
             # Stream updates as they arrive
             async for update in subscription:
@@ -381,10 +381,10 @@ class WeatherClientAgent(Agent):
             "service_definitions": ["services/weather_service.proto"],
             "server_address": "weather-service-agent:50051"
         })
-        
+
         # Create stub for the weather service
         self.weather_stub = self.grpc_client.get_stub("openmas.agents.WeatherService")
-    
+
     async def get_weather_for_location(self, location):
         # Create request message
         request = await self.grpc_client.create_message("WeatherRequest", {
@@ -393,11 +393,11 @@ class WeatherClientAgent(Agent):
             "include_forecast": True,
             "forecast_days": 5
         })
-        
+
         try:
             # Make the gRPC call
             response = await self.weather_stub.GetCurrentWeather(request)
-            
+
             # Process response
             weather_info = {
                 "location": response.location,
@@ -411,22 +411,22 @@ class WeatherClientAgent(Agent):
                     "conditions": day.conditions
                 } for day in response.forecast]
             }
-            
+
             return weather_info
         except grpc.RpcError as e:
             self.log.error(f"gRPC error: {e.code()}: {e.details()}")
             raise
-    
+
     async def subscribe_to_weather_updates(self, location):
         # Create request message
         request = await self.grpc_client.create_message("WeatherRequest", {
             "location": location,
             "units": "celsius"
         })
-        
+
         # Subscribe to streaming updates
         stream = self.weather_stub.SubscribeToWeatherUpdates(request)
-        
+
         # Process streamed responses
         async for response in stream:
             # Process each update
@@ -436,7 +436,7 @@ class WeatherClientAgent(Agent):
                 "humidity": response.humidity,
                 "conditions": response.conditions
             }
-            
+
             # Handle the update
             await self.process_weather_update(update)
 ```

@@ -9,7 +9,7 @@ This guide provides comprehensive instructions for developing extensions for Ope
 Before developing an extension, you should:
 
 1. **Understand the Extension Type**: Review the specific documentation for the type of extension you want to develop. Each extension type has its own interface requirements and integration patterns:
-   
+
    - [Agent Extensions](../extension_types/agent_extensions.md) - Enhance agent capabilities and behaviors
    - [Communicator Extensions](../extension_types/communicator_extensions.md) - Add support for new communication protocols
    - [Asset Extensions](../extension_types/assets.md) - Handle various types of assets and resources
@@ -69,26 +69,26 @@ from openmas.extensions import BaseExtension  # Or the specific extension base c
 
 class MyExtension(BaseExtension):
     """My custom extension."""
-    
+
     extension_type = "my_extension_type"  # e.g., "agent", "communicator", etc.
     extension_name = "my_extension"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         # Extract configuration options
         self.my_option = config.get("options", {}).get("my_option", "default_value")
-    
+
     def validate_config(self):
         """Validate the extension configuration."""
         if "required_option" not in self.config.get("options", {}):
             raise ValueError("Missing required option: required_option")
-    
+
     async def initialize(self):
         """Initialize the extension."""
         # Perform any setup needed
         self.initialized = True
-    
+
     # Implement extension-specific methods as required by the extension type
     # See the type-specific documentation for required methods
 ```
@@ -186,7 +186,7 @@ Adds a specific feature to a component:
 ```python
 class LoggingExtension(AgentExtension):
     """Adds enhanced logging to agents."""
-    
+
     def enhance_agent(self, agent):
         """Add logging capabilities to agent."""
         agent.logger = self._create_logger(agent.agent_id)
@@ -199,7 +199,7 @@ Integrates with external systems or services:
 ```python
 class DatabaseExtension(AssetExtension):
     """Provides asset access from a database."""
-    
+
     async def provide_asset(self, asset_id, context=None):
         """Retrieve an asset from the database."""
         return await self.db_connection.fetch_asset(asset_id)
@@ -212,7 +212,7 @@ Adds support for a new protocol:
 ```python
 class GRPCCommunicatorExtension(CommunicatorExtension):
     """Adds gRPC communication support."""
-    
+
     def create_communicator(self, agent_config):
         """Create a gRPC communicator instance."""
         return GRPCCommunicator(agent_config)
@@ -225,7 +225,7 @@ Transforms data between formats:
 ```python
 class PDFTextExtractorExtension(AssetProcessorExtension):
     """Extracts text from PDF assets."""
-    
+
     async def process_asset(self, asset, context=None):
         """Extract text from a PDF asset."""
         return self._extract_text_from_pdf(asset)
@@ -240,22 +240,22 @@ Extensions can depend on other extensions:
 ```python
 class AdvancedExtension(BaseExtension):
     """Extension that depends on another extension."""
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.dependency_name = config.get("options", {}).get("dependency", "some_extension")
-    
+
     async def initialize(self):
         """Initialize with dependency."""
         # Get the dependency from the registry
         self.dependency = self.extension_registry.get_extension(
-            "some_extension_type", 
+            "some_extension_type",
             self.dependency_name
         )
-        
+
         if not self.dependency:
             raise ValueError(f"Missing dependency: {self.dependency_name}")
-        
+
         self.initialized = True
 ```
 
@@ -268,14 +268,14 @@ from pydantic import BaseModel, Field
 
 class MyExtensionConfig(BaseModel):
     """Configuration schema for MyExtension."""
-    
+
     api_key: str = Field(..., description="API key for external service")
     timeout_ms: int = Field(5000, description="Timeout in milliseconds")
     retry_count: int = Field(3, ge=1, le=10, description="Number of retries")
 
 class MyExtension(BaseExtension):
     """Extension with validated configuration."""
-    
+
     def validate_config(self):
         """Validate using Pydantic model."""
         options = self.config.get("options", {})
@@ -292,12 +292,12 @@ Most extension methods should be asynchronous to support non-blocking operation:
 ```python
 class AsyncExtension(BaseExtension):
     """Extension with async methods."""
-    
+
     async def initialize(self):
         """Initialize asynchronously."""
         await self._async_setup()
         self.initialized = True
-    
+
     async def _async_setup(self):
         """Perform async setup operations."""
         # Async operations here

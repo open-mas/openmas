@@ -155,21 +155,21 @@ class ObservableAgent(Agent):
         self.logger = logging.get_logger("agent", agent_id=self.id)
         self.metrics = metrics.get_recorder("agent", agent_id=self.id)
         self.tracer = tracing.get_tracer("agent", agent_id=self.id)
-        
+
     async def process_message(self, message):
         with self.tracer.start_span("process_message") as span:
             span.set_attribute("message_type", message.type)
             self.metrics.increment("messages_processed", 1)
-            
+
             start_time = time.time()
             try:
                 result = await self._process_message_internal(message)
-                self.logger.info("Message processed successfully", 
+                self.logger.info("Message processed successfully",
                                 message_id=message.id)
                 return result
             except Exception as e:
-                self.logger.error("Error processing message", 
-                                 message_id=message.id, 
+                self.logger.error("Error processing message",
+                                 message_id=message.id,
                                  error=str(e))
                 self.metrics.increment("message_processing_errors", 1)
                 raise

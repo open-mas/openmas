@@ -262,23 +262,23 @@ def setup_agents():
     """Ensure agents are ready before testing."""
     assert wait_for_agent_ready(AGENT1_URL), "Agent 1 is not ready"
     assert wait_for_agent_ready(AGENT2_URL), "Agent 2 is not ready"
-    
+
     # Give agents additional time to initialize fully
     time.sleep(2)
-    
+
     # Return agent URLs for convenience
     return AGENT1_URL, AGENT2_URL
 
 def test_a2a_to_mcp_communication(setup_agents):
     """Test A2A agent can communicate with MCP agent."""
     agent1_url, agent2_url = setup_agents
-    
+
     # Get A2A agent card
     response = requests.get(f"{agent1_url}/.well-known/agent.json")
     assert response.status_code == 200
     agent_card = response.json()
     assert agent_card["name"] == "Test Agent 1"
-    
+
     # Send message from A2A agent to MCP agent
     message = {
         "target_agent_id": "agent2",
@@ -292,7 +292,7 @@ def test_a2a_to_mcp_communication(setup_agents):
         json=message
     )
     assert response.status_code == 200
-    
+
     # Check if message was received by MCP agent
     # Wait with retry since async communication may have delays
     max_retries = 5
@@ -310,13 +310,13 @@ def test_a2a_to_mcp_communication(setup_agents):
 def test_mcp_to_a2a_communication(setup_agents):
     """Test MCP agent can communicate with A2A agent."""
     agent1_url, agent2_url = setup_agents
-    
+
     # Get MCP tools list
     response = requests.get(f"{agent2_url}/tools")
     assert response.status_code == 200
     tools = response.json()
     assert any(tool["name"] == "search" for tool in tools)
-    
+
     # Execute MCP tool that sends message to A2A agent
     tool_request = {
         "name": "send_message",
@@ -330,7 +330,7 @@ def test_mcp_to_a2a_communication(setup_agents):
         json=tool_request
     )
     assert response.status_code == 200
-    
+
     # Check if message was received by A2A agent
     max_retries = 5
     for i in range(max_retries):
@@ -347,7 +347,7 @@ def test_mcp_to_a2a_communication(setup_agents):
 def test_agent_reasoning_capabilities(setup_agents):
     """Test agents with different reasoning capabilities."""
     agent1_url, agent2_url = setup_agents
-    
+
     # Test rule-based reasoning in Agent 1 (A2A)
     rule_test = {
         "input": "test rule",
@@ -360,7 +360,7 @@ def test_agent_reasoning_capabilities(setup_agents):
     assert response.status_code == 200
     result = response.json()
     assert result["action"] == "rule_response"
-    
+
     # Test LLM-based reasoning in Agent 2 (MCP)
     llm_test = {
         "input": "test llm",
@@ -408,15 +408,15 @@ async def generate_text(request: dict):
     # Simulate processing delay
     if RESPONSE_DELAY > 0:
         time.sleep(RESPONSE_DELAY)
-    
+
     # Simulate random errors if configured
     if ERROR_RATE > 0 and random.random() < ERROR_RATE:
         raise HTTPException(status_code=500, detail="Simulated error")
-    
+
     # Get input text from request
     input_text = request.get("prompt", "")
     max_tokens = request.get("max_tokens", 100)
-    
+
     # Generate response based on mode
     if RESPONSE_MODE == "deterministic":
         # Use canned responses for deterministic testing
@@ -492,12 +492,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       test-matrix: ${{ steps.set-matrix.outputs.matrix }}
-      
+
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0  # Fetch all history for file change detection
-      
+
       - name: Determine test matrix
         id: set-matrix
         run: |
@@ -508,28 +508,28 @@ jobs:
             # For push events, get changed files in the last commit
             CHANGED_FILES=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }})
           fi
-          
+
           # Initialize test configurations array
           CONFIGS=()
-          
+
           # Always include basic protocol tests
           CONFIGS+=('{\'name\': \'protocol-basic\', \'compose\': \'docker-compose.test.yml\'}')
-          
+
           # Check for A2A-specific changes
           if echo "$CHANGED_FILES" | grep -q "src/openmas/protocols/a2a\|src/openmas/communicators/a2a"; then
             CONFIGS+=('{\'name\': \'protocol-a2a\', \'compose\': \'docker-compose.a2a.yml\'}')
           fi
-          
+
           # Check for MCP-specific changes
           if echo "$CHANGED_FILES" | grep -q "src/openmas/protocols/mcp\|src/openmas/communicators/mcp"; then
             CONFIGS+=('{\'name\': \'protocol-mcp\', \'compose\': \'docker-compose.mcp.yml\'}')
           fi
-          
+
           # Check for changes in reasoning modules
           if echo "$CHANGED_FILES" | grep -q "src/openmas/reasoning"; then
             CONFIGS+=('{\'name\': \'reasoning-tests\', \'compose\': \'docker-compose.reasoning.yml\'}')
           fi
-          
+
           # For PRs to main or manual triggers, run all test suites
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] || \
              [ "${{ github.base_ref }}" = "main" ]; then
@@ -541,7 +541,7 @@ jobs:
               '{\'name\': \'performance\', \'compose\': \'docker-compose.performance.yml\'}'
             )
           fi
-          
+
           # Output the matrix for the next job
           echo "matrix={\"include\":[$(IFS=,; echo "${CONFIGS[*]}")]}"
           echo "matrix={\"include\":[$(IFS=,; echo "${CONFIGS[*]}")]}"
@@ -553,13 +553,13 @@ jobs:
     strategy:
       fail-fast: false  # Continue running tests even if one fails
       matrix: ${{fromJson(needs.determine-test-matrix.outputs.test-matrix)}}
-    
+
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
-      
+
       # Cache Docker layers for faster builds
       - name: Cache Docker layers
         uses: actions/cache@v3
@@ -568,7 +568,7 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}-${{ matrix.name }}
           restore-keys: |
             ${{ runner.os }}-buildx-
-      
+
       # Generate agent configurations from the unified schema
       - name: Generate test configurations
         run: |
@@ -577,19 +577,19 @@ jobs:
           python -m openmas.cli config generate \
             --template=tests/templates/${{ matrix.name }}.yaml \
             --output-dir=test-configs/${{ matrix.name }}
-      
+
       # Build and run tests with timeout
       - name: Build and run integration tests
         run: |
           # Build with cache
           docker-compose -f ${{ matrix.compose }} build \
             --build-arg BUILDKIT_INLINE_CACHE=1
-          
+
           # Set a timeout to prevent hung tests from blocking CI
           timeout 15m docker-compose -f ${{ matrix.compose }} up \
             --abort-on-container-exit \
             --exit-code-from test-controller
-      
+
       # Upload test results and logs
       - name: Upload test results
         uses: actions/upload-artifact@v3
@@ -597,14 +597,14 @@ jobs:
           name: test-results-${{ matrix.name }}
           path: test-results/
           if-no-files-found: error
-      
+
       - name: Upload test logs
         uses: actions/upload-artifact@v3
         with:
           name: test-logs-${{ matrix.name }}
           path: test-results/logs/
           if-no-files-found: warn
-      
+
       # Add PR comment with results summary
       - name: Comment on PR with test results
         if: github.event_name == 'pull_request'
@@ -626,22 +626,22 @@ jobs:
     needs: integration-tests
     runs-on: ubuntu-latest
     if: always()  # Run even if previous jobs failed
-    
+
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Download all test results
         uses: actions/download-artifact@v3
         with:
           path: all-test-results
-      
+
       - name: Generate summary report
         run: |
           python tools/ci/generate_test_report.py \
             --results-dir=all-test-results \
             --output-html=test-report.html \
             --output-badge=badge.svg
-      
+
       - name: Upload combined report
         uses: actions/upload-artifact@v3
         with:
@@ -670,22 +670,22 @@ def main():
     parser.add_argument("--reasoning", choices=["rule", "bdi", "llm", "hybrid", "all"], default="all")
     parser.add_argument("--output-dir", default="test-configs")
     args = parser.parse_args()
-    
+
     config_manager = ConfigurationManager()
-    
+
     # Generate configurations for each requested protocol
     protocols = ["a2a", "mcp"] if args.protocol == "all" else [args.protocol]
-    reasoning_types = (["rule_based", "bdi", "llm_based", "hybrid"] 
+    reasoning_types = (["rule_based", "bdi", "llm_based", "hybrid"]
                       if args.reasoning == "all" else [args.reasoning])
-    
+
     for protocol in protocols:
         for reasoning in reasoning_types:
             config = config_manager.create_test_config(protocol, reasoning)
-            
+
             # Save configuration
             output_path = f"{args.output_dir}/{protocol}_{reasoning}"
             os.makedirs(output_path, exist_ok=True)
-            
+
             with open(f"{output_path}/config.yaml", "w") as f:
                 yaml.dump(config, f)
 
@@ -707,17 +707,17 @@ def main():
     parser.add_argument("--results-file", required=True)
     parser.add_argument("--output-markdown", required=True)
     args = parser.parse_args()
-    
+
     tree = ET.parse(args.results_file)
     root = tree.getroot()
-    
+
     # Extract test results
     total_tests = int(root.attrib.get("tests", 0))
     failures = int(root.attrib.get("failures", 0))
     errors = int(root.attrib.get("errors", 0))
     skipped = int(root.attrib.get("skipped", 0))
     time = float(root.attrib.get("time", 0))
-    
+
     # Generate markdown summary
     with open(args.output_markdown, "w") as f:
         f.write(f"### Test Summary\n\n")
@@ -727,14 +727,14 @@ def main():
         f.write(f"- Errors: {errors}\n")
         f.write(f"- Skipped: {skipped}\n")
         f.write(f"- Total Time: {time:.2f}s\n\n")
-        
+
         # Add failure details if any
         if failures > 0 or errors > 0:
             f.write("### Failures and Errors\n\n")
             for testcase in root.findall(".//testcase"):
                 failure = testcase.find("failure")
                 error = testcase.find("error")
-                
+
                 if failure is not None or error is not None:
                     problem = failure if failure is not None else error
                     f.write(f"**{testcase.attrib.get('classname')}.{testcase.attrib.get('name')}**\n\n")
@@ -926,7 +926,7 @@ graph TD
     K --> L[Deploy to Registry]
 ```
 
-#### f. Local Development Testing 
+#### f. Local Development Testing
 
 For developers working on OpenMAS, simplified Docker Compose commands can be used:
 
@@ -1033,7 +1033,7 @@ This container can collect logs, metrics, and other diagnostic information to he
 def test_protocol_stress(setup_agents):
     """Test protocol performance under load."""
     agent1_url, _ = setup_agents
-    
+
     # Send 100 messages in quick succession
     results = []
     for i in range(100):
@@ -1049,7 +1049,7 @@ def test_protocol_stress(setup_agents):
             json=message
         )
         results.append(response.status_code == 200)
-    
+
     # Verify success rate
     success_rate = sum(results) / len(results)
     assert success_rate > 0.95  # Allow for small failure rate
@@ -1067,21 +1067,21 @@ services:
   # Similar to original but with more agents
   agent1:
     # A2A agent
-  
+
   agent2:
     # MCP agent
-  
+
   agent3:
     # Hybrid A2A+MCP agent
-  
+
   agent4:
     # Rule-based agent
-  
+
   agent5:
     # LLM-based agent
-  
+
   # ... more agents
-  
+
   test-controller:
     # Test runner
 ```
@@ -1092,13 +1092,13 @@ services:
 def test_protocol_failover(setup_agents):
     """Test agent's ability to use alternative protocols when primary fails."""
     agent1_url, agent2_url = setup_agents
-    
+
     # Agent with dual protocol support
     hybrid_agent_url = os.environ.get("HYBRID_AGENT_URL", "http://agent3:8080")
-    
+
     # Disable primary protocol
     requests.post(f"{hybrid_agent_url}/protocols/a2a-http/disable")
-    
+
     # Send message - should automatically use MCP
     message = {
         "target_agent_id": "agent1",
@@ -1109,7 +1109,7 @@ def test_protocol_failover(setup_agents):
         json=message
     )
     assert response.status_code == 200
-    
+
     # Verify message was sent via MCP
     response = requests.get(f"{hybrid_agent_url}/protocols/active")
     active_protocols = response.json()

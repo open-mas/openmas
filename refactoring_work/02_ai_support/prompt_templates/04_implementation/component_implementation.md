@@ -91,19 +91,19 @@ The component must implement this interface:
 ```python
 class ConfigLoader:
     """Loads and validates configuration for OpenMAS."""
-    
+
     def __init__(self, config_path: Optional[str] = None):
         """Initialize the config loader."""
-        
+
     async def load_config(self) -> ProjectConfig:
         """Load and validate configuration."""
-        
+
     def _load_yaml_file(self, file_path: str) -> Dict[str, Any]:
         """Load a YAML file."""
-        
+
     def _merge_configurations(self, base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any]:
         """Deep merge two configuration dictionaries."""
-        
+
     def _apply_environment_variables(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Apply environment variable overrides to configuration."""
 ```
@@ -130,11 +130,11 @@ async def test_load_config_from_file(mock_yaml_file):
     """Test loading configuration from a YAML file."""
     loader = ConfigLoader(config_path=mock_yaml_file)
     config = await loader.load_config()
-    
+
     assert config.project_name == "test_project"
     assert "agent1" in config.agent_configs
     assert config.agent_configs["agent1"].module == "test.agent"
     assert config.agent_configs["agent1"].class_name == "TestAgent"
 ```
 
-[Rest of prompt follows...] 
+[Rest of prompt follows...]

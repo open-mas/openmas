@@ -54,7 +54,7 @@ topology:
       peer:
         description: "Equal agent in peer-to-peer network"
         capabilities: ["communicate", "collaborate"]
-  
+
   relationships:
     definition:
       collaborates_with:
@@ -70,7 +70,7 @@ agents:
         type: "peer"
       relationships:
         collaborates_with: ["agent_b", "agent_c"]
-  
+
   agent_b:
     topology:
       pattern: "peer_to_peer"

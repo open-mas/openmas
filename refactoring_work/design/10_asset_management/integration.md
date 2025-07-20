@@ -113,7 +113,7 @@ class LLMAgent(Agent):
     async def setup(self):
         # Declare asset requirements
         self.require_asset("llm_model", version="^1.0.0")
-        
+
         # Register capability based on available asset
         if self.has_asset("llm_model"):
             self.register_capability("text_generation")
@@ -126,10 +126,10 @@ class EmbeddingService:
     async def get_embedding(self, text):
         # Dynamic asset loading
         embedding_model = await self.asset_manager.load_asset(
-            "embedding_model", 
+            "embedding_model",
             version="^2.0.0"
         )
-        
+
         # Use the asset
         result = embedding_model.embed(text)
         return result
@@ -147,7 +147,7 @@ class PromptTemplate:
             name=self.template_name,
             version=model_info.compatible_template_version
         )
-        
+
         # Format using compatible template
         return compatible_template.format(inputs)
 ```

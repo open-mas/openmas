@@ -71,21 +71,21 @@ topology:
       root:
         description: "Top-level controlling agent"
         capabilities: ["delegate", "monitor", "plan"]
-      
+
       manager:
         description: "Middle-tier management agent"
         capabilities: ["delegate", "report", "coordinate"]
-      
+
       worker:
         description: "Leaf node execution agent"
         capabilities: ["execute", "report"]
-  
+
   relationships:
     definition:
       manages:
         description: "Parent-child management relationship"
         permissions: ["delegate", "monitor", "override"]
-      
+
       reports_to:
         description: "Child-parent reporting relationship"
         permissions: ["notify", "request"]
@@ -99,7 +99,7 @@ agents:
         type: "root"
       relationships:
         manages: ["department_a", "department_b"]
-  
+
   department_a:
     topology:
       pattern: "hierarchical"

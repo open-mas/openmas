@@ -65,16 +65,16 @@ class TestA2AAgentCard:
                 "text": {"enabled": True, "models": ["test-model"]}
             }
         })
-        
+
         # Act
         card = communicator.generate_agent_card()
-        
+
         # Assert
         assert card.name == "test-agent"
         assert "text" in card.api.capabilities
         assert card.api.capabilities["text"].enabled == True
         assert "test-model" in card.api.capabilities["text"].models
-    
+
     def test_agent_card_validation(self):
         """Test that agent cards are correctly validated."""
         # Arrange
@@ -93,14 +93,14 @@ class TestA2AAgentCard:
                 }
             }
         }
-        
+
         # Act
         card = AgentCard.parse_obj(card_data)
-        
+
         # Assert
         assert card.name == "test-agent"
         assert card.api.capabilities["text"].enabled == True
-    
+
     def test_invalid_agent_card(self):
         """Test that invalid agent cards are rejected."""
         # Arrange
@@ -117,7 +117,7 @@ class TestA2AAgentCard:
                 }
             }
         }
-        
+
         # Act/Assert
         with pytest.raises(ValueError):
             AgentCard.parse_obj(invalid_card_data)
@@ -139,24 +139,24 @@ class TestA2ACommunication:
             "status": "success",
             "response": {"content": "Hello back"}
         }
-        
+
         # Setup communicator
         communicator = A2ACommunicator(config={
             "base_url": "http://localhost:8000",
             "agent_id": "agent1"
         })
-        
+
         # Act
         response = communicator.send_message(
             target_agent_id="agent2",
             message={"content": "Hello"}
         )
-        
+
         # Assert
         assert response["status"] == "success"
         assert response["response"]["content"] == "Hello back"
         mock_client.return_value.post.assert_called_once()
-    
+
     def test_discover_agents(self, mocker):
         """Test agent discovery via A2A protocol."""
         # Mock discovery response
@@ -172,20 +172,20 @@ class TestA2ACommunication:
                 "capabilities": ["image", "text"]
             }
         ]
-        
+
         # Mock HTTP client
         mock_client = mocker.patch("openmas.communicators.protocols.a2a.http.HTTPClient")
         mock_client.return_value.get.return_value = mock_response
-        
+
         # Setup communicator
         communicator = A2ACommunicator(config={
             "base_url": "http://localhost:8000",
             "agent_id": "agent1"
         })
-        
+
         # Act
         discovered = communicator.discover_agents()
-        
+
         # Assert
         assert len(discovered) == 2
         assert discovered[0]["name"] == "agent2"
@@ -218,16 +218,16 @@ class TestMCPServerMode:
                 }
             ]
         }
-        
+
         # Act
         server = MCPServer(config=config)
-        
+
         # Assert
         assert server.name == "test-server"
         assert server.port == 8080
         assert len(server.tools) == 1
         assert server.tools[0].name == "test_tool"
-    
+
     def test_tool_registration(self):
         """Test that tools can be registered with the MCP server."""
         # Arrange
@@ -236,7 +236,7 @@ class TestMCPServerMode:
             "server_name": "test-server",
             "http_port": 8080
         })
-        
+
         # Act
         server.register_tool(
             name="test_tool",
@@ -244,11 +244,11 @@ class TestMCPServerMode:
             parameters={"type": "object", "properties": {}},
             handler=lambda params: {"result": "success"}
         )
-        
+
         # Assert
         assert len(server.tools) == 1
         assert server.tools[0].name == "test_tool"
-        
+
         # Test tool execution
         result = server.execute_tool("test_tool", {})
         assert result["result"] == "success"
@@ -274,15 +274,15 @@ class TestMCPClientMode:
                 }
             ]
         }
-        
+
         # Act
         client = MCPClient(config=config)
-        
+
         # Assert
         assert len(client.servers) == 1
         assert client.servers[0].name == "test-server"
         assert client.servers[0].url == "http://localhost:8080"
-    
+
     def test_tool_discovery(self, mocker):
         """Test that tools can be discovered from MCP servers."""
         # Mock HTTP client
@@ -296,7 +296,7 @@ class TestMCPClientMode:
                 }
             ]
         }
-        
+
         # Setup client
         client = MCPClient(config={
             "client_mode": True,
@@ -307,14 +307,14 @@ class TestMCPClientMode:
                 }
             ]
         })
-        
+
         # Act
         tools = client.discover_tools("test-server")
-        
+
         # Assert
         assert len(tools) == 1
         assert tools[0]["name"] == "test_tool"
-    
+
     def test_tool_execution(self, mocker):
         """Test that tools can be executed on MCP servers."""
         # Mock HTTP client
@@ -322,7 +322,7 @@ class TestMCPClientMode:
         mock_client.return_value.post.return_value = {
             "result": "success"
         }
-        
+
         # Setup client
         client = MCPClient(config={
             "client_mode": True,
@@ -333,14 +333,14 @@ class TestMCPClientMode:
                 }
             ]
         })
-        
+
         # Act
         result = client.execute_tool(
             server_name="test-server",
             tool_name="test_tool",
             parameters={}
         )
-        
+
         # Assert
         assert result["result"] == "success"
         mock_client.return_value.post.assert_called_once()
@@ -360,11 +360,11 @@ class TestMultiProtocolCommunication:
         # Setup mock protocol interfaces
         mock_a2a_interface = mocker.Mock(spec=A2AProtocolInterface)
         mock_mcp_interface = mocker.Mock(spec=MCPProtocolInterface)
-        
+
         # Configure mocks
         mock_a2a_interface.send_message.return_value = {"status": "success"}
         mock_mcp_interface.execute_tool.return_value = {"result": "tool_executed"}
-        
+
         # Create multi-protocol agent with mocked interfaces
         agent = MultiProtocolAgent(config={
             "id": "multi-protocol-agent",
@@ -373,34 +373,34 @@ class TestMultiProtocolCommunication:
                 {"type": "mcp-sse"}
             ]
         })
-        
+
         # Replace interfaces with mocks
         agent.protocol_interfaces = {
             "a2a-http": mock_a2a_interface,
             "mcp-sse": mock_mcp_interface
         }
-        
+
         # Act: Send message using A2A, which internally maps to proper protocol
         result = agent.send_message(
             target_agent_id="agent2",
             message={"content": "Hello"},
             preferred_protocol="a2a-http"
         )
-        
+
         # Assert
         assert result["status"] == "success"
         mock_a2a_interface.send_message.assert_called_once()
-    
+
     def test_mcp_to_a2a_communication(self, mocker):
         """Test communication from MCP to A2A protocol in a multi-protocol agent."""
         # Setup mock protocol interfaces
         mock_a2a_interface = mocker.Mock(spec=A2AProtocolInterface)
         mock_mcp_interface = mocker.Mock(spec=MCPProtocolInterface)
-        
+
         # Configure mocks
         mock_a2a_interface.send_message.return_value = {"status": "success", "response": {"content": "Response"}}
         mock_mcp_interface.execute_tool.return_value = {"result": "tool_executed"}
-        
+
         # Create multi-protocol agent with mocked interfaces
         agent = MultiProtocolAgent(config={
             "id": "multi-protocol-agent",
@@ -409,13 +409,13 @@ class TestMultiProtocolCommunication:
                 {"type": "mcp-sse"}
             ]
         })
-        
+
         # Replace interfaces with mocks
         agent.protocol_interfaces = {
             "a2a-http": mock_a2a_interface,
             "mcp-sse": mock_mcp_interface
         }
-        
+
         # Act: Execute tool using MCP
         result = agent.execute_tool(
             server_name="test-server",
@@ -423,7 +423,7 @@ class TestMultiProtocolCommunication:
             parameters={"input": "Hello"},
             preferred_protocol="mcp-sse"
         )
-        
+
         # Assert
         assert result["result"] == "tool_executed"
         mock_mcp_interface.execute_tool.assert_called_once()
@@ -518,7 +518,7 @@ from pathlib import Path
 
 class MockA2AHandler(http.server.BaseHTTPRequestHandler):
     """Mock A2A protocol server handler."""
-    
+
     def do_GET(self):
         """Handle GET requests."""
         if self.path == "/.well-known/agent.json":
@@ -526,7 +526,7 @@ class MockA2AHandler(http.server.BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            
+
             card = {
                 "schema_version": "1.0",
                 "name": "mock-agent",
@@ -542,14 +542,14 @@ class MockA2AHandler(http.server.BaseHTTPRequestHandler):
                     }
                 }
             }
-            
+
             self.wfile.write(json.dumps(card).encode())
         elif self.path == "/discover":
             # Return list of agents
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            
+
             agents = [
                 {
                     "name": "agent1",
@@ -562,12 +562,12 @@ class MockA2AHandler(http.server.BaseHTTPRequestHandler):
                     "capabilities": ["image", "text"]
                 }
             ]
-            
+
             self.wfile.write(json.dumps(agents).encode())
         else:
             self.send_response(404)
             self.end_headers()
-    
+
     def do_POST(self):
         """Handle POST requests."""
         if self.path == "/generate":
@@ -575,15 +575,15 @@ class MockA2AHandler(http.server.BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length).decode('utf-8')
             request = json.loads(post_data)
-            
+
             self.send_response(200)
             self.send_header("Content-type", "application/json")
             self.end_headers()
-            
+
             response = {
                 "content": f"Response to: {request.get('content', '')}"
             }
-            
+
             self.wfile.write(json.dumps(response).encode())
         else:
             self.send_response(404)
@@ -595,18 +595,18 @@ def mock_a2a_server():
     # Find an available port
     with socketserver.TCPServer(("", 0), None) as s:
         port = s.server_address[1]
-    
+
     # Create and start the server
     server = socketserver.TCPServer(("", port), MockA2AHandler)
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
     server_thread.start()
-    
+
     # Allow time for server to start
     time.sleep(0.1)
-    
+
     yield server
-    
+
     # Shutdown server
     server.shutdown()
     server.server_close()
@@ -622,11 +622,11 @@ def test_cross_protocol_communication(mock_a2a_server, mocker):
     # Mock protocol interfaces
     mock_a2a_interface = mocker.Mock(spec=A2AProtocolInterface)
     mock_mcp_interface = mocker.Mock(spec=MCPProtocolInterface)
-    
+
     # Configure mocks
     mock_a2a_interface.send_message.return_value = {"status": "success"}
     mock_mcp_interface.execute_tool.return_value = {"result": "tool_executed"}
-    
+
     # Create multi-protocol agent
     agent = MultiProtocolAgent(config={
         "id": "multi-protocol-agent",
@@ -645,28 +645,28 @@ def test_cross_protocol_communication(mock_a2a_server, mocker):
             }
         ]
     })
-    
+
     # Replace interfaces with mocks
     agent.protocol_interfaces = {
         "a2a-http": mock_a2a_interface,
         "mcp-sse": mock_mcp_interface
     }
-    
+
     # Act - Test A2A protocol
     a2a_result = agent.send_message(
         target_agent_id="agent2",
         message={"content": "Hello"},
         preferred_protocol="a2a-http"
     )
-    
+
     # Test MCP protocol with the same agent
     mcp_result = agent.execute_tool(
-        server_name="test-server", 
+        server_name="test-server",
         tool_name="test_tool",
         parameters={"input": "Hello"},
         preferred_protocol="mcp-sse"
     )
-    
+
     # Assert
     assert a2a_result["status"] == "success"
     assert mcp_result["result"] == "tool_executed"
@@ -685,34 +685,34 @@ def test_protocol_reasoning_agnosticism(mocker):
     mock_rule_based = mocker.Mock(name="RuleBasedReasoning")
     mock_bdi = mocker.Mock(name="BDIReasoning")
     mock_llm = mocker.Mock(name="LLMReasoning")
-    
+
     # Configure A2A with different reasoning modules
     a2a_config = {"base_url": "http://localhost:8000", "agent_id": "test-agent"}
-    
+
     rule_a2a = A2ACommunicator(config=a2a_config)
     rule_a2a.reasoning = mock_rule_based
-    
+
     bdi_a2a = A2ACommunicator(config=a2a_config)
     bdi_a2a.reasoning = mock_bdi
-    
+
     llm_a2a = A2ACommunicator(config=a2a_config)
     llm_a2a.reasoning = mock_llm
-    
+
     # Mock message sending for testing
     mocker.patch.object(rule_a2a, '_send_http_request', return_value={"status": "success"})
     mocker.patch.object(bdi_a2a, '_send_http_request', return_value={"status": "success"})
     mocker.patch.object(llm_a2a, '_send_http_request', return_value={"status": "success"})
-    
+
     # Act - send messages with each reasoning module
     rule_result = rule_a2a.send_message("agent2", {"content": "Hello from rules"})
     bdi_result = bdi_a2a.send_message("agent2", {"content": "Hello from BDI"})
     llm_result = llm_a2a.send_message("agent2", {"content": "Hello from LLM"})
-    
+
     # Assert - all reasoning approaches can use the protocol
     assert rule_result["status"] == "success"
     assert bdi_result["status"] == "success"
     assert llm_result["status"] == "success"
-    
+
     # Configure MCP with different reasoning modules (repeat for other protocols)
 ```
 

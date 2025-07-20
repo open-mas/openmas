@@ -56,7 +56,7 @@ class MultiProtocolAgent(Agent):
     async def setup(self):
         # Register protocols from configuration
         await self.register_protocols_from_config()
-        
+
         # Or register protocols explicitly
         a2a = await self.register_protocol(
             "a2a-http",
@@ -69,7 +69,7 @@ class MultiProtocolAgent(Agent):
                 }
             }
         )
-        
+
         mcp = await self.register_protocol(
             "mcp-sse",
             MCPSSECommunicator,
@@ -78,7 +78,7 @@ class MultiProtocolAgent(Agent):
                 "http_port": 8080
             }
         )
-        
+
         # Set up protocol event handlers
         a2a.on_message(self.handle_a2a_message)
         mcp.on_tool_call(self.handle_tool_call)
@@ -119,7 +119,7 @@ class WeatherAgent(Agent):
                 }
             }
         )
-    
+
     @capability("get_weather")
     async def get_weather(self, location):
         # Protocol-agnostic implementation
@@ -199,16 +199,16 @@ class NotificationAgent(Agent):
         # Register protocols
         self.a2a = await self.register_protocol("a2a-http")
         self.mqtt = await self.register_protocol("mqtt")
-        
+
         # Register protocol-specific handlers
         self.a2a.on_message(self.handle_a2a_message)
         self.mqtt.on_message(self.handle_mqtt_message)
-    
+
     async def handle_a2a_message(self, message):
         # Handle A2A-specific message format
         if message.is_notification():
             await self.process_notification(message.content)
-    
+
     async def handle_mqtt_message(self, topic, payload):
         # Handle MQTT-specific message format
         if topic.startswith("notifications/"):
@@ -226,14 +226,14 @@ class OrchestrationAgent(Agent):
         self.a2a = await self.register_protocol("a2a-http")
         self.mcp = await self.register_protocol("mcp-sse")
         self.http = await self.register_protocol("http")
-        
+
         # Register capabilities
         self.register_capability("orchestrate_agents")
-    
+
     @capability("orchestrate_agents")
     async def orchestrate_agents(self, task):
         results = []
-        
+
         # Call an A2A agent
         a2a_result = await self.a2a.call_capability(
             agent_id="data_processing_agent",
@@ -241,21 +241,21 @@ class OrchestrationAgent(Agent):
             parameters={"data": task["data"]}
         )
         results.append({"agent": "data_processor", "result": a2a_result})
-        
+
         # Call an MCP agent
         mcp_result = await self.mcp.call_tool(
             tool="analyze_results",
             parameters={"results": a2a_result}
         )
         results.append({"agent": "analyzer", "result": mcp_result})
-        
+
         # Call an HTTP agent
         http_result = await self.http.post(
             url="/api/reporting",
             json={"analysis": mcp_result}
         )
         results.append({"agent": "reporter", "result": http_result})
-        
+
         return {
             "task_id": task["id"],
             "status": "completed",
@@ -273,16 +273,16 @@ class AdaptiveAgent(Agent):
         # Discover available protocols for another agent
         agent_id = "target_agent"
         protocols = await self.discover_protocols(agent_id)
-        
+
         # Select the optimal protocol
         selected_protocol = self.select_optimal_protocol(protocols)
-        
+
         # Create appropriate communicator
         communicator = await self.create_communicator(
             protocol=selected_protocol,
             target=agent_id
         )
-        
+
         # Use the selected protocol
         await communicator.send_message(
             agent_id=agent_id,
@@ -300,7 +300,7 @@ Key configuration sections:
 agents:
   multi_protocol_agent:
     class: "agents.MultiProtocolAgent"
-    
+
     # Protocol configuration
     protocols:
       - type: "a2a-http"
@@ -310,13 +310,13 @@ agents:
           agent_card:
             name: "Multi-Protocol Agent"
             description: "Agent supporting multiple protocols"
-      
+
       - type: "mcp-sse"
         enabled: true
         options:
           server_mode: true
           http_port: 8080
-      
+
       - type: "mqtt"
         enabled: true
         options:

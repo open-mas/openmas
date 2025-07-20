@@ -132,7 +132,7 @@ class ObservabilityConfigurationUpdatedEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         update_id: str  # Unique identifier for this update
         update_time: datetime  # When the update was performed
@@ -153,72 +153,72 @@ class ObservabilityConfigurationUpdatedEvent:
 def handle_observability_configuration_update(event: ObservabilityConfigurationUpdatedEvent):
     payload = event.payload
     updated_systems = payload.updated_systems
-    
+
     logger.info(f"Observability configuration update: {', '.join(updated_systems)} systems affected")
-    
+
     # Reconfigure logging if it was updated
     if "logging" in updated_systems:
         logger.info("Reconfiguring logging system")
-        
+
         # Get the updated logging configuration
         logging_config = configuration_system.get_configuration_value("observability.logging")
-        
+
         # Apply the logging configuration
         try:
             result = observability_system.logging_service.reconfigure(logging_config)
             logger.info(f"Logging reconfiguration result: Success={result.success}")
-            
+
             if not result.success:
                 logger.error(f"Failed to reconfigure logging: {result.error_message}")
         except Exception as e:
             logger.error(f"Error reconfiguring logging: {str(e)}")
-    
+
     # Reconfigure metrics if they were updated
     if "metrics" in updated_systems:
         logger.info("Reconfiguring metrics system")
-        
+
         # Get the updated metrics configuration
         metrics_config = configuration_system.get_configuration_value("observability.metrics")
-        
+
         # Check if any exporters were added or removed
         current_exporters = observability_system.metrics_service.get_exporters()
         new_exporters = set(metrics_config.get("exporters", []))
         added_exporters = new_exporters - set(current_exporters)
         removed_exporters = set(current_exporters) - new_exporters
-        
+
         if added_exporters:
             logger.info(f"Adding new metrics exporters: {', '.join(added_exporters)}")
-            
+
             for exporter in added_exporters:
                 exporter_config = metrics_config.get(exporter, {})
                 observability_system.metrics_service.add_exporter(exporter, exporter_config)
-        
+
         if removed_exporters:
             logger.info(f"Removing metrics exporters: {', '.join(removed_exporters)}")
-            
+
             for exporter in removed_exporters:
                 observability_system.metrics_service.remove_exporter(exporter)
-        
+
         # Update collection interval if changed
         if "collection_interval_seconds" in metrics_config:
             current_interval = observability_system.metrics_service.get_collection_interval()
             new_interval = metrics_config["collection_interval_seconds"]
-            
+
             if current_interval != new_interval:
                 logger.info(f"Updating metrics collection interval from {current_interval}s to {new_interval}s")
                 observability_system.metrics_service.set_collection_interval(new_interval)
-    
+
     # Reconfigure tracing if it was updated
     if "tracing" in updated_systems:
         logger.info("Reconfiguring tracing system")
-        
+
         # Get the updated tracing configuration
         tracing_config = configuration_system.get_configuration_value("observability.tracing")
-        
+
         # Check if tracing was enabled or disabled
         tracing_enabled = tracing_config.get("enabled", False)
         currently_enabled = observability_system.tracing_service.is_enabled()
-        
+
         if tracing_enabled != currently_enabled:
             if tracing_enabled:
                 logger.info("Enabling tracing system")
@@ -226,72 +226,72 @@ def handle_observability_configuration_update(event: ObservabilityConfigurationU
             else:
                 logger.info("Disabling tracing system")
                 observability_system.tracing_service.disable()
-        
+
         # Update sampling rate if changed
         if "sampling_rate" in tracing_config:
             current_rate = observability_system.tracing_service.get_sampling_rate()
             new_rate = tracing_config["sampling_rate"]
-            
+
             if current_rate != new_rate:
                 logger.info(f"Updating tracing sampling rate from {current_rate} to {new_rate}")
                 observability_system.tracing_service.set_sampling_rate(new_rate)
-        
+
         # Update tracing exporters
         if "exporters" in tracing_config:
             current_exporters = observability_system.tracing_service.get_exporters()
             new_exporters = set(tracing_config["exporters"])
-            
+
             for exporter in new_exporters - set(current_exporters):
                 logger.info(f"Adding tracing exporter: {exporter}")
                 exporter_config = tracing_config.get(exporter, {})
                 observability_system.tracing_service.add_exporter(exporter, exporter_config)
-            
+
             for exporter in set(current_exporters) - new_exporters:
                 logger.info(f"Removing tracing exporter: {exporter}")
                 observability_system.tracing_service.remove_exporter(exporter)
-    
+
     # Reconfigure events if they were updated
     if "events" in updated_systems:
         logger.info("Reconfiguring events system")
-        
+
         # Get the updated events configuration
         events_config = configuration_system.get_configuration_value("observability.events")
-        
+
         # Update buffer settings if changed
         if "buffer_size" in events_config:
             current_size = observability_system.events_service.get_buffer_size()
             new_size = events_config["buffer_size"]
-            
+
             if current_size != new_size:
                 logger.info(f"Updating events buffer size from {current_size} to {new_size}")
                 observability_system.events_service.set_buffer_size(new_size)
-        
+
         if "flush_interval_seconds" in events_config:
             current_interval = observability_system.events_service.get_flush_interval()
             new_interval = events_config["flush_interval_seconds"]
-            
+
             if current_interval != new_interval:
                 logger.info(f"Updating events flush interval from {current_interval}s to {new_interval}s")
                 observability_system.events_service.set_flush_interval(new_interval)
-        
+
         # Update event exporters
         if "exporters" in events_config:
             current_exporters = observability_system.events_service.get_exporters()
             new_exporters = set(events_config["exporters"])
-            
+
             for exporter in new_exporters - set(current_exporters):
                 logger.info(f"Adding events exporter: {exporter}")
                 exporter_config = events_config.get(exporter, {})
                 observability_system.events_service.add_exporter(exporter, exporter_config)
-            
+
             for exporter in set(current_exporters) - new_exporters:
                 logger.info(f"Removing events exporter: {exporter}")
                 observability_system.events_service.remove_exporter(exporter)
-    
+
     # Handle cases where restart is required
     if payload.requires_restart:
         logger.warning("Some observability configuration changes require a restart to take full effect")
-        
+
         # Notify administrators
         notification_service.send_admin_notification(
             severity="warning",
@@ -316,7 +316,7 @@ class ComponentObservabilityConfiguredEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         component_id: str  # Identifier of the component
         component_type: str  # Type of component (agent_framework, protocol_layer, etc.)
@@ -340,33 +340,33 @@ def handle_component_observability_configuration(event: ComponentObservabilityCo
     payload = event.payload
     component_id = payload.component_id
     component_type = payload.component_type
-    
+
     logger.info(f"Observability configured for component {component_id} (type: {component_type})")
-    
+
     # Get the component's observability handler if available
     handler = observability_system.get_component_handler(component_id)
-    
+
     if handler:
         logger.info(f"Configuring observability handler for component {component_id}")
-        
+
         # Configure the handler based on the updated configuration
         if payload.logging_level:
             logger.info(f"Setting logging level for {component_id} to {payload.logging_level}")
             handler.set_logging_level(payload.logging_level)
-        
+
         if payload.metrics_enabled is not None:
             if payload.metrics_enabled:
                 logger.info(f"Enabling metrics for {component_id}")
                 handler.enable_metrics()
-                
+
                 # Configure custom metrics if provided
                 if payload.custom_metrics:
                     logger.info(f"Configuring {len(payload.custom_metrics)} custom metrics for {component_id}")
-                    
+
                     for metric_config in payload.custom_metrics:
                         metric_name = metric_config.get("name")
                         metric_type = metric_config.get("type")
-                        
+
                         if metric_name and metric_type:
                             handler.configure_metric(
                                 name=metric_name,
@@ -379,7 +379,7 @@ def handle_component_observability_configuration(event: ComponentObservabilityCo
             else:
                 logger.info(f"Disabling metrics for {component_id}")
                 handler.disable_metrics()
-        
+
         if payload.tracing_enabled is not None:
             if payload.tracing_enabled:
                 logger.info(f"Enabling tracing for {component_id}")
@@ -387,12 +387,12 @@ def handle_component_observability_configuration(event: ComponentObservabilityCo
             else:
                 logger.info(f"Disabling tracing for {component_id}")
                 handler.disable_tracing()
-        
+
         if payload.events_enabled is not None:
             if payload.events_enabled:
                 logger.info(f"Enabling event monitoring for {component_id}")
                 handler.enable_event_monitoring()
-                
+
                 # Configure monitored event types if provided
                 if payload.monitored_event_types:
                     logger.info(f"Configuring {len(payload.monitored_event_types)} event types for monitoring in {component_id}")
@@ -400,18 +400,18 @@ def handle_component_observability_configuration(event: ComponentObservabilityCo
             else:
                 logger.info(f"Disabling event monitoring for {component_id}")
                 handler.disable_event_monitoring()
-        
+
         # Apply any component-specific configuration details
         if payload.configuration_details:
             logger.info(f"Applying additional configuration details to {component_id}")
             handler.apply_configuration_details(payload.configuration_details)
     else:
         logger.warning(f"No observability handler found for component {component_id}")
-        
+
         # Create a new handler if the component exists but doesn't have a handler yet
         if component_registry.component_exists(component_id):
             logger.info(f"Creating new observability handler for component {component_id}")
-            
+
             # Create the handler
             new_handler = observability_system.create_component_handler(
                 component_id=component_id,
@@ -421,18 +421,18 @@ def handle_component_observability_configuration(event: ComponentObservabilityCo
                 tracing_enabled=payload.tracing_enabled or False,
                 events_enabled=payload.events_enabled or False
             )
-            
+
             if new_handler:
                 logger.info(f"Successfully created observability handler for {component_id}")
-                
+
                 # Configure the new handler with any additional settings
                 if payload.custom_metrics:
                     for metric_config in payload.custom_metrics:
                         new_handler.configure_metric(**metric_config)
-                
+
                 if payload.monitored_event_types:
                     new_handler.set_monitored_event_types(payload.monitored_event_types)
-                
+
                 if payload.configuration_details:
                     new_handler.apply_configuration_details(payload.configuration_details)
             else:
@@ -451,7 +451,7 @@ class ProtocolObservabilityConfiguredEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         protocol_id: str  # Identifier of the protocol
         protocol_version: str  # Version of the protocol
@@ -476,71 +476,71 @@ class ProtocolObservabilityConfiguredEvent:
 def configure_protocol_observability(protocol_id: str, config: Dict[str, Any]) -> bool:
     # Validate the configuration
     validation_result = configuration_system.validate_protocol_observability_configuration(protocol_id, config)
-    
+
     if not validation_result.is_valid:
         logger.error(f"Invalid protocol observability configuration for {protocol_id}: {validation_result.errors}")
         return False
-    
+
     # Get protocol information
     protocol_info = protocol_registry.get_protocol_info(protocol_id)
     if not protocol_info:
         logger.error(f"Protocol {protocol_id} not found in registry")
         return False
-    
+
     protocol_version = protocol_info.get("version", "unknown")
-    
+
     # Apply the configuration
     try:
         # Configure the protocol observability handler
         handler = observability_system.get_protocol_handler(protocol_id)
-        
+
         if not handler:
             logger.info(f"Creating new observability handler for protocol {protocol_id}")
             handler = observability_system.create_protocol_handler(protocol_id)
-        
+
         if not handler:
             logger.error(f"Failed to create observability handler for protocol {protocol_id}")
             return False
-        
+
         # Configure message tracing
         message_tracing_enabled = config.get("message_tracing_enabled", False)
         handler.set_message_tracing_enabled(message_tracing_enabled)
-        
+
         # Configure payload sampling
         payload_sampling_enabled = config.get("payload_sampling_enabled", False)
         payload_sampling_rate = config.get("payload_sampling_rate", 0.0)
-        
+
         if payload_sampling_enabled:
             handler.enable_payload_sampling(payload_sampling_rate)
         else:
             handler.disable_payload_sampling()
-        
+
         # Configure metrics
         metrics_config = {
             "message_size": config.get("message_size_metrics_enabled", False),
             "latency": config.get("latency_metrics_enabled", False),
             "error_rate": config.get("error_rate_metrics_enabled", False)
         }
-        
+
         handler.configure_metrics(metrics_config)
-        
+
         # Configure custom protocol metrics
         custom_metrics = config.get("custom_protocol_metrics", [])
         for metric_config in custom_metrics:
             handler.configure_custom_metric(**metric_config)
-        
+
         # Configure monitored message types
         monitored_message_types = config.get("monitored_message_types", [])
         handler.set_monitored_message_types(monitored_message_types)
-        
+
         # Apply any additional configuration details
         configuration_details = config.get("configuration_details", {})
         handler.apply_configuration_details(configuration_details)
-        
+
         # Emit protocol observability configured event
         configuration_id = f"protocol_obs_{uuid.uuid4().hex[:8]}"
         configuration_time = datetime.now()
-        
+
         event_system.emit(
             event_name="protocol_observability_configured",
             payload=ProtocolObservabilityConfiguredEvent.Payload(
@@ -560,13 +560,13 @@ def configure_protocol_observability(protocol_id: str, config: Dict[str, Any]) -
                 configuration_details=configuration_details
             )
         )
-        
+
         logger.info(f"Successfully configured observability for protocol {protocol_id}")
         return True
-        
+
     except Exception as e:
         logger.error(f"Error configuring observability for protocol {protocol_id}: {str(e)}")
-        
+
         # Report the error
         error_reporting.report_error(
             error_type="protocol_observability_configuration_failure",
@@ -578,7 +578,7 @@ def configure_protocol_observability(protocol_id: str, config: Dict[str, Any]) -
                 "configuration": config
             }
         )
-        
+
         return False
 ```
 
@@ -594,7 +594,7 @@ class ReasoningObservabilityConfiguredEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         reasoning_id: str  # Identifier of the reasoning engine
         reasoning_type: str  # Type of reasoning engine (llm, rule-based, bdi, etc.)
@@ -618,69 +618,69 @@ class ReasoningObservabilityConfiguredEvent:
 def configure_reasoning_observability(reasoning_id: str, config: Dict[str, Any]) -> bool:
     # Validate the configuration
     validation_result = configuration_system.validate_reasoning_observability_configuration(reasoning_id, config)
-    
+
     if not validation_result.is_valid:
         logger.error(f"Invalid reasoning observability configuration for {reasoning_id}: {validation_result.errors}")
         return False
-    
+
     # Get reasoning engine information
     reasoning_info = reasoning_registry.get_reasoning_info(reasoning_id)
     if not reasoning_info:
         logger.error(f"Reasoning engine {reasoning_id} not found in registry")
         return False
-    
+
     reasoning_type = reasoning_info.get("type", "unknown")
-    
+
     # Apply the configuration
     try:
         # Configure the reasoning observability handler
         handler = observability_system.get_reasoning_handler(reasoning_id)
-        
+
         if not handler:
             logger.info(f"Creating new observability handler for reasoning engine {reasoning_id}")
             handler = observability_system.create_reasoning_handler(reasoning_id, reasoning_type)
-        
+
         if not handler:
             logger.error(f"Failed to create observability handler for reasoning engine {reasoning_id}")
             return False
-        
+
         # Configure reasoning tracing
         reasoning_tracing_enabled = config.get("reasoning_tracing_enabled", False)
         handler.set_reasoning_tracing_enabled(reasoning_tracing_enabled)
-        
+
         # Configure reasoning step logging
         reasoning_step_logging_enabled = config.get("reasoning_step_logging_enabled", False)
         handler.set_reasoning_step_logging_enabled(reasoning_step_logging_enabled)
-        
+
         # Configure explanation generation
         reasoning_explanation_enabled = config.get("reasoning_explanation_enabled", False)
         handler.set_reasoning_explanation_enabled(reasoning_explanation_enabled)
-        
+
         # Configure performance metrics
         reasoning_performance_metrics_enabled = config.get("reasoning_performance_metrics_enabled", False)
         handler.set_performance_metrics_enabled(reasoning_performance_metrics_enabled)
-        
+
         # Configure knowledge access tracing
         knowledge_access_tracing_enabled = config.get("knowledge_access_tracing_enabled", False)
         handler.set_knowledge_access_tracing_enabled(knowledge_access_tracing_enabled)
-        
+
         # Configure custom reasoning metrics
         custom_metrics = config.get("custom_reasoning_metrics", [])
         for metric_config in custom_metrics:
             handler.configure_custom_metric(**metric_config)
-        
+
         # Configure monitored reasoning events
         monitored_reasoning_events = config.get("monitored_reasoning_events", [])
         handler.set_monitored_reasoning_events(monitored_reasoning_events)
-        
+
         # Apply any additional configuration details
         configuration_details = config.get("configuration_details", {})
         handler.apply_configuration_details(configuration_details)
-        
+
         # Emit reasoning observability configured event
         configuration_id = f"reasoning_obs_{uuid.uuid4().hex[:8]}"
         configuration_time = datetime.now()
-        
+
         event_system.emit(
             event_name="reasoning_observability_configured",
             payload=ReasoningObservabilityConfiguredEvent.Payload(
@@ -699,13 +699,13 @@ def configure_reasoning_observability(reasoning_id: str, config: Dict[str, Any])
                 configuration_details=configuration_details
             )
         )
-        
+
         logger.info(f"Successfully configured observability for reasoning engine {reasoning_id}")
         return True
-        
+
     except Exception as e:
         logger.error(f"Error configuring observability for reasoning engine {reasoning_id}: {str(e)}")
-        
+
         # Report the error
         error_reporting.report_error(
             error_type="reasoning_observability_configuration_failure",
@@ -717,7 +717,7 @@ def configure_reasoning_observability(reasoning_id: str, config: Dict[str, Any])
                 "configuration": config
             }
         )
-        
+
         return False
 ```
 
@@ -794,7 +794,7 @@ observability:
     rotation:
       max_bytes: 10485760  # 10MB
       backup_count: 5
-  
+
   metrics:
     enabled: true
     collection_interval_seconds: 15
@@ -805,7 +805,7 @@ observability:
     datadog:
       api_key_env: "DATADOG_API_KEY"
       app_key_env: "DATADOG_APP_KEY"
-  
+
   tracing:
     enabled: true
     sampling_rate: 0.1  # 10% of transactions
@@ -815,7 +815,7 @@ observability:
       agent_port: 6831
     zipkin:
       url: "http://localhost:9411/api/v2/spans"
-  
+
   events:
     enabled: true
     buffer_size: 1000
@@ -843,7 +843,7 @@ observability:
           description: "Time taken to process messages"
           unit: "ms"
           buckets: [10, 50, 100, 500, 1000]
-    
+
     protocol_layer:
       logging_level: "INFO"
       metrics_enabled: true
@@ -888,11 +888,11 @@ observability:
          def initialize(self, config: Dict[str, Any]) → bool:
              # Initialize exporter with config
              pass
-         
+
          def export(self, telemetry_data: List[TelemetryRecord]) → bool:
              # Export telemetry data to external system
              pass
-             
+
          def shutdown(self) → None:
              # Clean shutdown of exporter
              pass
@@ -947,7 +947,7 @@ observability:
           type: "histogram"
           unit: "ms"
           buckets: [10, 50, 100, 500, 1000]
-      
+
       tracing:
         enabled: true
         span_processor: "protocol_spans"
@@ -956,7 +956,7 @@ observability:
           - "protocol.version"
           - "message.id"
           - "message.type"
-    
+
     # Reasoning Monitoring (Brain)
     krr:
       metrics_enabled: true
@@ -970,7 +970,7 @@ observability:
           type: "gauge"
           labels: ["reasoning_type", "decision_type"]
           unit: "score"
-      
+
       tracing:
         enabled: true
         span_processor: "reasoning_spans"

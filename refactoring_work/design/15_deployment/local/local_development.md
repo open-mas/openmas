@@ -59,10 +59,10 @@ system = MultiAgentSystem(config)
 async def main():
     await system.initialize()
     await system.start()
-    
+
     # Run your application logic
     # ...
-    
+
     # Shutdown when done
     await system.shutdown()
 
@@ -114,7 +114,7 @@ agents:
         type: "messaging"
       - id: "knowledge_retrieval"
         type: "knowledge_retrieval"
-    
+
   - id: "user_agent"
     name: "User Agent"
     type: "user"

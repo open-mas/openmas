@@ -79,17 +79,17 @@ from openmas.agent.lifecycle import AgentLifecycleManager
 class StartAgentCommand(AgentCommand):
     name = "start"
     description = "Start an agent"
-    
+
     def configure_parser(self, parser):
         parser.add_argument("--id", required=True, help="Agent ID")
-    
+
     async def execute(self, args):
         # Integration with Agent Components
         lifecycle_manager = AgentLifecycleManager()
-        
+
         # Start the agent
         await lifecycle_manager.start_agent(args.id)
-        
+
         # Return success message
         return f"Agent {args.id} started successfully"
 ```
@@ -104,20 +104,20 @@ from openmas.protocol.registry import ProtocolRegistry
 class RegisterProtocolCommand(ProtocolCommand):
     name = "register"
     description = "Register a protocol adapter"
-    
+
     def configure_parser(self, parser):
         parser.add_argument("--from", required=True, help="Protocol configuration file")
-    
+
     async def execute(self, args):
         # Load configuration
         config = self.load_config(args.from)
-        
+
         # Integration with Protocol Components
         protocol_registry = ProtocolRegistry()
-        
+
         # Register protocol
         protocol_id = await protocol_registry.register_protocol(config)
-        
+
         # Return success message
         return f"Protocol registered with ID: {protocol_id}"
 ```
@@ -132,20 +132,20 @@ from openmas.deployment.orchestrator import DeploymentOrchestrator
 class DeployCommand(DeploymentCommand):
     name = "apply"
     description = "Deploy a system"
-    
+
     def configure_parser(self, parser):
         parser.add_argument("--from", required=True, help="Deployment configuration file")
-    
+
     async def execute(self, args):
         # Load configuration
         config = self.load_config(args.from)
-        
+
         # Integration with Deployment Components
         orchestrator = DeploymentOrchestrator()
-        
+
         # Deploy the system
         deployment_id = await orchestrator.deploy(config)
-        
+
         # Return success message
         return f"Deployment successful. ID: {deployment_id}"
 ```
@@ -190,20 +190,20 @@ For developers who want to extend CLI component integration:
    ```python
    from openmas.cli.commands import BaseCommand
    from openmas.some_component import SomeComponent
-   
+
    class MyCommand(BaseCommand):
        name = "mycommand"
        description = "My custom command"
-       
+
        def configure_parser(self, parser):
            parser.add_argument("--option", help="Custom option")
-       
+
        async def execute(self, args):
            # Integrate with existing component
            component = SomeComponent()
            result = await component.some_operation(args.option)
            return result
-   
+
    # Register command
    from openmas.cli.registry import CommandRegistry
    CommandRegistry.register(MyCommand)
@@ -213,36 +213,36 @@ For developers who want to extend CLI component integration:
    ```python
    # Define component interface
    from openmas.cli.interface import ComponentInterface
-   
+
    class MyComponentInterface(ComponentInterface):
        component_type = "mycomponent"
-       
+
        async def custom_operation(self, *args, **kwargs):
            # Implement operation
            pass
-   
+
    # Register interface
    from openmas.cli.registry import InterfaceRegistry
    InterfaceRegistry.register(MyComponentInterface)
-   
+
    # Create CLI command that uses the interface
    from openmas.cli.commands import BaseCommand
-   
+
    class MyComponentCommand(BaseCommand):
        name = "mycomponent"
        description = "My component command"
-       
+
        def configure_parser(self, parser):
            parser.add_argument("--action", help="Component action")
-       
+
        async def execute(self, args):
            # Get component interface
            interface = self.get_interface("mycomponent")
-           
+
            # Execute operation
            result = await interface.custom_operation(args.action)
            return result
-   
+
    # Register command
    from openmas.cli.registry import CommandRegistry
    CommandRegistry.register(MyComponentCommand)

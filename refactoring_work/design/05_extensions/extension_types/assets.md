@@ -35,41 +35,41 @@ from openmas.extensions import AssetProviderExtension
 
 class FileSystemAssetProvider(AssetProviderExtension):
     """Provider for file system assets."""
-    
+
     extension_type = "asset_provider"
     extension_name = "filesystem_provider"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.base_directory = config.get("base_directory", "./assets")
-    
+
     async def initialize(self):
         """Initialize the provider."""
         # Ensure the directory exists
         os.makedirs(self.base_directory, exist_ok=True)
         self.initialized = True
-    
+
     async def get_asset(self, asset_id, asset_type=None):
         """Get an asset by ID."""
         asset_path = os.path.join(self.base_directory, asset_id)
-        
+
         if not os.path.exists(asset_path):
             return None
-        
+
         with open(asset_path, "rb") as f:
             content = f.read()
-        
+
         return {
             "id": asset_id,
             "type": asset_type or self._guess_type(asset_id),
             "content": content
         }
-    
+
     async def list_assets(self, asset_type=None):
         """List available assets."""
         assets = []
-        
+
         for filename in os.listdir(self.base_directory):
             file_type = self._guess_type(filename)
             if asset_type is None or file_type == asset_type:
@@ -77,9 +77,9 @@ class FileSystemAssetProvider(AssetProviderExtension):
                     "id": filename,
                     "type": file_type
                 })
-        
+
         return assets
-    
+
     def _guess_type(self, filename):
         """Guess the asset type from the filename."""
         if filename.endswith(".txt"):
@@ -101,14 +101,14 @@ from openmas.extensions import AssetProcessorExtension
 
 class ImageProcessorExtension(AssetProcessorExtension):
     """Extension for processing image assets."""
-    
+
     extension_type = "asset_processor"
     extension_name = "image_processor"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
-    
+
     async def initialize(self):
         """Initialize the processor."""
         # Import image processing libraries
@@ -118,41 +118,41 @@ class ImageProcessorExtension(AssetProcessorExtension):
             self.initialized = True
         except ImportError:
             raise RuntimeError("PIL is required for ImageProcessorExtension")
-    
+
     async def process(self, asset, options=None):
         """Process an image asset."""
         options = options or {}
-        
+
         # Verify asset type
         if asset["type"] not in ["image/png", "image/jpeg", "image/jpg"]:
             raise ValueError(f"Unsupported image type: {asset['type']}")
-        
+
         # Load image
         img = self.pil.open(BytesIO(asset["content"]))
-        
+
         # Apply transformations
         if "resize" in options:
             width = options["resize"].get("width")
             height = options["resize"].get("height")
             if width and height:
                 img = img.resize((width, height))
-            
+
         if "format" in options:
             fmt = options["format"]
             # Convert to new format
             output = BytesIO()
             img.save(output, format=fmt)
-            
+
             return {
                 "id": asset["id"],
                 "type": f"image/{fmt.lower()}",
                 "content": output.getvalue()
             }
-            
+
         # Return the processed asset
         output = BytesIO()
         img.save(output, format=img.format)
-        
+
         return {
             "id": asset["id"],
             "type": asset["type"],
@@ -169,43 +169,43 @@ from openmas.extensions import AssetConverterExtension
 
 class MCPResourceConverterExtension(AssetConverterExtension):
     """Converts assets to MCP resources."""
-    
+
     extension_type = "asset_converter"
     extension_name = "mcp_resource_converter"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
-    
+
     async def convert_to_protocol(self, asset, protocol, options=None):
         """Convert an asset to protocol format."""
         options = options or {}
-        
+
         if protocol == "mcp":
             return await self._convert_to_mcp(asset, options)
         else:
             raise ValueError(f"Unsupported protocol: {protocol}")
-    
+
     async def convert_from_protocol(self, protocol_asset, protocol, options=None):
         """Convert from protocol format to asset."""
         options = options or {}
-        
+
         if protocol == "mcp":
             return await self._convert_from_mcp(protocol_asset, options)
         else:
             raise ValueError(f"Unsupported protocol: {protocol}")
-    
+
     async def _convert_to_mcp(self, asset, options):
         """Convert an asset to MCP resource."""
         asset_type = asset["type"]
-        
+
         if asset_type.startswith("text"):
             # Convert to MCP text resource
             return {
                 "type": "text",
                 "text": asset["content"].decode("utf-8") if isinstance(asset["content"], bytes) else asset["content"]
             }
-            
+
         elif asset_type.startswith("image"):
             # Convert to MCP image resource
             import base64
@@ -214,7 +214,7 @@ class MCPResourceConverterExtension(AssetConverterExtension):
                 encoded = base64.b64encode(content).decode("ascii")
             else:
                 encoded = content
-                
+
             return {
                 "type": "image",
                 "image": {
@@ -222,12 +222,12 @@ class MCPResourceConverterExtension(AssetConverterExtension):
                     "mime_type": asset_type
                 }
             }
-            
+
         else:
             # Generic binary data
             import base64
             encoded = base64.b64encode(asset["content"]).decode("ascii")
-            
+
             return {
                 "type": "file",
                 "file": {
@@ -235,7 +235,7 @@ class MCPResourceConverterExtension(AssetConverterExtension):
                     "mime_type": asset_type or "application/octet-stream"
                 }
             }
-    
+
     async def _convert_from_mcp(self, mcp_resource, options):
         """Convert from MCP resource to asset."""
         if mcp_resource["type"] == "text":
@@ -244,21 +244,21 @@ class MCPResourceConverterExtension(AssetConverterExtension):
                 "type": "text/plain",
                 "content": mcp_resource["text"]
             }
-            
+
         elif mcp_resource["type"] == "image":
             import base64
             decoded = base64.b64decode(mcp_resource["image"]["data"])
-            
+
             return {
                 "id": options.get("id", str(uuid.uuid4())),
                 "type": mcp_resource["image"].get("mime_type", "image/jpeg"),
                 "content": decoded
             }
-            
+
         elif mcp_resource["type"] == "file":
             import base64
             decoded = base64.b64decode(mcp_resource["file"]["data"])
-            
+
             return {
                 "id": options.get("id", str(uuid.uuid4())),
                 "type": mcp_resource["file"].get("mime_type", "application/octet-stream"),
@@ -282,7 +282,7 @@ extensions:
         enabled: true
         max_size: 100  # MB
         ttl: 3600  # seconds
-  
+
   image_processor:
     type: "asset_processor"
     name: "image_processor"
@@ -345,7 +345,7 @@ Using asset extensions in code:
 ```python
 # Get asset provider extension
 asset_provider = extension_registry.get_extension(
-    "asset_provider", 
+    "asset_provider",
     "filesystem_provider"
 )
 
@@ -376,7 +376,7 @@ converter = extension_registry.get_extension(
 )
 
 mcp_resource = await converter.convert_to_protocol(
-    processed_asset, 
+    processed_asset,
     "mcp"
 )
 ```

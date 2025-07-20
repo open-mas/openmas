@@ -162,7 +162,7 @@ components:
   receiver:
     type: agent
     config: receiver_config.yaml
-  
+
   sender:
     type: agent
     config: sender_config.yaml

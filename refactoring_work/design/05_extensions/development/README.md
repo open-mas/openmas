@@ -70,32 +70,32 @@ logger = logging.getLogger(__name__)
 
 class MyExtension(BaseExtension):
     """My custom extension."""
-    
+
     def __init__(self, config: Dict[str, Any]):
         """Initialize the extension with configuration."""
         super().__init__(config)
         self.config = config
         self._initialized = False
-        
+
     async def initialize(self) -> bool:
         """Initialize the extension and set up resources."""
         if self._initialized:
             return True
-            
+
         # Get configuration values
         enabled = self.config.get("enabled", True)
         if not enabled:
             logger.info("Extension is disabled")
             return False
-            
+
         # Initialize resources
         try:
             # Set up your extension resources here
             logger.info("Initializing resources")
-            
+
             # Register capabilities with the extension registry
             registry = ExtensionRegistry.get_instance()
-            
+
             registry.register_capability(
                 "my_capability",
                 self.my_capability_method,
@@ -124,26 +124,26 @@ class MyExtension(BaseExtension):
                 },
                 protocol_mapping=self.config.get("protocol_mapping", {}).get("my_capability", {})
             )
-            
+
             self._initialized = True
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize extension: {e}")
             return False
-    
+
     async def my_capability_method(self, param1: str, param2: Optional[int] = None) -> Dict[str, Any]:
         """Implementation of my capability."""
         if not self._initialized:
             raise RuntimeError("Extension not initialized")
-        
+
         # Implement your capability
         result = f"Processed {param1}"
         if param2 is not None:
             result += f" with value {param2}"
-        
+
         return {"result": result}
-    
+
     async def shutdown(self) -> bool:
         """Clean up resources and shut down the extension."""
         logger.info("Shutting down extension")
@@ -152,17 +152,17 @@ class MyExtension(BaseExtension):
         return True
     extension_type = "my_extension_type"
     extension_name = "my_extension"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.custom_property = config.get("custom_property", "default")
-    
+
     async def initialize(self):
         """Initialize the extension."""
         # Initialization logic
         self.initialized = True
-    
+
     async def my_custom_method(self, *args, **kwargs):
         """Custom method for this extension."""
         # Implementation
@@ -205,7 +205,7 @@ class TestMyExtension(unittest.TestCase):
         config = {"custom_property": "test", "enabled": True}
         extension = MyExtension(config)
         self.assertEqual(extension.custom_property, "test")
-    
+
     async def test_my_custom_method(self):
         config = {"enabled": True}
         extension = MyExtension(config)
@@ -252,14 +252,14 @@ from openmas.extensions import AgentExtension
 
 class MyAgentExtension(AgentExtension):
     """My custom agent extension."""
-    
+
     extension_type = "agent"
     extension_name = "my_agent_extension"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
-    
+
     async def setup(self, agent):
         """Set up the agent extension."""
         # Register custom capabilities
@@ -269,10 +269,10 @@ class MyAgentExtension(AgentExtension):
             parameters={"type": "object", "properties": {}},
             returns={"type": "object", "properties": {}}
         )
-        
+
         # Add custom event handlers
         agent.on("message", self._on_message)
-    
+
     async def _on_message(self, message):
         """Handle incoming messages."""
         # Custom message handling logic
@@ -299,36 +299,36 @@ import aiohttp
 
 class HTTPCommunicator(CommunicatorExtension):
     """HTTP-based communicator implementation."""
-    
+
     extension_type = "communicator"
     extension_name = "http"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.base_url = config.get("base_url", "http://localhost:8000")
         self.session = None
-    
+
     async def initialize(self):
         """Initialize the communicator."""
         self.session = aiohttp.ClientSession()
         self.initialized = True
-    
+
     async def shutdown(self):
         """Shut down the communicator."""
         if self.session:
             await self.session.close()
         self.initialized = False
-    
+
     async def send_message(self, endpoint, message):
         """Send a message via HTTP."""
         if not self.session:
             raise RuntimeError("HTTP session not initialized")
-        
+
         url = f"{self.base_url}/{endpoint}"
         async with self.session.post(url, json=message) as response:
             return await response.json()
-    
+
     async def start_server(self, port):
         """Start an HTTP server."""
         # Implementation for server mode
@@ -355,41 +355,41 @@ import os
 
 class FileSystemAssetProvider(AssetExtension):
     """File system-based asset provider."""
-    
+
     extension_type = "asset"
     extension_name = "filesystem_provider"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.base_directory = config.get("base_directory", "./assets")
-    
+
     async def initialize(self):
         """Initialize the asset provider."""
         # Ensure the directory exists
         os.makedirs(self.base_directory, exist_ok=True)
         self.initialized = True
-    
+
     async def get_asset(self, asset_id, asset_type=None):
         """Get an asset by ID."""
         asset_path = os.path.join(self.base_directory, asset_id)
-        
+
         if not os.path.exists(asset_path):
             return None
-        
+
         with open(asset_path, "rb") as f:
             content = f.read()
-        
+
         return {
             "id": asset_id,
             "type": asset_type or self._guess_type(asset_id),
             "content": content
         }
-    
+
     async def list_assets(self, asset_type=None):
         """List available assets."""
         assets = []
-        
+
         for filename in os.listdir(self.base_directory):
             file_type = self._guess_type(filename)
             if asset_type is None or file_type == asset_type:
@@ -397,9 +397,9 @@ class FileSystemAssetProvider(AssetExtension):
                     "id": filename,
                     "type": file_type
                 })
-        
+
         return assets
-    
+
     def _guess_type(self, filename):
         """Guess the asset type from the filename."""
         if filename.endswith(".txt"):
@@ -442,38 +442,38 @@ logger = logging.getLogger(__name__)
 
 class A2AMCPAdapter(ProtocolAdapterExtension):
     """Protocol adapter that translates between A2A and MCP protocols."""
-    
+
     def __init__(self, config: Dict[str, Any]):
         """Initialize the protocol adapter extension."""
         super().__init__(config)
         self.config = config
         self._initialized = False
         self.registry = None
-        
+
         # Capability mappings between protocols
         self.a2a_to_mcp_mapping = {}
         self.mcp_to_a2a_mapping = {}
-    
+
     async def initialize(self) -> bool:
         """Initialize the protocol adapter."""
         if self._initialized:
             return True
-            
+
         try:
             # Get configuration
             enabled = self.config.get("enabled", True)
             if not enabled:
                 logger.info("A2A-MCP Protocol Adapter is disabled")
                 return False
-                
+
             # Initialize protocol mappings from configuration
             mappings = self.config.get("mappings", {})
             self.a2a_to_mcp_mapping = mappings.get("a2a_to_mcp", {})
             self.mcp_to_a2a_mapping = mappings.get("mcp_to_a2a", {})
-            
+
             # Get extension registry
             self.registry = ExtensionRegistry.get_instance()
-            
+
             # Register this adapter with the registry
             self.registry.register_protocol_adapter(
                 "a2a", "mcp", self.translate_a2a_to_mcp
@@ -481,73 +481,73 @@ class A2AMCPAdapter(ProtocolAdapterExtension):
             self.registry.register_protocol_adapter(
                 "mcp", "a2a", self.translate_mcp_to_a2a
             )
-            
+
             logger.info("A2A-MCP Protocol Adapter initialized successfully")
             self._initialized = True
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to initialize A2A-MCP Protocol Adapter: {e}")
             return False
-    
+
     async def translate_a2a_to_mcp(self, message: A2AMessage) -> MCPMessage:
         """Translate an A2A message to MCP format."""
         if not self._initialized:
             raise RuntimeError("Protocol adapter not initialized")
-            
+
         try:
             # Extract A2A message components
             a2a_capability = message.capability
             a2a_parameters = message.parameters
-            
+
             # Map A2A capability to MCP tool name
             mcp_tool_name = self.a2a_to_mcp_mapping.get(a2a_capability)
             if not mcp_tool_name:
                 # Use the same name if not mapped
                 mcp_tool_name = a2a_capability
-                
+
             # Create equivalent MCP message
             mcp_message = MCPMessage(
                 name=mcp_tool_name,
                 arguments=a2a_parameters,
                 message_id=message.message_id
             )
-            
+
             return mcp_message
-            
+
         except Exception as e:
             logger.error(f"Failed to translate A2A to MCP: {e}")
             raise
-    
+
     async def translate_mcp_to_a2a(self, message: MCPMessage) -> A2AMessage:
         """Translate an MCP message to A2A format."""
         if not self._initialized:
             raise RuntimeError("Protocol adapter not initialized")
-            
+
         try:
             # Extract MCP message components
             mcp_tool_name = message.name
             mcp_arguments = message.arguments
-            
+
             # Map MCP tool name to A2A capability
             a2a_capability = self.mcp_to_a2a_mapping.get(mcp_tool_name)
             if not a2a_capability:
                 # Use the same name if not mapped
                 a2a_capability = mcp_tool_name
-                
+
             # Create equivalent A2A message
             a2a_message = A2AMessage(
                 capability=a2a_capability,
                 parameters=mcp_arguments,
                 message_id=message.message_id
             )
-            
+
             return a2a_message
-            
+
         except Exception as e:
             logger.error(f"Failed to translate MCP to A2A: {e}")
             raise
-            
+
     async def translate_a2a_response_to_mcp(self, a2a_response: Dict[str, Any]) -> Dict[str, Any]:
         """Translate an A2A response to MCP format."""
         # For simple responses, the format may be compatible
@@ -556,14 +556,14 @@ class A2AMCPAdapter(ProtocolAdapterExtension):
             "content": a2a_response,
             "content_type": "application/json"
         }
-        
+
     async def translate_mcp_response_to_a2a(self, mcp_response: Dict[str, Any]) -> Dict[str, Any]:
         """Translate an MCP response to A2A format."""
         # Extract the content from MCP response
         if isinstance(mcp_response, dict) and "content" in mcp_response:
             return mcp_response["content"]
         return mcp_response
-    
+
     async def shutdown(self) -> bool:
         """Clean up resources and shut down the adapter."""
         logger.info("Shutting down A2A-MCP Protocol Adapter")
@@ -572,14 +572,14 @@ class A2AMCPAdapter(ProtocolAdapterExtension):
 
 class MyExtensionA2AAdapter(ProtocolAdapterExtension):
     """A2A adapter for my extension."""
-    
+
     extension_type = "protocol_adapter"
     extension_name = "my_extension_a2a"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
-    
+
     def adapt_request(self, request):
         """Adapt a request to A2A format."""
         return {
@@ -587,14 +587,14 @@ class MyExtensionA2AAdapter(ProtocolAdapterExtension):
             "capability": request.get("method", "default"),
             "content": request.get("params", {})
         }
-    
+
     def adapt_response(self, response):
         """Adapt a response from A2A format."""
         return {
             "result": response.get("content", {}),
             "status": response.get("status", "success")
         }
-    
+
     def get_capability_definition(self, capability):
         """Get the A2A capability definition."""
         return {
@@ -614,33 +614,33 @@ from openmas.protocols.adapters import A2AAdapter, MCPAdapter
 
 class MyMultiProtocolExtension(MultiProtocolExtension):
     """Extension supporting multiple protocols."""
-    
+
     extension_type = "my_multi_protocol"
     extension_name = "my_extension"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
-        
+
         # Register protocol adapters
         self.register_protocol_adapter("a2a", A2AAdapter())
         self.register_protocol_adapter("mcp", MCPAdapter())
-    
+
     async def handle_request(self, request, protocol="a2a"):
         """Handle a request using the appropriate protocol adapter."""
         adapter = self.get_protocol_adapter(protocol)
         if not adapter:
             raise ValueError(f"Unsupported protocol: {protocol}")
-        
+
         # Adapt the request to the extension's internal format
         adapted_request = adapter.adapt_request(request)
-        
+
         # Process the request
         result = await self._process_request(adapted_request)
-        
+
         # Adapt the response back to the protocol's format
         return adapter.adapt_response(result)
-    
+
     async def _process_request(self, request):
         """Process a request in the internal format."""
         # Implementation
@@ -662,7 +662,7 @@ class MyExtension(BaseExtension):
         # Handle the communication aspects
         result = await self.delegate_to_reasoner(request)
         return self.format_response(result)
-    
+
     async def delegate_to_reasoner(self, request):
         # Delegate to the appropriate reasoner through abstract interface
         return await self.reasoner.process(request)
@@ -693,7 +693,7 @@ class MyExtension(BaseExtension):
             config.get("reasoner_type", "default"),
             config.get("reasoner_config", {})
         )
-    
+
     async def process(self, input_data):
         # Use abstract reasoning interface
         return await self.reasoner.process(input_data)
@@ -707,7 +707,7 @@ class MyExtension(BaseExtension):
             api_key=config["api_key"],
             model="gpt-4"
         )
-    
+
     async def process(self, input_data):
         # Direct dependency on specific reasoning implementation
         return await self.gpt4_client.generate(input_data)
@@ -726,7 +726,7 @@ class MyExtension(MultiProtocolExtension):
         self.register_protocol_adapter("a2a", A2AAdapter())
         self.register_protocol_adapter("mcp", MCPAdapter())
         self.register_protocol_adapter("http", HTTPAdapter())
-    
+
     async def process(self, request, protocol):
         # Use the appropriate protocol adapter
         adapter = self.get_protocol_adapter(protocol)
@@ -739,7 +739,7 @@ class MyExtension(BaseExtension):
     async def process_a2a_request(self, request):
         # A2A-specific implementation
         return {"content": result, "status": "success"}
-    
+
     async def process_mcp_request(self, request):
         # MCP-specific implementation
         return {"result": result, "error": None}
@@ -760,24 +760,24 @@ class TestMyExtension(unittest.TestCase):
     def setUp(self):
         self.config = {"enabled": True, "custom_property": "test"}
         self.extension = MyExtension(self.config)
-    
+
     async def test_initialization(self):
         self.assertEqual(self.extension.custom_property, "test")
         self.assertFalse(self.extension.initialized)
-        
+
         await self.extension.initialize()
         self.assertTrue(self.extension.initialized)
-    
+
     async def test_my_custom_method(self):
         await self.extension.initialize()
-        
+
         # Set up mocks
         self.extension._internal_dependency = AsyncMock()
         self.extension._internal_dependency.fetch.return_value = "result"
-        
+
         # Test the method
         result = await self.extension.my_custom_method("test")
-        
+
         # Assertions
         self.assertEqual(result, "processed_result")
         self.extension._internal_dependency.fetch.assert_called_once_with("test")
@@ -797,11 +797,11 @@ class TestExtensionIntegration(unittest.TestCase):
     async def setUp(self):
         # Initialize OpenMAS
         self.openmas = OpenMAS()
-        
+
         # Register the extension
         self.registry = ExtensionRegistry()
         self.registry.register("my_extension_type", "my_extension", MyExtension)
-        
+
         # Set up configuration
         self.config = {
             "extensions": {
@@ -813,27 +813,27 @@ class TestExtensionIntegration(unittest.TestCase):
                 }
             }
         }
-        
+
         # Initialize OpenMAS with the configuration
         await self.openmas.initialize(self.config)
-    
+
     async def test_extension_loading(self):
         # Get the extension instance
         extension = self.openmas.get_extension("my_extension_type", "my_extension")
-        
+
         # Assertions
         self.assertIsNotNone(extension)
         self.assertIsInstance(extension, MyExtension)
         self.assertTrue(extension.initialized)
         self.assertEqual(extension.custom_property, "test")
-    
+
     async def test_extension_functionality(self):
         # Get the extension instance
         extension = self.openmas.get_extension("my_extension_type", "my_extension")
-        
+
         # Test functionality
         result = await extension.my_custom_method("test")
-        
+
         # Assertions
         self.assertEqual(result, "expected_result")
 ```

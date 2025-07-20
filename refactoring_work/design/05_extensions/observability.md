@@ -69,7 +69,7 @@ properties:
                 type: boolean
                 description: "Include request ID in logs"
                 default: true
-            
+
       # MCP Protocol Monitoring
       mcp_monitoring:
         type: object
@@ -160,7 +160,7 @@ properties:
             type: boolean
             description: "Whether to maintain strict separation between communication and reasoning monitoring"
             default: true
-      
+
       # A2A Protocol Monitoring
       a2a_monitoring:
         type: object
@@ -229,7 +229,7 @@ properties:
                 type: boolean
                 description: "Whether to collect storage metrics"
                 default: true
-      
+
       # Metrics collection
       metrics:
         type: object
@@ -258,7 +258,7 @@ properties:
             type: integer
             description: "Interval for pushing metrics"
             default: 30
-      
+
       # Distributed tracing
       tracing:
         type: object
@@ -283,7 +283,7 @@ properties:
             type: boolean
             description: "Whether to propagate trace context"
             default: true
-      
+
       # Health checks
       health:
         type: object
@@ -490,7 +490,7 @@ The observability system tracks protocol-specific metrics while maintaining Open
    - Session creation, activation, and termination rates
    - Session duration and resource utilization
    - Request completion rates and error distribution
-   
+
 2. **MCP Message Metrics**:
    - Request/response counts and latency
    - Content type distribution
@@ -557,21 +557,21 @@ from openmas.observability import ObservabilityManager
 def setup_observability(app, config):
     # Initialize observability manager with configuration
     obs = ObservabilityManager(config["observability"])
-    
+
     # Setup logging
     obs.setup_logging()
-    
+
     # Setup metrics collection
     if config["observability"]["metrics"]["enabled"]:
         obs.setup_metrics(app)
-    
+
     # Setup distributed tracing
     if config["observability"]["tracing"]["enabled"]:
         obs.setup_tracing()
-    
+
     # Setup health checks
     if config["observability"]["health"]["enabled"]:
         obs.setup_health_checks(app)
-    
+
     return obs
-``` 
+```

@@ -13,29 +13,29 @@ The diagram below illustrates the hierarchical relationships between the three k
 ```mermaid
 graph TD
     subgraph "OpenMAS Architecture"
-        subgraph "Agent Topologies" 
+        subgraph "Agent Topologies"
             AT["Defines How Agents Organize"]
             ATA["Reasoning Agnostic"]
         end
-        
+
         subgraph "Communication Patterns"
             CP["Defines How Messages Exchange"]
             CPA["Protocol Agnostic"]
         end
-        
+
         subgraph "Protocol Layer (Communicators)"
             PL["Implements How Protocols Enable Communication"]
             PLA["Protocol-Specific Implementation"]
         end
-        
+
         AT -->|"Are Applied To"| CP
         CP -->|"Are Enabled Through"| PL
-        
+
         %% Hierarchical relationship
         classDef top fill:#f9f,stroke:#333,stroke-width:2px
         classDef middle fill:#bbf,stroke:#333,stroke-width:2px
         classDef bottom fill:#bfb,stroke:#333,stroke-width:2px
-        
+
         class AT,ATA top
         class CP,CPA middle
         class PL,PLA bottom
@@ -120,7 +120,7 @@ communication_patterns:
         use_streaming: false
       http:
         method: "POST"
-  
+
   event_based:
     options:
       event_buffer_size: 100
@@ -145,7 +145,7 @@ agents:
           relationship_type: "orchestrator_to_worker"
         - agent_id: "hotel_search"
           relationship_type: "orchestrator_to_worker"
-  
+
   flight_search:
     class: "agents.flight.FlightSearchAgent"
     communicator_type: "a2a"
@@ -159,7 +159,7 @@ agents:
         - agent_id: "travel_coordinator"
           relationship_type: "worker_to_orchestrator"
           communication_pattern: "event_based"
-  
+
   hotel_search:
     class: "agents.hotel.HotelSearchAgent"
     communicator_type: "mcp"  # Different protocol!
@@ -227,7 +227,7 @@ class TravelCoordinator(Agent):
     async def setup(self):
         # Set up topology
         self.topology_manager = TopologyManager(self)
-        
+
         # Register capabilities with patterns
         self.register_capability(
             "search_flights",
@@ -238,12 +238,12 @@ class TravelCoordinator(Agent):
             ),
             protocols=["a2a", "mcp", "http"]  # Multi-protocol support
         )
-        
+
         # Discover related agents based on topology
         self.worker_agents = await self.topology_manager.get_related_agents(
             relationship_type="orchestrator_to_worker"
         )
-    
+
     async def search_flights(self, params):
         # Invoke capability on worker agent using topology and pattern
         result = await self.topology_manager.invoke_agent(

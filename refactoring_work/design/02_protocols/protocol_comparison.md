@@ -53,7 +53,7 @@ Each protocol in OpenMAS can be integrated in various ways, depending on your sy
 ### MQTT Integration Patterns
 
 - **Sensor Network**: IoT devices publishing sensor data
-- **Command & Control**: Central control of distributed devices 
+- **Command & Control**: Central control of distributed devices
 - **Event Bus**: Distributed event notification system
 - **Message Broker**: Decoupled communication through topics
 

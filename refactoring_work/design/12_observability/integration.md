@@ -132,27 +132,27 @@ When implementing observability integration:
 class ObservableComponent:
     def __init__(self, component_name, component_id=None):
         self.logger = logging.get_logger(
-            component_name, 
+            component_name,
             component_id=component_id
         )
         self.metrics = metrics.get_recorder(
-            component_name, 
+            component_name,
             component_id=component_id
         )
         self.tracer = tracing.get_tracer(
-            component_name, 
+            component_name,
             component_id=component_id
         )
-    
+
     def operation(self, *args, **kwargs):
         with self.tracer.start_span("operation") as span:
             for key, value in kwargs.items():
                 if key not in self._sensitive_params:
                     span.set_attribute(key, str(value))
-            
+
             self.metrics.increment("operations_total", 1)
             start_time = time.time()
-            
+
             try:
                 self.logger.debug("Starting operation", operation="operation")
                 result = self._operation_impl(*args, **kwargs)
@@ -177,17 +177,17 @@ class ObservableComponent:
 async def handle_request(request, context):
     # Extract trace context from request
     trace_context = extract_trace_context(request)
-    
+
     # Create new span using the parent context
     with tracer.start_span("handle_request", parent=trace_context) as span:
         span.set_attribute("request_type", request.type)
-        
+
         # Process the request
         response = await process_request(request)
-        
+
         # Inject trace context into response
         inject_trace_context(response, tracer.current_span().context)
-        
+
         return response
 ```
 
@@ -197,20 +197,20 @@ async def handle_request(request, context):
 def process_batch(batch):
     batch_size = len(batch)
     metrics.gauge("batch_size", batch_size)
-    
+
     start_time = time.time()
     processed = 0
     errors = 0
-    
+
     for item in batch:
         try:
             process_item(item)
             processed += 1
         except Exception:
             errors += 1
-    
+
     duration = time.time() - start_time
-    
+
     metrics.counter("items_processed_total", processed)
     metrics.counter("items_error_total", errors)
     metrics.histogram("batch_processing_duration", duration)

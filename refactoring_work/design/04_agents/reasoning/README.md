@@ -29,7 +29,7 @@ sequenceDiagram
     participant Protocol as Protocol Adapter
     participant AgentFramework as Agent Framework
     participant Reasoning as Reasoning Engine
-    
+
     Protocol->>AgentFramework: Convert Protocol Message to SIMF
     AgentFramework->>Reasoning: Pass SIMF Message
     Reasoning->>AgentFramework: Return SIMF Response
@@ -76,7 +76,7 @@ def process_stream(self, messages):
             if msg.payload.stream_id not in streams:
                 streams[msg.payload.stream_id] = []
             streams[msg.payload.stream_id].append(msg)
-    
+
     # Process each stream as a coherent sequence
     for stream_id, stream_msgs in streams.items():
         sorted_msgs = sorted(stream_msgs, key=lambda m: m.payload.sequence_number)
@@ -96,7 +96,7 @@ def process_event(self, message):
             "data": message.payload.data,
             "timestamp": message.payload.timestamp
         })
-        
+
         # Trigger event-specific rules
         self.evaluate_rules_for_event_type(message.payload.event_type)
 ```
@@ -123,14 +123,14 @@ class SecurityAgent(Agent):
             conflict_resolution="priority",
             max_iterations=100
         )
-        
+
         # Define rules programmatically
         self.rule_engine.add_rules([
             "IF sensor.motion = True AND time.period = 'night' THEN alert('Motion detected during night')",
             "IF sensor.smoke > 50 THEN alert('Smoke detected') AND activate('sprinklers')",
             "IF sensor.temperature > 30 THEN activate('cooling')"
         ])
-        
+
         # Define rules using object model for more complex scenarios
         complex_rule = Rule(
             name="intrusion_detection",
@@ -147,26 +147,26 @@ class SecurityAgent(Agent):
             ]
         )
         self.rule_engine.add_rule(complex_rule)
-        
+
         # Load rules from external file
         await self.rule_engine.load_rules_from_file("security_rules.yml")
-        
+
         # Register capabilities
         self.register_capability("check_security")
         self.register_capability("update_rules")
-    
+
     @capability("check_security")
     async def check_security(self, sensors):
         # Update fact base with sensor data
         self.rule_engine.update_facts(sensors)
-        
+
         # Evaluate rules with different inference settings
         actions = self.rule_engine.evaluate(
             inference_depth=3,
             explain=True,  # Generate explanation of reasoning
             uncertainty_threshold=0.8  # Handle uncertain facts
         )
-        
+
         # Execute resulting actions
         results = []
         for action in actions:
@@ -177,19 +177,19 @@ class SecurityAgent(Agent):
                 "parameters": action.parameters,
                 "explanation": action.explanation
             })
-            
+
         return {
-            "detected_issues": len(results), 
+            "detected_issues": len(results),
             "actions_taken": results,
             "inference_path": self.rule_engine.get_inference_path()
         }
-        
+
     @capability("update_rules")
     async def update_rules(self, new_rules, override=False):
         """Dynamic rule update capability."""
         if override:
             self.rule_engine.clear_rules()
-            
+
         added_rules = self.rule_engine.add_rules(new_rules)
         return {"rules_added": len(added_rules), "rules_total": self.rule_engine.rule_count}
 ```
@@ -215,7 +215,7 @@ class SecurityAgent(Agent):
   - Reasoning trace generation
   - Inference path visualization
   - Decision justification
-  
+
 - **Integration Features**:
   - Dynamic rule updates
   - External knowledge source integration
@@ -237,17 +237,17 @@ class DeliveryAgent(Agent):
         self.desire_set = DesireSet()
         self.plan_library = PlanLibrary()
         self.intention_structure = IntentionStructure()
-        
+
         # Add initial beliefs
         self.belief_base.add("at(depot)")
         self.belief_base.add("packages", [
             {"id": "p1", "destination": "location_a"},
             {"id": "p2", "destination": "location_b"}
         ])
-        
+
         # Add desires (goals)
         self.desire_set.add_desire("deliver_all_packages", priority=10)
-        
+
         # Add plans
         self.plan_library.add_plan(
             "deliver_package",
@@ -259,26 +259,26 @@ class DeliveryAgent(Agent):
                 "!navigate_to(depot)"
             ]
         )
-        
+
         self.plan_library.add_plan(
             "deliver_all",
             trigger="deliver_all_packages",
             body=["!deliver_package(?p) FOR_EACH ?p IN packages"]
         )
-        
+
         # Register capabilities
         self.register_capability("start_deliveries")
         self.register_capability("add_package")
-    
+
     @capability("start_deliveries")
     async def start_deliveries(self):
         # Add intention to deliver all packages
         self.intention_structure.add_intention("deliver_all_packages")
-        
+
         # Run BDI reasoning cycle
         while self.intention_structure.has_intentions():
             await self.bdi_cycle()
-            
+
         return {"status": "completed", "packages_delivered": len(self.belief_base.query("packages"))}
 ```
 
@@ -304,28 +304,28 @@ class DiagnosticAgent(Agent):
         self.symbolic_engine = SymbolicEngine(
             reasoning_methods=["deductive", "abductive"]
         )
-        
+
         # Connect to KR&R System-managed knowledge bases (configured in knowledge_management_config)
         self.kb_client = KnowledgeBaseClient()
         self.medical_kb = await self.kb_client.get_knowledge_base("medical_ontology")
         self.rules_kb = await self.kb_client.get_knowledge_base("diagnostic_rules")
-        
+
         # Register capabilities
         self.register_capability("diagnose")
-    
+
     @capability("diagnose")
     async def diagnose(self, symptoms):
         # Assert symptoms as facts using the KR&R System's knowledge base interface
         for symptom in symptoms:
             await self.medical_kb.add(f"hasSymptom(patient, {symptom})")
-        
+
         # Perform reasoning to determine possible conditions
         possible_conditions = await self.symbolic_engine.infer(
             query="hasCondition(patient, ?condition)",
             knowledge_base=self.medical_kb,
             reasoning_type="abductive"
         )
-        
+
         # Determine confidence for each condition
         results = []
         for condition in possible_conditions:
@@ -334,10 +334,10 @@ class DiagnosticAgent(Agent):
                 knowledge_base=self.medical_kb
             )
             results.append({"condition": condition, "confidence": confidence})
-        
+
         # Sort by confidence
         results.sort(key=lambda x: x["confidence"], reverse=True)
-        
+
         return {
             "diagnosis": results,
             "explanation": await self.symbolic_engine.explain(results[0]["condition"])
@@ -367,25 +367,25 @@ class CustomerSupportAgent(Agent):
             model=self.config.get("reasoning.llm.model", "gpt-4"),
             system_prompt="You are a helpful customer support agent."
         )
-        
+
         # Set up memory
         self.memory = self.llm.create_memory(
             memory_type="conversation_buffer",
             max_tokens=10000
         )
-        
+
         # Load knowledge base
         self.knowledge = await self.load_knowledge("customer_support_kb")
-        
+
         # Register capabilities
         self.register_capability("answer_question")
         self.register_capability("escalate_issue")
-    
+
     @capability("answer_question")
     async def answer_question(self, question, conversation_id=None):
         # Retrieve relevant knowledge
         relevant_docs = await self.knowledge.query(question)
-        
+
         # Generate response with LLM
         response = await self.llm.generate(
             prompt=question,
@@ -394,7 +394,7 @@ class CustomerSupportAgent(Agent):
             context=relevant_docs,
             max_tokens=1000
         )
-        
+
         return {
             "answer": response.text,
             "sources": response.metadata.get("sources", []),
@@ -425,22 +425,22 @@ class FinancialAdvisorAgent(Agent):
         # Initialize component reasoners
         self.rule_engine = RuleEngine()
         self.rule_engine.load_rules("financial_rules.yml")
-        
+
         self.llm = await LLMReasoner.create(
             provider="openai",
             model="gpt-4"
         )
-        
+
         self.bdi = BDIEngine()
         self.bdi.load_plans("financial_plans.yml")
-        
+
         # Create hybrid reasoner
         self.reasoner = HybridEngine([
             ("rule_engine", self.rule_engine, {"priority": 1}),
             ("llm", self.llm, {"priority": 2}),
             ("bdi", self.bdi, {"priority": 3})
         ])
-        
+
         # Configure reasoning flow
         self.reasoner.configure_flow({
             "regulatory_compliance": "rule_engine",
@@ -448,10 +448,10 @@ class FinancialAdvisorAgent(Agent):
             "financial_planning": "bdi",
             "fallback": "llm"
         })
-        
+
         # Register capabilities
         self.register_capability("provide_investment_advice")
-    
+
     @capability("provide_investment_advice")
     async def provide_investment_advice(self, client_profile, preferences):
         # Regulatory compliance check using rules
@@ -459,22 +459,22 @@ class FinancialAdvisorAgent(Agent):
             "regulatory_compliance",
             {"profile": client_profile, "preferences": preferences}
         )
-        
+
         if not compliance.get("compliant", False):
             return {"status": "rejected", "reason": compliance.get("reason")}
-        
+
         # Generate personalized advice using LLM
         advice = await self.reasoner.reason(
             "personalized_advice",
             {"profile": client_profile, "preferences": preferences}
         )
-        
+
         # Create financial plan using BDI
         plan = await self.reasoner.reason(
             "financial_planning",
             {"profile": client_profile, "preferences": preferences, "advice": advice}
         )
-        
+
         return {
             "status": "success",
             "advice": advice.get("recommendation"),
@@ -499,26 +499,26 @@ All reasoning approaches implement a common interface:
 ```python
 class BaseReasoner:
     """Base class for all reasoning approaches."""
-    
+
     def __init__(self, config=None):
         self.config = config or {}
-    
+
     async def initialize(self):
         """Initialize the reasoner."""
         raise NotImplementedError
-    
+
     async def reason(self, input_data, context=None):
         """Perform reasoning on the input data."""
         raise NotImplementedError
-    
+
     async def explain(self, reasoning_result):
         """Explain the reasoning process for a result."""
         raise NotImplementedError
-    
+
     async def update(self, new_knowledge):
         """Update the reasoner's knowledge."""
         raise NotImplementedError
-    
+
     async def cleanup(self):
         """Clean up resources."""
         pass
@@ -535,27 +535,27 @@ class MultiReasoningAgent(Agent):
         self.llm_reasoner = await LLMReasoner.create(provider="openai", model="gpt-4")
         self.rule_reasoner = RuleEngine()
         self.rule_reasoner.load_rules("business_rules.yml")
-        
+
         # Register capabilities with specific reasoners
         self.register_capability(
             name="generate_content",
             description="Generate creative content",
             reasoner="llm"  # Use LLM for creative tasks
         )
-        
+
         self.register_capability(
             name="validate_transaction",
             description="Validate a financial transaction",
             reasoner="rule"  # Use rules for compliance
         )
-    
+
     @capability("generate_content", reasoner="llm")
     async def generate_content(self, topic, length):
         return await self.llm_reasoner.generate({
             "topic": topic,
             "length": length
         })
-    
+
     @capability("validate_transaction", reasoner="rule")
     async def validate_transaction(self, transaction):
         return self.rule_reasoner.evaluate({
@@ -574,11 +574,11 @@ agents:
   finance_agent:
     class: "agents.finance.FinancialAdvisorAgent"
     type: "hybrid"
-    
+
     # Reasoning configuration
     reasoning:
       approach: "hybrid"
-      
+
       # LLM reasoning configuration
       llm:
         provider: "openai"
@@ -586,13 +586,13 @@ agents:
         temperature: 0.2
         system_prompt: "You are a financial advisor..."
         tools_enabled: true
-      
+
       # Rule-based reasoning configuration
       rule_based:
         engine: "standard"
         rules_file: "rules/financial_rules.yml"
         inference: "forward"
-      
+
       # BDI reasoning configuration
       bdi:
         belief_base:
@@ -603,7 +603,7 @@ agents:
         plans:
           - name: "diversify_investments"
             triggers: ["optimize_portfolio"]
-      
+
       # Hybrid reasoning flow
       hybrid:
         flow:

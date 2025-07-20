@@ -162,7 +162,7 @@ The `config` command can operate on different levels of this hierarchy.
 ## Related Commands
 
 - [init](./init.md): Initialize a new OpenMAS project
-- [validate](./validate.md): Validate OpenMAS configurations 
+- [validate](./validate.md): Validate OpenMAS configurations
 - [run](./run.md): Run agents and systems with configuration
 
 ## Related Documentation

@@ -93,7 +93,7 @@ See the `agents.[agent_id].protocols[].options` (where type is "mqtt") in the [U
             description: "MQTT Quality of Service level"
             enum: [0, 1, 2]
             default: 1
-            
+
           # gRPC Protocol Options
           grpc_port:
             type: integer
@@ -245,7 +245,7 @@ agents:
   weather_agent:
     class: "agents.weather.WeatherAgent"
     type: "hybrid"
-    
+
     # Protocol configuration
     protocols:
       - type: "a2a-http"
@@ -255,13 +255,13 @@ agents:
           agent_card:
             name: "Weather Agent"
             description: "Provides weather forecasts and alerts"
-      
+
       - type: "mcp-sse"
         enabled: true
         options:
           client_mode: true
           server_name: "weather_tools"
-      
+
       - type: "mqtt"
         enabled: true
         options:

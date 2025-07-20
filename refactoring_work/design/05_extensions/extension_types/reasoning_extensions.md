@@ -88,13 +88,13 @@ from typing import Dict, List, Any
 
 class RuleBasedReasoner(BaseReasoner):
     """Rule-based reasoner implementation."""
-    
+
     def __init__(self, config):
         super().__init__(config)
         self.rules = config.get("rules", [])
         self.variables = {}
         self.compile_rules()
-    
+
     def compile_rules(self):
         """Compile rules for efficient matching."""
         self.compiled_rules = []
@@ -102,7 +102,7 @@ class RuleBasedReasoner(BaseReasoner):
             pattern = rule.get("pattern", "")
             action = rule.get("action", "")
             priority = rule.get("priority", 0)
-            
+
             try:
                 compiled_pattern = re.compile(pattern, re.IGNORECASE)
                 self.compiled_rules.append({
@@ -112,33 +112,33 @@ class RuleBasedReasoner(BaseReasoner):
                 })
             except re.error as e:
                 self.logger.error(f"Failed to compile rule pattern '{pattern}': {e}")
-        
+
         # Sort by priority (higher first)
         self.compiled_rules.sort(key=lambda r: r["priority"], reverse=True)
-    
+
     async def process_message(self, message):
         """Process a message using the rule-based approach."""
         # Extract message content
         content = message.get_content_text()
-        
+
         # Find matching rules
         matching_rules = []
         for rule in self.compiled_rules:
             match = rule["pattern"].search(content)
             if match:
                 matching_rules.append((rule, match))
-        
+
         if not matching_rules:
             # No rule matched, use default response
             return self.create_response(message, "I don't know how to respond to that.")
-        
+
         # Use the highest priority matching rule
         rule, match = matching_rules[0]
-        
+
         # Extract variables from match
         variables = match.groupdict()
         self.variables.update(variables)
-        
+
         # Execute the action
         try:
             response_text = self.execute_action(rule["action"], variables)
@@ -146,20 +146,20 @@ class RuleBasedReasoner(BaseReasoner):
         except Exception as e:
             self.logger.error(f"Error executing rule action: {e}")
             return self.create_response(message, "I encountered an error processing your request.")
-    
+
     def execute_action(self, action, variables):
         """Execute a rule action with variables."""
         # Simple template substitution
         result = action
         for var_name, var_value in variables.items():
             result = result.replace(f"{{{var_name}}}", var_value)
-        
+
         # Replace global variables
         for var_name, var_value in self.variables.items():
             result = result.replace(f"${{{var_name}}}", str(var_value))
-        
+
         return result
-    
+
     def create_response(self, message, response_text):
         """Create a response to the message."""
         return {
@@ -169,20 +169,20 @@ class RuleBasedReasoner(BaseReasoner):
 
 class RuleBasedReasoningExtension(ReasoningExtension):
     """Extension that provides rule-based reasoning."""
-    
+
     extension_type = "reasoning"
     extension_name = "rule_based"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
-    
+
     def validate_config(self):
         """Validate the extension configuration."""
         options = self.config.get("options", {})
         if options.get("approach") != "rule_based":
             raise ValueError("Rule-based reasoning extension requires 'approach: rule_based' in options")
-    
+
     def get_reasoner_metadata(self):
         """Get metadata about the reasoning approach."""
         return {
@@ -192,7 +192,7 @@ class RuleBasedReasoningExtension(ReasoningExtension):
             "requires_llm": False,
             "requires_kb": False
         }
-    
+
     def get_supported_capabilities(self):
         """Get capabilities supported by this reasoner."""
         return [
@@ -212,16 +212,16 @@ class RuleBasedReasoningExtension(ReasoningExtension):
                 "description": "Generate responses based on templates with variable substitution"
             }
         ]
-    
+
     def create_reasoner(self, agent_config):
         """Create a rule-based reasoner instance."""
         # Extract rule-based reasoning configuration
         reasoning_config = agent_config.get("reasoning", {})
         rule_config = reasoning_config.get("rule_based", {})
-        
+
         # Add rules from the configuration
         rules = rule_config.get("rules", [])
-        
+
         # Create reasoner instance with rules
         return RuleBasedReasoner({
             "rules": rules,
@@ -270,22 +270,22 @@ from openmas.krr import IKnowledgeBase
 
 class KnowledgeEnabledReasoner(BaseReasoner):
     """Reasoner that uses the KR&R system."""
-    
+
     def __init__(self, config, knowledge_base=None):
         super().__init__(config)
         self.knowledge_base = knowledge_base
-    
+
     async def process_message(self, message):
         """Process a message using knowledge from the KR&R system."""
         content = message.get_content_text()
-        
+
         # Use the knowledge base to find relevant knowledge
         if self.knowledge_base:
             facts = await self.knowledge_base.query({"text": content})
             if facts:
                 # Use the facts to generate a response
                 return self.create_knowledge_based_response(message, facts)
-        
+
         # Fallback if no relevant knowledge
         return self.create_response(message, "I don't have information about that.")
 ```

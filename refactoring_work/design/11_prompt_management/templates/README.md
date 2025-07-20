@@ -92,14 +92,14 @@ prompts:
     version: "1.0.0"
     template: |
       System: {{system_instruction}}
-      
+
       {% if context %}
       Context:
       {{context}}
       {% endif %}
-      
+
       User: {{user_input}}
-      
+
       Assistant:
     variables:
       system_instruction: "You are a helpful assistant."
@@ -120,14 +120,14 @@ prompts:
     version: "1.0.0"
     template: |
       System: {{system_instruction}}
-      
+
       {% if conversation_history %}
       Previous conversation:
       {{conversation_history}}
       {% endif %}
-      
+
       User: {{user_input}}
-      
+
       Assistant:
     variables:
       system_instruction: "You are a helpful assistant."

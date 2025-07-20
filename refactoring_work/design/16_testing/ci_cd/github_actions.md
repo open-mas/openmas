@@ -46,7 +46,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [3.9, 3.10, 3.11, 3.12]
-        
+
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python ${{ matrix.python-version }}
@@ -82,7 +82,7 @@ jobs:
     strategy:
       matrix:
         protocol: [a2a, mcp, http, mqtt, grpc]
-        
+
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.10
@@ -114,7 +114,7 @@ jobs:
     strategy:
       matrix:
         reasoning: [rule-based, bdi, llm, kr-symbolic, kr-graph, kr-probabilistic, hybrid]
-        
+
     steps:
     - uses: actions/checkout@v3
     - name: Set up Python 3.10

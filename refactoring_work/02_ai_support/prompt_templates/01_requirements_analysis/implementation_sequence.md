@@ -110,4 +110,4 @@ The component has been broken down into these sub-components:
    - Considers existing code that needs to be migrated
 
 [Rest of prompt follows...]
-``` 
+```

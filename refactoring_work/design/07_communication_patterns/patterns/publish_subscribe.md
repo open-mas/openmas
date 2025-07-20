@@ -137,7 +137,7 @@ publish_subscribe:
 ```python
 class PublishSubscribePattern(Pattern):
     """Implementation of the Publish-Subscribe pattern."""
-    
+
     def __init__(self, options, agent_context):
         """Initialize the pattern."""
         super().__init__(options, agent_context)
@@ -145,16 +145,16 @@ class PublishSubscribePattern(Pattern):
         self.topic_structure = options.get("topic_structure", {})
         self.subscription_handling = options.get("subscription_handling", {})
         self.retention = options.get("retention", {})
-        
+
         # Initialize subscriptions
         self.subscriptions = {}
         self.message_handlers = {}
-        
+
     async def publish(self, topic, content, metadata=None):
         """Publish a message to a topic."""
         # Format the topic
         formatted_topic = self._format_topic(topic)
-        
+
         # Create publish message
         message = {
             "id": str(uuid.uuid4()),
@@ -163,7 +163,7 @@ class PublishSubscribePattern(Pattern):
             "content": content,
             "metadata": metadata or {}
         }
-        
+
         # Add pattern metadata
         message["metadata"].update({
             "pattern": "publish_subscribe",
@@ -171,25 +171,25 @@ class PublishSubscribePattern(Pattern):
             "publisher_id": self.agent_context.agent_id,
             "retention": self.retention.get("enabled", False)
         })
-        
+
         # Get the protocol adapter
         protocol = self.agent_context.communicator.protocol
         adapter = self.get_protocol_adapter(protocol)
-        
+
         # Prepare the outgoing message
         prepared_message = await adapter.prepare_outgoing(message, self)
-        
+
         # Send the message (broadcast)
         await self.agent_context.communicator.broadcast_message(
             prepared_message, topic=formatted_topic)
-            
+
         return message["id"]
-        
+
     async def subscribe(self, topic, handler=None):
         """Subscribe to a topic."""
         # Format the topic
         formatted_topic = self._format_topic(topic)
-        
+
         # Create subscription message
         message = {
             "id": str(uuid.uuid4()),
@@ -202,35 +202,35 @@ class PublishSubscribePattern(Pattern):
                 "qos": self._get_qos_level()
             }
         }
-        
+
         # Get the protocol adapter
         protocol = self.agent_context.communicator.protocol
         adapter = self.get_protocol_adapter(protocol)
-        
+
         # Prepare the outgoing message
         prepared_message = await adapter.prepare_outgoing(message, self)
-        
+
         # Send the subscription message
         await self.agent_context.communicator.subscribe(
             prepared_message, topic=formatted_topic)
-            
+
         # Register the handler
         if handler:
             self.message_handlers[formatted_topic] = handler
-            
+
         # Track the subscription
         self.subscriptions[formatted_topic] = {
             "id": message["id"],
             "created_at": datetime.now().isoformat()
         }
-        
+
         return message["id"]
-        
+
     async def unsubscribe(self, topic):
         """Unsubscribe from a topic."""
         # Format the topic
         formatted_topic = self._format_topic(topic)
-        
+
         # Create unsubscribe message
         message = {
             "id": str(uuid.uuid4()),
@@ -242,73 +242,73 @@ class PublishSubscribePattern(Pattern):
                 "subscriber_id": self.agent_context.agent_id
             }
         }
-        
+
         # Get the protocol adapter
         protocol = self.agent_context.communicator.protocol
         adapter = self.get_protocol_adapter(protocol)
-        
+
         # Prepare the outgoing message
         prepared_message = await adapter.prepare_outgoing(message, self)
-        
+
         # Send the unsubscribe message
         await self.agent_context.communicator.unsubscribe(
             prepared_message, topic=formatted_topic)
-            
+
         # Remove the handler
         if formatted_topic in self.message_handlers:
             del self.message_handlers[formatted_topic]
-            
+
         # Remove the subscription
         if formatted_topic in self.subscriptions:
             del self.subscriptions[formatted_topic]
-            
+
         return True
-        
+
     async def process_incoming(self, message, protocol):
         """Process an incoming message."""
         adapter = self.get_protocol_adapter(protocol)
         transformed = await adapter.process_incoming(message, self)
-        
+
         if transformed.get("type") == "notification":
             # Handle notification
             topic = transformed.get("topic")
-            
+
             # Find matching handlers
             for pattern, handler in self.message_handlers.items():
                 if self._topic_matches(topic, pattern):
                     # Call the handler
                     await handler(transformed)
-                    
+
         return transformed
-        
+
     async def prepare_outgoing(self, message, protocol):
         """Prepare an outgoing message."""
         adapter = self.get_protocol_adapter(protocol)
         return await adapter.prepare_outgoing(message, self)
-        
+
     def on_message(self, topic, handler):
         """Register a message handler for a topic."""
         formatted_topic = self._format_topic(topic)
         self.message_handlers[formatted_topic] = handler
-        
+
     def _format_topic(self, topic):
         """Format a topic according to the configured structure."""
         format_str = self.topic_structure.get("format")
         if not format_str:
             return topic
-            
+
         # Apply dynamic segments
         format_args = {}
         for segment in self.topic_structure.get("dynamic_segments", []):
             if segment == "agent_id":
                 format_args[segment] = self.agent_context.agent_id
-                
+
         # Format the topic
         try:
             return format_str.format(topic=topic, **format_args)
         except Exception:
             return topic
-            
+
     def _get_qos_level(self):
         """Get the QoS level based on delivery guarantee."""
         if self.delivery_guarantee == "at_most_once":
@@ -319,7 +319,7 @@ class PublishSubscribePattern(Pattern):
             return 2
         else:
             return 1
-            
+
     def _topic_matches(self, topic, pattern):
         """Check if a topic matches a subscription pattern."""
         # Convert MQTT-style wildcards to regex
@@ -327,10 +327,10 @@ class PublishSubscribePattern(Pattern):
             pattern = pattern.replace("#", ".*")
         if "+" in pattern:
             pattern = pattern.replace("+", "[^/]+")
-            
+
         # Escape regex special characters in the pattern
         pattern = "^" + re.escape(pattern).replace("\\+", "[^/]+").replace("\\#", ".*") + "$"
-        
+
         # Check if the topic matches the pattern
         return bool(re.match(pattern, topic))
 ```
@@ -355,20 +355,20 @@ publish_subscribe:
 ```python
 class MQTTPublishSubscribeAdapter(ProtocolAdapter):
     """Adapts the Publish-Subscribe pattern to MQTT protocol."""
-    
+
     async def process_incoming(self, message, pattern):
         """Process an incoming MQTT message."""
         # MQTT messages already have topic
         topic = message.get("topic")
         payload = message.get("payload")
-        
+
         try:
             # Parse JSON payload
             content = json.loads(payload)
         except Exception:
             # Use raw payload as content
             content = payload
-            
+
         return {
             "id": str(uuid.uuid4()),  # MQTT doesn't have message IDs
             "type": "notification",
@@ -380,24 +380,24 @@ class MQTTPublishSubscribeAdapter(ProtocolAdapter):
                 "qos": message.get("qos", 0)
             }
         }
-        
+
     async def prepare_outgoing(self, message, pattern):
         """Prepare an outgoing MQTT message."""
         if message.get("type") == "publish":
             # Prepare a publish message
             topic = message.get("topic")
             content = message.get("content")
-            
+
             # Get QoS and retention
             qos = pattern.config.get("qos_level", 1)
             retain = pattern.config.get("retain", False)
-            
+
             # Override from message metadata
             if "qos" in message.get("metadata", {}):
                 qos = message["metadata"]["qos"]
             if "retention" in message.get("metadata", {}):
                 retain = message["metadata"]["retention"]
-                
+
             return {
                 "topic": topic,
                 "payload": json.dumps(content),
@@ -408,7 +408,7 @@ class MQTTPublishSubscribeAdapter(ProtocolAdapter):
             # Prepare a subscribe message
             topic = message.get("topic")
             qos = message.get("metadata", {}).get("qos", 1)
-            
+
             return {
                 "topic": topic,
                 "qos": qos
@@ -416,7 +416,7 @@ class MQTTPublishSubscribeAdapter(ProtocolAdapter):
         elif message.get("type") == "unsubscribe":
             # Prepare an unsubscribe message
             topic = message.get("topic")
-            
+
             return {
                 "topic": topic
             }
@@ -440,14 +440,14 @@ publish_subscribe:
 ```python
 class A2APublishSubscribeAdapter(ProtocolAdapter):
     """Adapts the Publish-Subscribe pattern to A2A protocol."""
-    
+
     async def process_incoming(self, message, pattern):
         """Process an incoming A2A message."""
         if message.get("type") == pattern.config.get("task_type", "notification"):
             # Extract notification from A2A task
             metadata = message.get("metadata", {})
             topic = metadata.get(pattern.config.get("topic_metadata_field", "topic"))
-            
+
             return {
                 "id": message.get("id"),
                 "type": "notification",
@@ -459,9 +459,9 @@ class A2APublishSubscribeAdapter(ProtocolAdapter):
                     "publisher_id": metadata.get("publisher_id")
                 }
             }
-            
+
         return message
-        
+
     async def prepare_outgoing(self, message, pattern):
         """Prepare an outgoing A2A message."""
         if message.get("type") == "publish":
@@ -477,7 +477,7 @@ class A2APublishSubscribeAdapter(ProtocolAdapter):
                 }
             }
             return task
-        
+
         return message
 ```
 
@@ -537,7 +537,7 @@ async def handle_status_update(self, message):
     service_id = message.get("topic").split("/")[-1]
     status = message.get("content", {}).get("status")
     metrics = message.get("content", {}).get("metrics", {})
-    
+
     # Update dashboard with status
     await self.dashboard.update_service_status(service_id, status, metrics)
 ```
@@ -592,7 +592,7 @@ async def handle_new_content(self, message):
     topic_parts = message.get("topic").split("/")
     content_type = topic_parts[1] if len(topic_parts) > 1 else "unknown"
     content = message.get("content", {})
-    
+
     # Process new content
     if content_type == "articles":
         await self.content_manager.add_article(content)

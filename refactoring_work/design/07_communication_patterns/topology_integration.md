@@ -83,7 +83,7 @@ agents:
           relationship_type: "orchestrator_to_service"
           direction: "outgoing"
           communication_pattern: "delegation"
-    
+
     patterns:
       request_response:
         options:
@@ -247,7 +247,7 @@ agents:
       delegation:
         options:
           delegation_timeout: 300000
-          
+
   task_worker_1:
     class: "agents.workflow.Worker"
     communicator_type: "a2a"
@@ -299,7 +299,7 @@ agents:
       event_based:
         options:
           event_history_size: 100
-          
+
   content_node_2:
     class: "agents.content.ContentNode"
     communicator_type: "mqtt"
@@ -321,18 +321,18 @@ At runtime, the integration between topologies and patterns is managed by these 
 ```python
 class PatternManager:
     """Manages communication patterns for an agent."""
-    
+
     def __init__(self, agent_id, patterns_config, pattern_factory):
         """Initialize the pattern manager."""
         self.agent_id = agent_id
         self.patterns_config = patterns_config
         self.pattern_factory = pattern_factory
         self.patterns = {}
-        
+
     async def initialize(self, topology_manager):
         """Initialize patterns based on topology relationships."""
         relationships = await topology_manager.get_relationships()
-        
+
         # Create patterns based on relationships
         for relationship in relationships:
             pattern_type = relationship.communication_pattern
@@ -341,11 +341,11 @@ class PatternManager:
                     pattern_type,
                     self.patterns_config.get(pattern_type, {})
                 )
-                
+
         # Initialize all patterns
         for pattern in self.patterns.values():
             await pattern.initialize()
-            
+
     async def get_pattern_for_relationship(self, relationship):
         """Get the appropriate pattern for a relationship."""
         pattern_type = relationship.communication_pattern

@@ -39,7 +39,7 @@
 
 - `extension_system.configure_extension(extension_id: str, config: Dict[str, Any]) → bool`
   - **Purpose**: Configure a specific extension with custom parameters
-  - **Parameters**: 
+  - **Parameters**:
     - `extension_id`: Extension identifier
     - `config`: Extension-specific configuration
   - **Returns**: Boolean indicating successful configuration
@@ -95,7 +95,7 @@ class ExtensionConfigurationUpdatedEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         extension_id: str  # Identifier of the extension
         extension_type: str  # Type of extension (capability, protocol, reasoning, etc.)
@@ -118,45 +118,45 @@ def handle_extension_configuration_update(event: ExtensionConfigurationUpdatedEv
     extension_id = payload.extension_id
     extension_type = payload.extension_type
     updated_paths = payload.updated_paths
-    
+
     logger.info(f"Extension configuration update for {extension_id} (type: {extension_type}) with {len(updated_paths)} path updates")
-    
+
     # Get the extension loader for this extension type
     loader = extension_system.get_loader_for_type(extension_type)
     if not loader:
         logger.error(f"No loader found for extension type: {extension_type}")
         return
-    
+
     # Check if this is an extension managed by this loader
     if loader.has_extension(extension_id):
         logger.info(f"Handling configuration update for extension {extension_id}")
-        
+
         # Get the updated configuration
         extension_config = configuration_system.get_extension_configuration(extension_id)
-        
+
         # Apply the configuration to the extension
         try:
             result = loader.update_extension_configuration(extension_id, extension_config)
-            
+
             logger.info(f"Applied configuration update to extension {extension_id}: Success={result.success}")
-            
+
             # Handle extension restart if needed
             if result.success and payload.requires_extension_restart:
                 logger.info(f"Extension {extension_id} requires restart due to configuration changes")
-                
+
                 # Check if we're configured to auto-restart extensions
                 extension_system_config = configuration_system.get_configuration_value("extension_system")
                 auto_restart = extension_system_config.get("auto_restart_on_config_change", False)
-                
+
                 if auto_restart:
                     logger.info(f"Auto-restarting extension {extension_id}")
-                    
+
                     # Restart the extension
                     restart_result = loader.restart_extension(extension_id)
-                    
+
                     if restart_result.success:
                         logger.info(f"Successfully restarted extension {extension_id}")
-                        
+
                         # Notify interested components
                         event_system.emit("extension_restarted", {
                             "extension_id": extension_id,
@@ -166,7 +166,7 @@ def handle_extension_configuration_update(event: ExtensionConfigurationUpdatedEv
                         })
                     else:
                         logger.error(f"Failed to restart extension {extension_id}: {restart_result.error_message}")
-                        
+
                         # Report the error
                         error_reporting.report_error(
                             error_type="extension_restart_failure",
@@ -180,7 +180,7 @@ def handle_extension_configuration_update(event: ExtensionConfigurationUpdatedEv
                         )
                 else:
                     logger.warning(f"Extension {extension_id} needs manual restart to apply configuration changes")
-                    
+
                     # Notify administrators
                     notification_service.send_admin_notification(
                         severity="warning",
@@ -196,7 +196,7 @@ def handle_extension_configuration_update(event: ExtensionConfigurationUpdatedEv
                     )
         except Exception as e:
             logger.error(f"Error applying configuration update to extension {extension_id}: {str(e)}")
-            
+
             # Report the error
             error_reporting.report_error(
                 error_type="extension_configuration_failure",
@@ -221,7 +221,7 @@ class ExtensionRegistryUpdatedEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         update_id: str  # Unique identifier for this update
         update_time: datetime  # When the update was performed
@@ -244,32 +244,32 @@ def handle_extension_registry_update(event: ExtensionRegistryUpdatedEvent):
     added_count = len(payload.added_extensions)
     updated_count = len(payload.updated_extensions)
     removed_count = len(payload.removed_extensions)
-    
+
     logger.info(f"Extension registry update ({update_type}): {added_count} added, {updated_count} updated, {removed_count} removed")
-    
+
     # Update the discovery system with new registry information
     extension_system.discovery_service.process_registry_update(
         added_extensions=payload.added_extensions,
         updated_extensions=payload.updated_extensions,
         removed_extensions=payload.removed_extensions
     )
-    
+
     # If any extensions were added, check if they should be auto-installed
     if payload.added_extensions:
         extension_system_config = configuration_system.get_configuration_value("extension_system")
         auto_install = extension_system_config.get("auto_install_new_extensions", False)
-        
+
         if auto_install:
             logger.info(f"Auto-installing {added_count} new extensions")
-            
+
             # Queue extensions for installation
             for extension_info in payload.added_extensions:
                 extension_id = extension_info.get("id")
                 extension_version = extension_info.get("version")
-                
+
                 if extension_id and extension_version:
                     logger.info(f"Queueing installation of extension {extension_id} version {extension_version}")
-                    
+
                     # Queue the installation
                     extension_system.installation_queue.add({
                         "extension_id": extension_id,
@@ -278,30 +278,30 @@ def handle_extension_registry_update(event: ExtensionRegistryUpdatedEvent):
                         "auto_install": True,
                         "install_dependencies": True
                     })
-    
+
     # If any extensions were updated, check if current installations should be upgraded
     if payload.updated_extensions:
         extension_system_config = configuration_system.get_configuration_value("extension_system")
         auto_upgrade = extension_system_config.get("auto_upgrade_extensions", False)
-        
+
         if auto_upgrade:
             logger.info(f"Checking {updated_count} extensions for possible upgrade")
-            
+
             # Get currently installed extensions
             installed_extensions = extension_system.get_installed_extensions()
-            
+
             # Check each updated extension
             for extension_info in payload.updated_extensions:
                 extension_id = extension_info.get("id")
                 extension_version = extension_info.get("version")
-                
+
                 # If extension is installed, check if upgrade is needed
                 if extension_id in installed_extensions:
                     installed_version = installed_extensions[extension_id].get("version")
-                    
+
                     if installed_version and extension_version and installed_version != extension_version:
                         logger.info(f"Queueing upgrade of extension {extension_id} from version {installed_version} to {extension_version}")
-                        
+
                         # Queue the upgrade
                         extension_system.installation_queue.add({
                             "extension_id": extension_id,
@@ -311,7 +311,7 @@ def handle_extension_registry_update(event: ExtensionRegistryUpdatedEvent):
                             "install_dependencies": True,
                             "upgrade": True
                         })
-    
+
     # Process installation queue
     extension_system.process_installation_queue()
 ```
@@ -327,7 +327,7 @@ class ExtensionInstalledEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         extension_id: str  # Identifier of the installed extension
         extension_type: str  # Type of extension (capability, protocol, reasoning, etc.)
@@ -349,23 +349,23 @@ class ExtensionInstalledEvent:
 def install_extension(extension_id: str, version: str, installer: str = "user", auto_install: bool = False) -> bool:
     # Check if extension exists in registry
     extension_info = extension_system.registry.get_extension_info(extension_id, version)
-    
+
     if not extension_info:
         logger.error(f"Extension {extension_id} version {version} not found in registry")
         return False
-    
+
     # Extract extension type
     extension_type = extension_info.get("type")
     if not extension_type:
         logger.error(f"Extension {extension_id} is missing type information")
         return False
-    
+
     # Get the extension loader for this extension type
     loader = extension_system.get_loader_for_type(extension_type)
     if not loader:
         logger.error(f"No loader found for extension type: {extension_type}")
         return False
-    
+
     # Check if extension is already installed
     is_upgrade = False
     previous_version = None
@@ -374,27 +374,27 @@ def install_extension(extension_id: str, version: str, installer: str = "user", 
         if existing_extension:
             is_upgrade = True
             previous_version = existing_extension.get("version")
-            
+
             logger.info(f"Upgrading extension {extension_id} from version {previous_version} to {version}")
-    
+
     # Install or upgrade the extension
     installation_id = f"install_{uuid.uuid4().hex[:8]}"
     installation_time = datetime.now()
-    
+
     try:
         # Resolve and install dependencies first
         dependencies = extension_info.get("dependencies", [])
         installed_dependencies = []
-        
+
         for dependency in dependencies:
             dependency_id = dependency.get("id")
             dependency_version = dependency.get("version")
-            
+
             if dependency_id and dependency_version:
                 # Check if dependency is already installed
                 if not extension_system.is_extension_installed(dependency_id, dependency_version):
                     logger.info(f"Installing dependency {dependency_id} version {dependency_version}")
-                    
+
                     # Install the dependency
                     dependency_result = install_extension(
                         extension_id=dependency_id,
@@ -402,7 +402,7 @@ def install_extension(extension_id: str, version: str, installer: str = "user", 
                         installer=f"dependency_of_{extension_id}",
                         auto_install=True
                     )
-                    
+
                     if dependency_result:
                         installed_dependencies.append({
                             "id": dependency_id,
@@ -411,23 +411,23 @@ def install_extension(extension_id: str, version: str, installer: str = "user", 
                     else:
                         logger.error(f"Failed to install dependency {dependency_id}, aborting installation of {extension_id}")
                         return False
-        
+
         # Install the extension itself
         installation_result = loader.install_extension(extension_id, extension_info)
-        
+
         if installation_result.success:
             logger.info(f"Successfully installed extension {extension_id} version {version}")
-            
+
             # Configure the extension with defaults
             if "default_configuration" in extension_info:
                 logger.info(f"Applying default configuration to extension {extension_id}")
-                
+
                 default_config = extension_info["default_configuration"]
                 config_result = extension_system.configure_extension(extension_id, default_config)
-                
+
                 if not config_result:
                     logger.warning(f"Failed to apply default configuration to extension {extension_id}")
-            
+
             # Emit extension installed event
             event_system.emit(
                 event_name="extension_installed",
@@ -445,27 +445,27 @@ def install_extension(extension_id: str, version: str, installer: str = "user", 
                     installation_details=installation_result.details
                 )
             )
-            
+
             # If this is a protocol extension, update protocol registry
             if extension_type == "protocol":
                 protocol_registry.register_protocol_extension(extension_id, extension_info)
-            
+
             # If this is a reasoning extension, update reasoning registry
             elif extension_type == "reasoning":
                 reasoning_registry.register_reasoning_extension(extension_id, extension_info)
-            
+
             # If this is a capability extension, update capability registry
             elif extension_type == "capability":
                 capability_registry.register_capability_extension(extension_id, extension_info)
-            
+
             return True
         else:
             logger.error(f"Failed to install extension {extension_id}: {installation_result.error_message}")
             return False
-            
+
     except Exception as e:
         logger.error(f"Error installing extension {extension_id}: {str(e)}")
-        
+
         # Report the error
         error_reporting.report_error(
             error_type="extension_installation_failure",
@@ -478,7 +478,7 @@ def install_extension(extension_id: str, version: str, installer: str = "user", 
                 "is_upgrade": is_upgrade
             }
         )
-        
+
         return False
 ```
 
@@ -493,7 +493,7 @@ class ExtensionSchemaRegisteredEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         extension_id: str  # Identifier of the extension
         extension_type: str  # Type of extension (capability, protocol, reasoning, etc.)
@@ -514,20 +514,20 @@ def handle_extension_schema_registration(event: ExtensionSchemaRegisteredEvent):
     payload = event.payload
     extension_id = payload.extension_id
     extension_type = payload.extension_type
-    
+
     logger.info(f"Extension schema registered for {extension_id} (type: {extension_type})")
-    
+
     # If this is a protocol extension schema, update protocol adapters
     if extension_type == "protocol":
         logger.info(f"Updating protocol adapters for extension {extension_id}")
-        
+
         # Get the protocol extension loader
         protocol_loader = extension_system.get_loader_for_type("protocol")
-        
+
         if protocol_loader and protocol_loader.has_extension(extension_id):
             # Retrieve the protocol extension
             protocol_extension = protocol_loader.get_extension(extension_id)
-            
+
             # Update protocol registry with schema information
             protocol_registry.update_protocol_schema(
                 protocol_id=extension_id,
@@ -536,13 +536,13 @@ def handle_extension_schema_registration(event: ExtensionSchemaRegisteredEvent):
                 required_properties=payload.required_properties,
                 metadata=payload.metadata
             )
-            
+
             logger.info(f"Updated protocol registry for {extension_id}")
-    
+
     # If this is a reasoning extension schema, update reasoning adapters
     elif extension_type == "reasoning":
         logger.info(f"Updating reasoning registry for extension {extension_id}")
-        
+
         # Update reasoning registry with schema information
         reasoning_registry.update_reasoning_schema(
             reasoning_id=extension_id,
@@ -551,13 +551,13 @@ def handle_extension_schema_registration(event: ExtensionSchemaRegisteredEvent):
             required_properties=payload.required_properties,
             metadata=payload.metadata
         )
-        
+
         logger.info(f"Updated reasoning registry for {extension_id}")
-    
+
     # If this is a capability extension schema, update capability registry
     elif extension_type == "capability":
         logger.info(f"Updating capability registry for extension {extension_id}")
-        
+
         # Update capability registry with schema information
         capability_registry.update_capability_schema(
             capability_id=extension_id,
@@ -566,9 +566,9 @@ def handle_extension_schema_registration(event: ExtensionSchemaRegisteredEvent):
             required_properties=payload.required_properties,
             metadata=payload.metadata
         )
-        
+
         logger.info(f"Updated capability registry for {extension_id}")
-    
+
     # Notify configuration validator about new schema
     configuration_validator.register_schema(payload.schema_id, extension_id)
 ```
@@ -589,7 +589,7 @@ def handle_extension_schema_registration(event: ExtensionSchemaRegisteredEvent):
 
 - `configuration_system.validate_extension_configuration(extension_id: str, config: Dict[str, Any]) → ValidationResult`
   - **Purpose**: Validate extension configuration against schema
-  - **Parameters**: 
+  - **Parameters**:
     - `extension_id`: Extension identifier
     - `config`: Extension configuration
   - **Returns**: Validation result with any errors
@@ -649,31 +649,31 @@ extension_system:
   extension_directories:
     - "extensions/"
     - "custom_extensions/"
-  
+
   auto_discovery: true
-  
+
   extension_types:
     - type: "capability"
       interface: "CapabilityExtension"
       loader: "CapabilityLoader"
-    
+
     - type: "protocol"
       interface: "ProtocolExtension"
       loader: "ProtocolLoader"
-    
+
     - type: "reasoning"
       interface: "ReasoningExtension"
       loader: "ReasoningLoader"
-  
+
   extension_validation: true
   isolation_level: "process"  # process, thread, none
-  
+
   registry:
     remote_registries:
       - url: "https://extensions.openmas.org/registry"
         auth_type: "api_key"
         api_key_env: "OPENMAS_REGISTRY_KEY"
-    
+
     local_registry_path: "local_extensions/registry.json"
     auto_update: true
     update_interval_hours: 24
@@ -689,7 +689,7 @@ extensions:
     api_parameters:
       timeout_seconds: 30
       retry_count: 3
-  
+
   web_search:
     enabled: true
     type: "capability"
@@ -730,11 +730,11 @@ extensions:
          def load_extension(self, extension_id: str, config: Dict[str, Any]) → ExtensionInstance:
              # Load extension with configuration
              pass
-         
+
          def unload_extension(self, extension_id: str) → bool:
              # Unload extension safely
              pass
-             
+
          def reload_extension(self, extension_id: str, config: Dict[str, Any]) → ExtensionInstance:
              # Reload extension with new configuration
              pass
@@ -750,7 +750,7 @@ extensions:
            enabled: true
            paths: ["extensions/", "custom_extensions/"]
            patterns: ["*.extension.py", "extension.json"]
-         
+
          registry:
            enabled: true
            registry_urls: ["https://extensions.openmas.org/registry"]
@@ -779,15 +779,15 @@ extensions:
       belief_database:
         type: "in_memory"
         constraints_file: "bdi/constraints.json"
-      
+
       plan_library:
         path: "bdi/plans/"
         auto_reload: true
-      
+
       intention_selection:
         strategy: "priority_based"
         max_concurrent_intentions: 5
-  
+
   llm_reasoning:
     enabled: true
     type: "reasoning"
@@ -800,12 +800,12 @@ extensions:
           file: "llm/templates/sequential_thinking.prompt"
         - name: "chain_of_thought"
           file: "llm/templates/chain_of_thought.prompt"
-      
+
       model_parameters:
         temperature: 0.7
         max_tokens: 2000
         top_p: 1.0
-      
+
       capability_mapping:
         - capability: "reasoning"
           template: "sequential_thinking"

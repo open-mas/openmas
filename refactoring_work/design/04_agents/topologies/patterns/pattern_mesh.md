@@ -56,7 +56,7 @@ topology:
       mesh_node:
         description: "Interconnected agent in mesh network"
         capabilities: ["route", "connect", "discover"]
-  
+
   relationships:
     definition:
       connects_to:
@@ -76,7 +76,7 @@ agents:
       relationships:
         connects_to: ["node_b", "node_c", "node_d"]
         backup_for: ["node_b"]
-  
+
   node_b:
     topology:
       pattern: "mesh"

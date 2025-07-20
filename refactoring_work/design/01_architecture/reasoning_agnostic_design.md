@@ -70,7 +70,7 @@ classDiagram
         <<interface>>
         +process(message: SIMF): SIMF
     }
-    
+
     class IKnowledgeBase {
         <<interface>>
         +add(knowledge: Any): void
@@ -79,63 +79,63 @@ classDiagram
         +remove(query: Any): void
         +exists(query: Any): boolean
     }
-    
+
     class KRRSystem {
         -knowledgeBaseRegistry: Map
         +getKnowledgeBase(id: string): IKnowledgeBase
         +registerKnowledgeBase(kb: IKnowledgeBase): void
     }
-    
+
     class KnowledgeRepresentation {
         <<interface>>
         +store(data: Any): void
         +retrieve(query: Any): Any
     }
-    
+
     class SymbolicKB {
         +internalInferenceEngine
         +factBase
         +ruleBase
     }
-    
+
     class GraphKB {
         +graphDatabase
         +queryProcessor
     }
-    
+
     class VectorKB {
         +vectorStore
         +embeddingModel
         +similaritySearch()
     }
-    
+
     class RuleBasedEngine {
         +ruleSet
         +evaluate()
     }
-    
+
     class BDIEngine {
         +beliefBase
         +desireSet
         +intentions
     }
-    
+
     class LLMEngine {
         +model
         +promptTemplates
         +workingMemory
     }
-    
+
     KRRSystem "1" -- "*" IKnowledgeBase : manages >
     KnowledgeRepresentation <|.. SymbolicKB
     KnowledgeRepresentation <|.. GraphKB
     KnowledgeRepresentation <|.. VectorKB
     IKnowledgeBase --> KnowledgeRepresentation : uses >
-    
+
     ReasoningEngine <|.. RuleBasedEngine
     ReasoningEngine <|.. BDIEngine
     ReasoningEngine <|.. LLMEngine
-    
+
     RuleBasedEngine --> IKnowledgeBase : uses for facts >
     BDIEngine --> IKnowledgeBase : uses for beliefs >
     LLMEngine --> IKnowledgeBase : uses for context >
@@ -166,46 +166,46 @@ class Agent:
         self.config = config
         self.protocol_interfaces = []
         self.reasoning_component = None
-        
+
         # Initialize protocol interfaces
         self._initialize_protocols()
-        
+
         # Initialize reasoning component
         self._initialize_reasoning()
-    
+
     def _initialize_protocols(self):
         """Initialize protocol interfaces based on configuration."""
         for protocol_config in self.config.get("protocols", []):
             if not protocol_config.get("enabled", True):
                 continue
-            
+
             protocol_type = protocol_config["type"]
             # Factory pattern to create appropriate protocol interface
             self.protocol_interfaces.append(
                 create_protocol_interface(protocol_type, self, protocol_config)
             )
-    
+
     def _initialize_reasoning(self):
         """Initialize reasoning component based on configuration."""
         reasoning_config = self.config.get("reasoning", {})
         reasoning_type = reasoning_config.get("type", "rule_based")
-        
+
         # Factory pattern to create appropriate reasoning component
         self.reasoning_component = create_reasoning_component(
             reasoning_type, reasoning_config
         )
-    
+
     async def handle_message(self, message, protocol_interface):
         """Handle incoming message by passing to reasoning component."""
         # Preprocessing by protocol interface
         processed_message = protocol_interface.preprocess_message(message)
-        
+
         # Pass to reasoning component for processing
         reasoning_result = await self.reasoning_component.process(processed_message)
-        
+
         # Postprocessing by protocol interface
         response = protocol_interface.create_response(reasoning_result)
-        
+
         return response
 ```
 
@@ -218,20 +218,20 @@ class ProtocolInterface:
     def __init__(self, agent, config):
         self.agent = agent
         self.config = config
-    
+
     async def send_message(self, recipient, content):
         """Send message using this protocol."""
         pass
-    
+
     async def receive_message(self, message):
         """Receive message using this protocol and pass to agent."""
         response = await self.agent.handle_message(message, self)
         return response
-    
+
     def preprocess_message(self, message):
         """Convert protocol-specific message to reasoning-agnostic format."""
         pass
-    
+
     def create_response(self, reasoning_result):
         """Convert reasoning result to protocol-specific response."""
         pass
@@ -245,7 +245,7 @@ Reasoning components implement specific reasoning approaches but remain agnostic
 class ReasoningComponent:
     def __init__(self, config):
         self.config = config
-    
+
     async def process(self, message):
         """Process a message using this reasoning approach."""
         pass
@@ -294,25 +294,25 @@ agents:
           agent_card:
             name: "Hybrid Agent"
             description: "Agent supporting multiple protocols and reasoning approaches"
-      
+
       - type: "mcp-sse"
         enabled: true
         options:
           server_mode: true
           http_port: 8081
-    
+
     reasoning:
       type: "hybrid"
       components:
         - type: "rule_based"
           rules_file: "config/rules.json"
           priority: 1
-        
+
         - type: "llm_based"
           service_url: "http://llm-service:8080/generate"
           model: "gpt-4o"
           priority: 2
-      
+
       fallback: "llm_based"
 ```
 

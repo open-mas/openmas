@@ -143,7 +143,7 @@ request_response:
 ```python
 class RequestResponsePattern(Pattern):
     """Implementation of the Request-Response pattern."""
-    
+
     def __init__(self, options, agent_context):
         """Initialize the pattern."""
         super().__init__(options, agent_context)
@@ -152,15 +152,15 @@ class RequestResponsePattern(Pattern):
         self.retry_config = options.get("retry", {})
         self.response_handling = options.get("response_handling", {})
         self.error_handling = options.get("error_handling", {})
-        
+
         # Initialize request tracking
         self.pending_requests = {}
-        
+
     async def send_request(self, content, target_agent_id, metadata=None):
         """Send a request to a target agent."""
         # Generate request ID
         request_id = str(uuid.uuid4())
-        
+
         # Create request message
         request = {
             "id": request_id,
@@ -168,7 +168,7 @@ class RequestResponsePattern(Pattern):
             "content": content,
             "metadata": metadata or {}
         }
-        
+
         # Add pattern metadata
         request["metadata"].update({
             "pattern": "request_response",
@@ -176,25 +176,25 @@ class RequestResponsePattern(Pattern):
             "requester_id": self.agent_context.agent_id,
             "timeout_ms": self.timeout
         })
-        
+
         # Track the request if synchronous
         if self.synchronous:
             self.pending_requests[request_id] = {
                 "future": asyncio.Future(),
                 "created_at": datetime.now()
             }
-            
+
         # Get the protocol adapter
         protocol = self.agent_context.communicator.protocol
         adapter = self.get_protocol_adapter(protocol)
-        
+
         # Prepare the outgoing message
         prepared_request = await adapter.prepare_outgoing(request, self)
-        
+
         # Send the request
         await self.agent_context.communicator.send_message(
             prepared_request, target_agent_id)
-            
+
         # If synchronous, wait for response
         if self.synchronous:
             try:
@@ -222,39 +222,39 @@ class RequestResponsePattern(Pattern):
             return {
                 "request_id": request_id
             }
-            
+
     async def handle_response(self, response):
         """Handle a response to a previous request."""
         request_id = response.get("request_id")
-        
+
         if not request_id or request_id not in self.pending_requests:
             # No matching request found
             return
-            
+
         # Get the pending request
         pending = self.pending_requests[request_id]
-        
+
         # Complete the future
         if not pending["future"].done():
             pending["future"].set_result(response)
-            
+
         # Clean up
         del self.pending_requests[request_id]
-        
+
     async def process_incoming(self, message, protocol):
         """Process an incoming message."""
         adapter = self.get_protocol_adapter(protocol)
         transformed = await adapter.process_incoming(message, self)
-        
+
         if transformed.get("type") == "request":
             # Handle incoming request
             await self.agent_context.message_handler.handle_request(transformed)
         elif transformed.get("type") == "response":
             # Handle incoming response
             await self.handle_response(transformed)
-            
+
         return transformed
-        
+
     async def prepare_outgoing(self, message, protocol):
         """Prepare an outgoing message."""
         adapter = self.get_protocol_adapter(protocol)
@@ -281,7 +281,7 @@ request_response:
 ```python
 class A2ARequestResponseAdapter(ProtocolAdapter):
     """Adapts the Request-Response pattern to A2A protocol."""
-    
+
     async def process_incoming(self, message, pattern):
         """Process an incoming A2A message."""
         if message.get("type") == pattern.config.get("task_type", "request_response"):
@@ -304,7 +304,7 @@ class A2ARequestResponseAdapter(ProtocolAdapter):
                 "error": message.get("error"),
                 "metadata": metadata
             }
-            
+
     async def prepare_outgoing(self, message, pattern):
         """Prepare an outgoing A2A message."""
         if message.get("type") == "request":
@@ -343,7 +343,7 @@ request_response:
 ```python
 class MCPRequestResponseAdapter(ProtocolAdapter):
     """Adapts the Request-Response pattern to MCP protocol."""
-    
+
     async def process_incoming(self, message, pattern):
         """Process an incoming MCP message."""
         if message.get("type") == "function_call":
@@ -368,7 +368,7 @@ class MCPRequestResponseAdapter(ProtocolAdapter):
                 "error": message.get("error"),
                 "metadata": message.get("metadata", {})
             }
-            
+
     async def prepare_outgoing(self, message, pattern):
         """Prepare an outgoing MCP message."""
         if message.get("type") == "request":

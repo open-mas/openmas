@@ -128,7 +128,7 @@ components:
     resources:
       cpu: "0.5"
       memory: "512Mi"
-  
+
   agent2:
     type: agent
     config: config/agent2_config.yaml
@@ -142,7 +142,7 @@ networking:
     - name: api
       port: 8080
       target: agent1
-  
+
 storage:
   volumes:
     - name: data
@@ -171,7 +171,7 @@ This applies the production profile to the base deployment configuration.
 The deploy command maintains OpenMAS's reasoning-agnostic architecture:
 
 - **Body-Brain Separation**: Deployment configurations maintain separation between communication infrastructure ("body") and reasoning approaches ("brain")
-- **Protocol Independence**: Deployments can use any supported protocol (MCP, A2A, HTTP, MQTT, gRPC) 
+- **Protocol Independence**: Deployments can use any supported protocol (MCP, A2A, HTTP, MQTT, gRPC)
 - **Component Isolation**: Deployed components maintain proper isolation boundaries
 
 ## Protocol-Specific and Reasoning-Specific Deployments
@@ -236,7 +236,7 @@ components:
       memory: "512Mi"
     env:
       PROTOCOL: a2a
-  
+
   mcp_agent:
     type: agent
     config: config/mcp_agent_config.yaml
@@ -287,7 +287,7 @@ components:
       engine: simple_rule
     env:
       OPENMAS_REASONING_ENGINE: rule
-  
+
   bdi_agent:
     type: agent
     config: config/bdi_agent_config.yaml
@@ -295,7 +295,7 @@ components:
       engine: bdi
     env:
       OPENMAS_REASONING_ENGINE: bdi
-  
+
   llm_agent:
     type: agent
     config: config/llm_agent_config.yaml
@@ -326,7 +326,7 @@ components:
   coordinator:
     type: agent
     config: config/coordinator_config.yaml
-  
+
   worker:
     type: agent
     config: config/worker_config.yaml
@@ -342,7 +342,7 @@ profiles:
         replicas: 1
         env:
           LOG_LEVEL: debug
-  
+
   production:
     components:
       coordinator:
@@ -365,7 +365,7 @@ openmas deploy up --file base_deployment.yaml --profile development
 
 # For production
 export ENVIRONMENT=kubernetes
-export WORKER_REPLICAS=10 
+export WORKER_REPLICAS=10
 openmas deploy up --file base_deployment.yaml --profile production
 ```
 

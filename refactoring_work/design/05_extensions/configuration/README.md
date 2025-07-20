@@ -68,7 +68,7 @@ profiles:
         options:
           debug: true
           endpoint: "http://localhost:8080"
-  
+
   production:
     extensions:
       my_extension:

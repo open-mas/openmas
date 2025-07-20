@@ -53,11 +53,11 @@ assets:
   model_asset:
     name: "example-model"
     version: "^1.2.3"  # Compatible with 1.2.3 up to 2.0.0
-    
+
   embeddings:
     name: "text-embeddings"
     version: "~2.0.0"  # Compatible with 2.0.0 up to 2.1.0
-    
+
   dataset:
     name: "training-data"
     version: ">=3.0.0 <4.0.0"  # Any 3.x.x version

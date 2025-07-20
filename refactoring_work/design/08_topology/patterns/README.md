@@ -54,7 +54,7 @@ OpenMAS supports several standard topology patterns:
 
 When selecting a topology pattern, consider:
 
-1. **Scale Requirements**: 
+1. **Scale Requirements**:
    - Small scale (< 10 agents): Centralized
    - Medium scale (10-50 agents): Peer-to-Peer or Mesh
    - Large scale (> 50 agents): Hierarchical or Hybrid

@@ -215,10 +215,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
-      
+
       - name: Build and run tests
         run: |
           docker-compose -f docker-compose.test.yml up --build --exit-code-from test-supervisor

@@ -35,40 +35,40 @@ from openmas.extensions import PromptTemplateExtension
 
 class JinjaTemplateExtension(PromptTemplateExtension):
     """Jinja2-based template engine for prompts."""
-    
+
     extension_type = "prompt_template"
     extension_name = "jinja_template"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
-    
+
     async def initialize(self):
         """Initialize the template engine."""
         try:
             from jinja2 import Environment, FileSystemLoader, select_autoescape
-            
+
             # Set up Jinja environment
             self.env = Environment(
                 loader=FileSystemLoader(self.config.get("template_directory", "./templates")),
                 autoescape=select_autoescape(['html', 'xml'])
             )
-            
+
             self.initialized = True
         except ImportError:
             raise RuntimeError("Jinja2 is required for JinjaTemplateExtension")
-    
+
     async def render_template(self, template_name, variables):
         """Render a template with variables."""
         if not self.initialized:
             raise RuntimeError("Template engine not initialized")
-        
+
         # Get the template
         template = self.env.get_template(template_name)
-        
+
         # Render with variables
         return template.render(**variables)
-    
+
     def get_template_schema(self, template_name):
         """Get the schema for a template."""
         # Get schema path based on template name
@@ -76,12 +76,12 @@ class JinjaTemplateExtension(PromptTemplateExtension):
             self.config.get("template_directory", "./templates"),
             template_name.replace(".j2", ".schema.json")
         )
-        
+
         # Load schema if it exists
         if os.path.exists(schema_path):
             with open(schema_path, "r") as f:
                 return json.load(f)
-        
+
         return None
 ```
 
@@ -94,37 +94,37 @@ from openmas.extensions import PromptContextExtension
 
 class DynamicContextManagerExtension(PromptContextExtension):
     """Dynamic context window manager for prompts."""
-    
+
     extension_type = "prompt_context"
     extension_name = "dynamic_context_manager"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.max_tokens = config.get("max_tokens", 4096)
         self.token_estimator = None
-    
+
     async def initialize(self):
         """Initialize the context manager."""
         # Set up token estimator
         self.token_estimator = self._create_token_estimator()
         self.initialized = True
-    
+
     async def optimize_context(self, messages, constraints=None):
         """Optimize a context window based on constraints."""
         constraints = constraints or {}
         max_tokens = constraints.get("max_tokens", self.max_tokens)
-        
+
         # Calculate current token usage
         total_tokens = sum(self._estimate_tokens(msg) for msg in messages)
-        
+
         # If within limits, return unchanged
         if total_tokens <= max_tokens:
             return messages
-        
+
         # Otherwise, optimize context
         return await self._optimize_context(messages, max_tokens)
-    
+
     def _create_token_estimator(self):
         """Create a token estimator."""
         # Simple estimation method (4 chars ≈ 1 token)
@@ -132,14 +132,14 @@ class DynamicContextManagerExtension(PromptContextExtension):
             if isinstance(text, str):
                 return len(text) // 4 + 1
             return 0
-        
+
         return estimate_tokens
-    
+
     def _estimate_tokens(self, message):
         """Estimate tokens in a message."""
         if isinstance(message, str):
             return self.token_estimator(message)
-        
+
         if isinstance(message, dict):
             # Sum token count from all string fields
             return sum(
@@ -147,16 +147,16 @@ class DynamicContextManagerExtension(PromptContextExtension):
                 for value in message.values()
                 if isinstance(value, str)
             )
-        
+
         return 0
-    
+
     async def _optimize_context(self, messages, max_tokens):
         """Optimize context to fit within token limit."""
         # Categorize messages by type/importance
         system_messages = []
         user_messages = []
         assistant_messages = []
-        
+
         for msg in messages:
             if isinstance(msg, dict) and "role" in msg:
                 if msg["role"] == "system":
@@ -165,20 +165,20 @@ class DynamicContextManagerExtension(PromptContextExtension):
                     user_messages.append(msg)
                 elif msg["role"] == "assistant":
                     assistant_messages.append(msg)
-        
+
         # Strategy: Keep all system messages, prioritize recent message pairs
         optimized = list(system_messages)  # Start with system messages
-        
+
         # Add most recent messages first
         remaining_tokens = max_tokens - sum(self._estimate_tokens(msg) for msg in optimized)
-        
+
         # Create pairs of user/assistant messages, most recent first
         pairs = []
         for i in range(min(len(user_messages), len(assistant_messages))):
             user_idx = len(user_messages) - 1 - i
             asst_idx = len(assistant_messages) - 1 - i
             pairs.append((user_messages[user_idx], assistant_messages[asst_idx]))
-        
+
         # Add pairs as long as they fit
         for user_msg, asst_msg in pairs:
             pair_tokens = self._estimate_tokens(user_msg) + self._estimate_tokens(asst_msg)
@@ -188,7 +188,7 @@ class DynamicContextManagerExtension(PromptContextExtension):
                 remaining_tokens -= pair_tokens
             else:
                 break
-        
+
         return optimized
 ```
 
@@ -201,32 +201,32 @@ from openmas.extensions import PromptAdapterExtension
 
 class MCPPromptAdapterExtension(PromptAdapterExtension):
     """Adapter for MCP protocol prompts."""
-    
+
     extension_type = "prompt_adapter"
     extension_name = "mcp_prompt_adapter"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
-    
+
     async def adapt_to_protocol(self, prompt, protocol, options=None):
         """Adapt a prompt to a specific protocol format."""
         options = options or {}
-        
+
         if protocol == "mcp":
             return await self._adapt_to_mcp(prompt, options)
         else:
             raise ValueError(f"Unsupported protocol: {protocol}")
-    
+
     async def adapt_from_protocol(self, protocol_prompt, protocol, options=None):
         """Adapt from a protocol format to a standard prompt."""
         options = options or {}
-        
+
         if protocol == "mcp":
             return await self._adapt_from_mcp(protocol_prompt, options)
         else:
             raise ValueError(f"Unsupported protocol: {protocol}")
-    
+
     async def _adapt_to_mcp(self, prompt, options):
         """Adapt a standard prompt to MCP format."""
         # Handle different prompt formats
@@ -238,11 +238,11 @@ class MCPPromptAdapterExtension(PromptAdapterExtension):
                     "content": prompt
                 }]
             }
-        
+
         elif isinstance(prompt, list):
             # List of messages
             mcp_messages = []
-            
+
             for message in prompt:
                 if isinstance(message, str):
                     # Default to user role for string messages
@@ -256,11 +256,11 @@ class MCPPromptAdapterExtension(PromptAdapterExtension):
                         "role": message["role"],
                         "content": message["content"]
                     })
-            
+
             return {
                 "messages": mcp_messages
             }
-        
+
         elif isinstance(prompt, dict):
             # Dictionary format
             if "messages" in prompt:
@@ -269,13 +269,13 @@ class MCPPromptAdapterExtension(PromptAdapterExtension):
             elif "system" in prompt or "user" in prompt or "assistant" in prompt:
                 # Role-based dictionary
                 mcp_messages = []
-                
+
                 if "system" in prompt:
                     mcp_messages.append({
                         "role": "system",
                         "content": prompt["system"]
                     })
-                
+
                 if "user" in prompt:
                     user_content = prompt["user"]
                     if isinstance(user_content, list):
@@ -289,7 +289,7 @@ class MCPPromptAdapterExtension(PromptAdapterExtension):
                             "role": "user",
                             "content": user_content
                         })
-                
+
                 if "assistant" in prompt:
                     assistant_content = prompt["assistant"]
                     if isinstance(assistant_content, list):
@@ -303,11 +303,11 @@ class MCPPromptAdapterExtension(PromptAdapterExtension):
                             "role": "assistant",
                             "content": assistant_content
                         })
-                
+
                 return {
                     "messages": mcp_messages
                 }
-        
+
         # Default case
         return {
             "messages": [{
@@ -315,12 +315,12 @@ class MCPPromptAdapterExtension(PromptAdapterExtension):
                 "content": str(prompt)
             }]
         }
-    
+
     async def _adapt_from_mcp(self, mcp_prompt, options):
         """Adapt from MCP format to standard prompt."""
         if not isinstance(mcp_prompt, dict) or "messages" not in mcp_prompt:
             raise ValueError("Invalid MCP prompt format")
-        
+
         # Extract messages
         messages = []
         for msg in mcp_prompt["messages"]:
@@ -329,7 +329,7 @@ class MCPPromptAdapterExtension(PromptAdapterExtension):
                     "role": msg["role"],
                     "content": msg["content"]
                 })
-        
+
         return messages
 ```
 
@@ -346,7 +346,7 @@ extensions:
     options:
       template_directory: "/path/to/templates"
       default_template: "default.j2"
-  
+
   dynamic_context_manager:
     type: "prompt_context"
     name: "dynamic_context_manager"
@@ -410,7 +410,7 @@ Using prompt extensions in code:
 ```python
 # Get template engine extension
 template_engine = extension_registry.get_extension(
-    "prompt_template", 
+    "prompt_template",
     "jinja_template"
 )
 

@@ -105,7 +105,7 @@ This works well for loosely coupled agent systems.
 ```python
 class MultiAgentContextManager:
     """Manages context sharing across multiple agents."""
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         self.config = config
@@ -114,17 +114,17 @@ class MultiAgentContextManager:
         self.strategy = self.sharing_config.get("strategy", "shared_db")
         self.scoped_by_conversation = self.sharing_config.get("scoped_by_conversation", True)
         self.visibility = self.sharing_config.get("visibility", "all")
-        
+
         # Set up appropriate storage based on strategy
         self.storage = self._create_storage()
-    
+
     def _create_storage(self):
         """Create appropriate storage for the selected strategy."""
         if self.strategy == "shared_db":
             # Use database for shared context
             storage_config = self.sharing_config.get("storage", {})
             storage_type = storage_config.get("type", "redis")
-            
+
             if storage_type == "redis":
                 return RedisContextStorage(storage_config)
             elif storage_type == "database":
@@ -139,15 +139,15 @@ class MultiAgentContextManager:
         else:
             # Default to in-memory storage
             return InMemoryContextStorage({})
-    
+
     async def share_context(self, agent_id, conversation_id, context, metadata=None):
         """Share context from an agent."""
         if not self.enabled:
             return
-            
+
         # Get the context key
         context_key = self._get_context_key(agent_id, conversation_id)
-        
+
         # Store in shared storage
         await self.storage.set(context_key, {
             "agent_id": agent_id,
@@ -156,18 +156,18 @@ class MultiAgentContextManager:
             "metadata": metadata or {},
             "updated_at": datetime.now().isoformat()
         })
-    
+
     async def get_shared_context(self, agent_id, conversation_id, requester_metadata=None):
         """Get shared context for an agent and conversation."""
         if not self.enabled:
             return []
-            
+
         shared_context = []
-        
+
         if self.scoped_by_conversation:
             # Get all contexts for this conversation
             context_keys = await self.storage.list_by_conversation(conversation_id)
-            
+
             for key in context_keys:
                 if key != self._get_context_key(agent_id, conversation_id):  # Skip own context
                     context_data = await self.storage.get(key)
@@ -176,34 +176,34 @@ class MultiAgentContextManager:
         else:
             # Get all contexts (not scoped by conversation)
             context_keys = await self.storage.list_all()
-            
+
             for key in context_keys:
                 if not key.startswith(f"{agent_id}:"):  # Skip own contexts
                     context_data = await self.storage.get(key)
                     if context_data and self._check_visibility(context_data, requester_metadata):
                         shared_context.append(context_data)
-        
+
         return shared_context
-    
+
     def _check_visibility(self, context_data, requester_metadata):
         """Check if context is visible to the requester."""
         if self.visibility == "all":
             return True
-            
+
         if self.visibility == "selective":
             # Check if explicitly shared with requester
             shared_with = context_data.get("metadata", {}).get("shared_with", [])
             requester_id = requester_metadata.get("agent_id")
             return not shared_with or requester_id in shared_with
-            
+
         if self.visibility == "role-based":
             # Check if requester's role has access
             context_roles = context_data.get("metadata", {}).get("visible_to_roles", [])
             requester_role = requester_metadata.get("role")
             return not context_roles or requester_role in context_roles
-            
+
         return True
-    
+
     def _get_context_key(self, agent_id, conversation_id):
         """Get the storage key for a context."""
         if self.scoped_by_conversation:
@@ -265,7 +265,7 @@ This ensures data integrity but may impact performance.
 ```python
 class MultiAgentCoordinator:
     """Coordinates activities between multiple agents."""
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         self.config = config
@@ -275,10 +275,10 @@ class MultiAgentCoordinator:
         self.synchronization = self.coordination_config.get("synchronization", "eventual")
         self.protocol_config = self.coordination_config.get("protocol", {})
         self.protocol_type = self.protocol_config.get("type", "turn_based")
-        
+
         # Set up appropriate protocol
         self.protocol = self._create_protocol()
-    
+
     def _create_protocol(self):
         """Create appropriate coordination protocol."""
         if self.protocol_type == "turn_based":
@@ -289,40 +289,40 @@ class MultiAgentCoordinator:
             return TaskDelegationProtocol(self.protocol_config)
         else:
             return TurnBasedProtocol({})
-    
+
     async def register_agent(self, agent_id, metadata=None):
         """Register an agent with the coordinator."""
         if not self.enabled:
             return
-            
+
         await self.protocol.register_participant(agent_id, metadata)
-    
+
     async def unregister_agent(self, agent_id):
         """Unregister an agent from the coordinator."""
         if not self.enabled:
             return
-            
+
         await self.protocol.unregister_participant(agent_id)
-    
+
     async def get_next_action(self, agent_id, conversation_id):
         """Get the next action for an agent."""
         if not self.enabled:
             return {"can_act": True}
-            
+
         return await self.protocol.get_next_action(agent_id, conversation_id)
-    
+
     async def notify_action_complete(self, agent_id, conversation_id, action_data):
         """Notify that an agent has completed an action."""
         if not self.enabled:
             return
-            
+
         await self.protocol.notify_action_complete(agent_id, conversation_id, action_data)
-    
+
     async def get_conversation_state(self, conversation_id):
         """Get the current state of a conversation."""
         if not self.enabled:
             return {"active": True}
-            
+
         return await self.protocol.get_conversation_state(conversation_id)
 ```
 
@@ -380,7 +380,7 @@ sessions:
 ```python
 class RoleManager:
     """Manages agent roles in multi-agent sessions."""
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         self.config = config
@@ -389,15 +389,15 @@ class RoleManager:
         self.roles = self.roles_config.get("roles", [])
         self.default_role = self.roles_config.get("default_role", "responder")
         self.assignment_strategy = self.roles_config.get("role_assignment", "dynamic")
-        
+
         # Initialize role storage
         self.role_assignments = {}
-    
+
     async def get_agent_role(self, agent_id, conversation_id):
         """Get the role for an agent in a conversation."""
         if not self.enabled:
             return self.default_role
-            
+
         if self.assignment_strategy == "static":
             # Check static role assignments
             agent_roles = self.roles_config.get("agent_roles", {})
@@ -407,32 +407,32 @@ class RoleManager:
             conversation_key = f"{conversation_id}"
             if conversation_key in self.role_assignments:
                 return self.role_assignments[conversation_key].get(agent_id, self.default_role)
-            
+
             return self.default_role
-    
+
     async def assign_role(self, agent_id, conversation_id, role):
         """Assign a role to an agent in a conversation."""
         if not self.enabled:
             return
-            
+
         # Validate role
         if role not in [r.get("name") if isinstance(r, dict) else r for r in self.roles]:
             raise ValueError(f"Invalid role: {role}")
-            
+
         conversation_key = f"{conversation_id}"
         if conversation_key not in self.role_assignments:
             self.role_assignments[conversation_key] = {}
-            
+
         self.role_assignments[conversation_key][agent_id] = role
-    
+
     async def check_permission(self, agent_id, conversation_id, permission):
         """Check if an agent has a specific permission."""
         if not self.enabled:
             return True
-            
+
         # Get agent role
         role = await self.get_agent_role(agent_id, conversation_id)
-        
+
         # Find role definition
         role_def = None
         for r in self.roles:
@@ -442,10 +442,10 @@ class RoleManager:
             elif r == role:
                 # Simple role without permissions defined
                 return True
-                
+
         if not role_def:
             return False
-            
+
         # Check permission
         permissions = role_def.get("permissions", [])
         return permission in permissions
@@ -497,7 +497,7 @@ sessions:
 ```python
 class StateSynchronizer:
     """Synchronizes state across multiple agents."""
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         self.config = config
@@ -505,25 +505,25 @@ class StateSynchronizer:
         self.sync_config = config.get("state_synchronization", {})
         self.strategy = self.sync_config.get("strategy", "centralized")
         self.conflict_resolution = self.sync_config.get("conflict_resolution", "last_write_wins")
-        
+
         # Initialize state storage
         self.state_versions = {}
         self.state_storage = {}
-    
+
     async def update_state(self, agent_id, conversation_id, key, value, version=None):
         """Update a state value."""
         if not self.enabled:
             return
-            
+
         state_key = f"{conversation_id}:{key}"
-        
+
         # Get current version number
         current_version = self.state_versions.get(state_key, 0)
-        
+
         # Use provided version or increment
         if version is None:
             version = current_version + 1
-            
+
         # Check version for conflicts
         if self.strategy == "centralized" or version > current_version:
             # Update state
@@ -542,26 +542,26 @@ class StateSynchronizer:
                 self.state_storage[state_key] = merged_value
                 self.state_versions[state_key] = version + 1
                 return True
-        
+
         # Version conflict
         return False
-    
+
     async def get_state(self, conversation_id, key, default=None):
         """Get a state value."""
         if not self.enabled:
             return default
-            
+
         state_key = f"{conversation_id}:{key}"
         return self.state_storage.get(state_key, default)
-    
+
     async def get_state_version(self, conversation_id, key):
         """Get the version of a state value."""
         if not self.enabled:
             return 0
-            
+
         state_key = f"{conversation_id}:{key}"
         return self.state_versions.get(state_key, 0)
-    
+
     def _merge_values(self, value1, value2):
         """Merge two values."""
         if isinstance(value1, dict) and isinstance(value2, dict):
@@ -650,14 +650,14 @@ agents:
       multi_agent:
         role_management:
           static_role: "information_provider"
-  
+
   synthesis_agent:
     class: "agents.specialized.SynthesisAgent"
     sessions:
       multi_agent:
         role_management:
           static_role: "coordinator"
-  
+
   critic_agent:
     class: "agents.specialized.CriticAgent"
     sessions:

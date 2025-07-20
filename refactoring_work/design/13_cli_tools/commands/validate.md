@@ -181,7 +181,7 @@ agents:
               task_id: task_id
               task_data: payload
               worker_id: recipient
-    
+
     communication:
       primary_protocol: a2a
       protocols:
@@ -191,7 +191,7 @@ agents:
         mcp:
           mode: client
           endpoint: http://localhost:8100
-    
+
     reasoning:
       engine: bdi
       beliefs:

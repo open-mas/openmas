@@ -27,10 +27,10 @@ def test_config_loader_loads_valid_yaml(mock_file_reader):
     version: 1.0.0
     """
     loader = ConfigLoader(file_reader=mock_file_reader)
-    
+
     # Act
     config = loader.load_config()
-    
+
     # Assert
     assert config.project_name == "test_project"
     assert config.version == "1.0.0"
@@ -46,10 +46,10 @@ async def test_agent_communicator_integration_mock(mock_communicator_factory, mo
     # Arrange
     communicator = mock_communicator_factory.create("http")
     mock_agent.communicator = communicator
-    
+
     # Act
     await mock_agent.send_message("test message")
-    
+
     # Assert
     communicator.send.assert_called_once_with("test message")
 ```
@@ -70,14 +70,14 @@ async def test_mcp_communicator_real_integration(real_mcp_server):
         )
     )
     await communicator.setup()
-    
+
     # Act
     response = await communicator.send_prompt("Hello")
-    
+
     # Assert
     assert response is not None
     assert isinstance(response, str)
-    
+
     # Cleanup
     await communicator.shutdown()
 ```
@@ -215,4 +215,4 @@ poetry run tox -e coverage
 4. **Isolate Side Effects** - Avoid tests that affect the environment or other tests
 5. **Test Edge Cases** - Include tests for error conditions and edge cases
 6. **Avoid Test Logic** - Keep test logic simple; avoid conditionals in tests
-7. **Clean Up Resources** - Properly clean up resources in teardown or fixtures 
+7. **Clean Up Resources** - Properly clean up resources in teardown or fixtures

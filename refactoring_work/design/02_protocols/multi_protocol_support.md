@@ -31,8 +31,8 @@ agents:
             description: "Protocol-specific options"
         required:
           - type
-  
-  # Capability exposure configuration  
+
+  # Capability exposure configuration
   capability_exposure:
     type: object
     description: "Configuration for capability exposure across protocols"
@@ -56,7 +56,7 @@ agents:
           type: object
           additionalProperties:
             type: string
-  
+
   # Content handling configuration
   content_handling:
     type: object
@@ -99,7 +99,7 @@ agents:
   multi_protocol_agent:
     class: "agents.multipurpose.MultiPurposeAgent"
     type: "hybrid"
-    
+
     # Protocol configuration - multiple protocols for a single agent
     protocols:
       - type: "a2a-http"
@@ -140,7 +140,7 @@ agents:
                 limit:
                   type: "integer"
                   default: 10
-  
+
   - type: "mcp-sse"
     enabled: true
     options:
@@ -165,7 +165,7 @@ protocols:
     enabled: true
     options:
       base_url: "http://localhost:8080"
-  
+
   - type: "mcp-sse"
     enabled: true
     options:
@@ -190,12 +190,12 @@ class MultiProtocolAgent(Agent):
     def __init__(self, config):
         super().__init__(config)
         self.protocol_interfaces = []
-        
+
         # Initialize protocol interfaces based on configuration
         for protocol_config in config.get("protocols", []):
             if not protocol_config.get("enabled", True):
                 continue
-                
+
             protocol_type = protocol_config["type"]
             if protocol_type.startswith("a2a-"):
                 # A2A adapter handles translation between A2A protocol and SIMF

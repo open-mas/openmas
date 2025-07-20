@@ -38,12 +38,12 @@ class TestWeatherClient:
         config_mock.units = "metric"
         config_mock.cache_ttl = 60
         return config_mock
-    
+
     @pytest.fixture
     def client(self, config):
         with patch.dict('os.environ', {'WEATHER_API_KEY': 'test_key'}):
             return WeatherClient(config)
-    
+
     @patch('requests.get')
     def test_get_current_weather(self, mock_get, client):
         # Setup mock response
@@ -54,14 +54,14 @@ class TestWeatherClient:
         }
         mock_response.raise_for_status.return_value = None
         mock_get.return_value = mock_response
-        
+
         # Call method
         result = client.get_current_weather("London")
-        
+
         # Verify result
         assert result["temperature"] == 22.5
         assert result["condition"] == "Sunny"
-        
+
         # Verify request
         mock_get.assert_called_once()
         args, kwargs = mock_get.call_args
@@ -122,17 +122,17 @@ async def weather_extension(weather_config):
 async def test_extension_initialization(weather_extension, setup_registry):
     # Verify the extension is initialized
     assert weather_extension._initialized
-    
+
     # Verify capabilities were registered
     capabilities = setup_registry.list_capabilities()
     assert "current_weather" in capabilities
     assert "forecast" in capabilities
     assert "alerts" in capabilities
-    
+
     # Verify protocol mappings
     a2a_mapping = setup_registry.get_protocol_mapping("a2a-http")
     assert "getCurrentWeather" in a2a_mapping
-    
+
     mcp_mapping = setup_registry.get_protocol_mapping("mcp-sse")
     assert "get_current_weather_tool" in mcp_mapping
 
@@ -140,7 +140,7 @@ async def test_extension_initialization(weather_extension, setup_registry):
 async def test_capability_invocation(weather_extension, setup_registry):
     # Invoke capability through registry
     result = await setup_registry.invoke_capability("current_weather", {"location": "Berlin"})
-    
+
     # Verify result
     assert result["location"] == "Berlin"
     assert "temperature" in result
@@ -195,7 +195,7 @@ async def initialized_extension(weather_config):
 async def test_a2a_protocol(initialized_extension):
     # Create mock A2A protocol handler
     a2a_handler = MagicMock(spec=A2AProtocolHandler)
-    
+
     # Create mock A2A request
     a2a_request = {
         "capability": "getCurrentWeather",
@@ -203,7 +203,7 @@ async def test_a2a_protocol(initialized_extension):
             "location": "Paris"
         }
     }
-    
+
     # Mock invoke_capability method
     async def mock_invoke(capability, params):
         if capability == "getCurrentWeather":
@@ -211,13 +211,13 @@ async def test_a2a_protocol(initialized_extension):
             internal_capability = "current_weather"
             return await initialized_extension.get_current_weather(params["location"])
         return None
-    
+
     a2a_handler.invoke_capability.side_effect = mock_invoke
-    
+
     # Process request
     response = await a2a_handler.process_capability_request(json.dumps(a2a_request))
     response_data = json.loads(response)
-    
+
     # Verify response
     assert response_data["location"] == "Paris"
     assert "temperature" in response_data
@@ -227,7 +227,7 @@ async def test_a2a_protocol(initialized_extension):
 async def test_mcp_protocol(initialized_extension):
     # Create mock MCP protocol handler
     mcp_handler = MagicMock(spec=MCPProtocolHandler)
-    
+
     # Create mock MCP tool call
     mcp_tool_call = {
         "name": "get_current_weather_tool",
@@ -235,7 +235,7 @@ async def test_mcp_protocol(initialized_extension):
             "location": "Tokyo"
         }
     }
-    
+
     # Mock invoke_tool method
     async def mock_invoke(tool_name, arguments):
         if tool_name == "get_current_weather_tool":
@@ -243,13 +243,13 @@ async def test_mcp_protocol(initialized_extension):
             internal_capability = "current_weather"
             return await initialized_extension.get_current_weather(arguments["location"])
         return None
-    
+
     mcp_handler.invoke_tool.side_effect = mock_invoke
-    
+
     # Process tool call
     response = await mcp_handler.process_tool_call(json.dumps(mcp_tool_call))
     response_data = json.loads(response)
-    
+
     # Verify response
     assert response_data["location"] == "Tokyo"
     assert "temperature" in response_data
@@ -295,14 +295,14 @@ async def initialized_extension(weather_config):
 async def test_with_llm_agent(initialized_extension):
     # Create mock LLM agent
     llm_agent = MagicMock(spec=LLMAgent)
-    
+
     # Simulate the agent using the capability
     weather_data = await initialized_extension.get_current_weather("Barcelona")
-    
+
     # Verify result with LLM-specific processing
     llm_response = f"The current weather in Barcelona is {weather_data['temperature']}°C and {weather_data['condition']}."
     llm_agent.generate_response.return_value = llm_response
-    
+
     # Verify the agent can process the data
     response = await llm_agent.generate_response(weather_data)
     assert "Barcelona" in response
@@ -312,22 +312,22 @@ async def test_with_llm_agent(initialized_extension):
 async def test_with_rule_based_agent(initialized_extension):
     # Create mock rule-based agent
     rule_agent = MagicMock(spec=RuleBasedAgent)
-    
+
     # Define a mock rule
     def mock_rule(data):
         if data.get("condition") == "Sunny" and data.get("temperature") > 20:
             return "outdoor_activities"
         else:
             return "indoor_activities"
-    
+
     rule_agent.apply_rules.side_effect = mock_rule
-    
+
     # Simulate the agent using the capability
     weather_data = await initialized_extension.get_current_weather("Rome")
-    
+
     # Apply rule engine logic
     result = rule_agent.apply_rules(weather_data)
-    
+
     # Verify rule-based processing works
     if weather_data["condition"] == "Sunny" and weather_data["temperature"] > 20:
         assert result == "outdoor_activities"
@@ -338,21 +338,21 @@ async def test_with_rule_based_agent(initialized_extension):
 async def test_with_bdi_agent(initialized_extension):
     # Create mock BDI agent
     bdi_agent = MagicMock(spec=BDIAgent)
-    
+
     # Mock belief update
     def mock_update_belief(name, value):
         bdi_agent.beliefs[name] = value
         return True
-    
+
     bdi_agent.beliefs = {}
     bdi_agent.update_belief.side_effect = mock_update_belief
-    
+
     # Simulate the agent using the capability
     weather_data = await initialized_extension.get_forecast("Miami", days=3)
-    
+
     # Update belief with weather data
     bdi_agent.update_belief("forecast_miami", weather_data)
-    
+
     # Verify belief was updated
     assert "forecast_miami" in bdi_agent.beliefs
     assert bdi_agent.beliefs["forecast_miami"] == weather_data
@@ -380,7 +380,7 @@ async def test_disabled_extension():
             "cache_ttl": 60
         }
     }
-    
+
     with patch.dict('os.environ', {'TEST_WEATHER_API_KEY': 'test_key'}):
         extension = WeatherServiceExtension(config)
         result = await extension.initialize()
@@ -400,12 +400,12 @@ async def test_missing_api_key():
         },
         "capabilities": ["current_weather"]
     }
-    
+
     with patch.dict('os.environ', {}, clear=True):
         extension = WeatherServiceExtension(config)
         # Should initialize but log warning about missing API key
         await extension.initialize()
-        
+
         # Should still function with mock implementation
         with patch.dict('os.environ', {'OPENMAS_EXTENSIONS_MOCK': 'true'}):
             extension.client.mock_implementation()
@@ -426,15 +426,15 @@ async def test_selective_capability_enabling():
         "capabilities": ["current_weather"],  # Only enable current_weather, not forecast or alerts
         "protocol_mapping": {}
     }
-    
+
     with patch.dict('os.environ', {'TEST_WEATHER_API_KEY': 'test_key', 'OPENMAS_EXTENSIONS_MOCK': 'true'}):
         extension = WeatherServiceExtension(config)
         await extension.initialize()
-        
+
         # current_weather should work
         result = await extension.get_current_weather("Paris")
         assert result["location"] == "Paris"
-        
+
         # forecast should raise error since it's not enabled
         with pytest.raises(RuntimeError):
             await extension.get_forecast("Paris")
@@ -482,7 +482,7 @@ async def test_response_time(initialized_extension):
     start_time = time.time()
     await initialized_extension.get_current_weather("Tokyo")
     elapsed_time = time.time() - start_time
-    
+
     # Response should be under 500ms (adjust as needed)
     assert elapsed_time < 0.5, f"Response time too slow: {elapsed_time}s"
 
@@ -492,12 +492,12 @@ async def test_cache_effectiveness(initialized_extension):
     start_time = time.time()
     await initialized_extension.get_current_weather("New York")
     first_request_time = time.time() - start_time
-    
+
     # Second request (cache hit)
     start_time = time.time()
     await initialized_extension.get_current_weather("New York")
     second_request_time = time.time() - start_time
-    
+
     # Cache hit should be significantly faster
     assert second_request_time < first_request_time * 0.5, f"Cache not effective: {first_request_time}s vs {second_request_time}s"
 
@@ -505,17 +505,17 @@ async def test_cache_effectiveness(initialized_extension):
 async def test_concurrent_requests(initialized_extension):
     # Create multiple concurrent requests
     locations = ["London", "Paris", "Berlin", "Tokyo", "New York", "Sydney", "Moscow", "Beijing", "Cairo", "Rio"]
-    
+
     start_time = time.time()
     tasks = [initialized_extension.get_current_weather(location) for location in locations]
     results = await asyncio.gather(*tasks)
     elapsed_time = time.time() - start_time
-    
+
     # Verify all requests completed successfully
     assert len(results) == len(locations)
     for i, result in enumerate(results):
         assert result["location"] == locations[i]
-    
+
     # Check overall performance
     assert elapsed_time < 1.0, f"Concurrent performance too slow: {elapsed_time}s for {len(locations)} requests"
 ```
@@ -628,7 +628,7 @@ Mock external API calls to avoid network dependencies:
 def test_api_error_handling(mock_get, client):
     # Simulate API error
     mock_get.side_effect = requests.exceptions.RequestException("API error")
-    
+
     # Verify error handling
     with pytest.raises(requests.exceptions.RequestException):
         client.get_current_weather("London")
@@ -656,18 +656,18 @@ Create protocol simulators to test protocol-specific behavior:
 ```python
 class A2ASimulator:
     """Simulate A2A protocol interactions."""
-    
+
     def __init__(self, registry):
         self.registry = registry
-    
+
     async def call_capability(self, agent_id, capability_name, parameters):
         """Simulate an A2A capability call."""
         # Map external name to internal capability
         internal_capability = self.registry.get_internal_capability(agent_id, "a2a-http", capability_name)
-        
+
         if not internal_capability:
             raise ValueError(f"Unknown capability: {capability_name}")
-        
+
         # Invoke capability
         return await self.registry.invoke_capability(internal_capability, parameters)
 ```
@@ -697,20 +697,20 @@ Test resilience against intermittent failures:
 async def test_intermittent_failures(mock_get, initialized_extension):
     # Configure mock to fail every other request
     call_count = 0
-    
+
     def intermittent_failure(*args, **kwargs):
         nonlocal call_count
         call_count += 1
         if call_count % 2 == 0:
             raise requests.exceptions.RequestException("Intermittent failure")
-        
+
         mock_response = MagicMock()
         mock_response.json.return_value = {"temperature": 22.5, "condition": "Sunny"}
         mock_response.raise_for_status.return_value = None
         return mock_response
-    
+
     mock_get.side_effect = intermittent_failure
-    
+
     # Test retry logic
     for _ in range(5):
         try:
@@ -730,13 +730,13 @@ Test under high load conditions:
 async def test_high_load(initialized_extension):
     # Generate many concurrent requests
     locations = [f"City{i}" for i in range(100)]
-    
+
     # Execute in batches to avoid overwhelming the system
     for batch_start in range(0, len(locations), 10):
         batch = locations[batch_start:batch_start+10]
         tasks = [initialized_extension.get_current_weather(location) for location in batch]
         results = await asyncio.gather(*tasks)
-        
+
         for i, result in enumerate(results):
             assert result["location"] == batch[i]
 ```

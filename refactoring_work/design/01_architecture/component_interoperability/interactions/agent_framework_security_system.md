@@ -14,14 +14,14 @@
 def authenticate_request(request: ProtocolRequest, auth_context: Optional[AuthContext] = None) -> AuthenticationResult:
     """
     Authenticates an incoming request from the Protocol Layer.
-    
+
     Args:
         request: ProtocolRequest - Protocol-specific request object containing authentication credentials
         auth_context: Optional[AuthContext] - Additional context for authentication decisions
-        
+
     Returns:
         AuthenticationResult - Authentication result containing principal information and status
-        
+
     Raises:
         InvalidCredentialsError - If the credentials are invalid
         AuthenticationMechanismError - If there's an error with the authentication mechanism
@@ -122,7 +122,7 @@ if auth_result.is_authenticated:
     # Initialize a session if one was created
     if auth_result.session_id:
         session_manager.initialize_session(auth_result.session_id, principal_info)
-        
+
 else:
     # Handle authentication failure
     error_message = auth_result.error_message or "Authentication failed"
@@ -133,19 +133,19 @@ else:
 ```
 
 ```python
-def authorize_agent_access(principal_info: SecurityPrincipalInfo, agent_id: str, 
+def authorize_agent_access(principal_info: SecurityPrincipalInfo, agent_id: str,
                            access_context: Optional[AccessContext] = None) -> AuthorizationResult:
     """
     Authorizes access to a specific agent by the authenticated principal.
-    
+
     Args:
         principal_info: SecurityPrincipalInfo - Information about the authenticated principal
         agent_id: str - Identifier of the agent being accessed
         access_context: Optional[AccessContext] - Additional context for authorization decisions
-        
+
     Returns:
         AuthorizationResult - Authorization result indicating whether access is allowed
-        
+
     Raises:
         UnknownAgentError - If the agent doesn't exist
         InvalidPrincipalError - If the principal information is invalid
@@ -220,7 +220,7 @@ if auth_result.is_authorized:
     if auth_result.constraints:
         # Apply any constraints to the invocation
         apply_access_constraints(auth_result.constraints)
-        
+
 else:
     # Handle authorization failure
     reason = auth_result.decision_reason or "Access denied"
@@ -235,17 +235,17 @@ def authorize_capability_invocation(principal_info: SecurityPrincipalInfo, agent
                                    access_context: Optional[AccessContext] = None) -> AuthorizationResult:
     """
     Authorizes invocation of a specific agent capability by the authenticated principal.
-    
+
     Args:
         principal_info: SecurityPrincipalInfo - Information about the authenticated principal
         agent_id: str - Identifier of the agent being accessed
         capability_id: str - Identifier of the capability being invoked
         capability_params: Optional[Dict[str, Any]] - Parameters for the capability invocation
         access_context: Optional[AccessContext] - Additional context for authorization decisions
-        
+
     Returns:
         AuthorizationResult - Authorization result indicating whether the capability invocation is allowed
-        
+
     Raises:
         UnknownAgentError - If the agent doesn't exist
         UnknownCapabilityError - If the capability doesn't exist
@@ -290,13 +290,13 @@ if auth_result.is_authorized:
     # Apply any constraints to the invocation
     if auth_result.constraints:
         filtered_params = apply_capability_constraints(
-            capability_params, 
+            capability_params,
             auth_result.constraints
         )
         invoke_capability(agent_id, capability_id, filtered_params)
     else:
         invoke_capability(agent_id, capability_id, capability_params)
-        
+
 else:
     # Handle authorization failure
     reason = auth_result.decision_reason or "Capability invocation denied"
@@ -363,18 +363,18 @@ class AuthorizationCompletedEvent:
 #### Methods/Functions
 
 ```python
-def create_reasoning_security_interface(principal_info: SecurityPrincipalInfo, 
+def create_reasoning_security_interface(principal_info: SecurityPrincipalInfo,
                                           rsi_config: Optional[RSIConfig] = None) -> ReasoningSecurityInterface:
     """
     Creates a Reasoning Security Interface (RSI) implementation for a specific authenticated principal.
-    
+
     Args:
         principal_info: SecurityPrincipalInfo - Information about the authenticated principal
         rsi_config: Optional[RSIConfig] - Configuration for the RSI implementation
-        
+
     Returns:
         ReasoningSecurityInterface - Implementation of the RSI that can be passed to the reasoning engine
-        
+
     Raises:
         InvalidPrincipalError - If the principal information is invalid
         RSICreationError - If the RSI cannot be created
@@ -403,56 +403,56 @@ class ReasoningSecurityInterface(Protocol):
     Interface for security operations within reasoning engines.
     Allows reasoning engines to access security principal information and perform permission checks.
     """
-    
+
     def get_current_principal(self) -> SecurityPrincipalInfo:
         """
         Get information about the current authenticated principal.
-        
+
         Returns:
             SecurityPrincipalInfo - Information about the authenticated principal
         """
         pass
-    
-    def check_permission(self, action: str, resource_identifier: str, 
+
+    def check_permission(self, action: str, resource_identifier: str,
                          context: Optional[Dict[str, Any]] = None) -> AuthZResult:
         """
         Check if the current principal has permission to perform an action on a resource.
-        
+
         Args:
             action: str - The action to check permission for
             resource_identifier: str - Identifier for the resource
             context: Optional[Dict[str, Any]] - Additional context for the permission check
-            
+
         Returns:
             AuthZResult - Result of the permission check
-            
+
         Raises:
             PermissionCheckError - If the permission check fails
         """
         pass
-    
+
     def get_security_context(self) -> Dict[str, Any]:
         """
         Get the current security context.
-        
+
         Returns:
             Dict[str, Any] - The current security context
         """
         pass
-    
-    def generate_secure_token(self, token_type: str, expiration_seconds: int = 3600, 
+
+    def generate_secure_token(self, token_type: str, expiration_seconds: int = 3600,
                               claims: Optional[Dict[str, Any]] = None) -> SecureToken:
         """
         Generate a secure token for use in further operations.
-        
+
         Args:
             token_type: str - Type of token to generate
             expiration_seconds: int - Token expiration time in seconds
             claims: Optional[Dict[str, Any]] - Claims to include in the token
-            
+
         Returns:
             SecureToken - The generated token
-            
+
         Raises:
             TokenGenerationError - If the token generation fails
         """
@@ -523,14 +523,14 @@ def process_message(self, message, context):
     # Access security principal information
     principal = self.rsi.get_current_principal()
     print(f"Processing message for {principal.id} with roles: {principal.roles}")
-    
+
     # Check permission to access knowledge base
     kb_permission = self.rsi.check_permission(
         action="query",
         resource_identifier="knowledge_base:customer_data",
         context={"purpose": "answer_user_query", "query_type": "sensitive"}
     )
-    
+
     if kb_permission.allowed:
         # Access knowledge base with any constraints
         constraints = kb_permission.constraints or {}
@@ -558,12 +558,12 @@ class ReasoningSecurityInterfaceImpl(ReasoningSecurityInterface):
     """
     Implementation of the Reasoning Security Interface provided by the Security System.
     """
-    
+
     def __init__(self, principal_info: SecurityPrincipalInfo, security_system: SecuritySystem,
                  config: RSIConfig = RSIConfig()):
         """
         Initialize the RSI implementation.
-        
+
         Args:
             principal_info: SecurityPrincipalInfo - Information about the authenticated principal
             security_system: SecuritySystem - Reference to the security system
@@ -576,34 +576,34 @@ class ReasoningSecurityInterfaceImpl(ReasoningSecurityInterface):
         self._permission_cache = {} if config.permission_caching else None
         self._created_at = datetime.now()
         self._request_count = 0
-        
+
     def get_current_principal(self) -> SecurityPrincipalInfo:
         """
         Get information about the current authenticated principal.
-        
+
         Returns:
             SecurityPrincipalInfo - Information about the authenticated principal
         """
         # Log access if detailed audit is enabled
         if self._config.detailed_audit:
             self._log_principal_access()
-        
+
         # Return the principal information
         return self._principal_info
-    
-    def check_permission(self, action: str, resource_identifier: str, 
+
+    def check_permission(self, action: str, resource_identifier: str,
                         context: Optional[Dict[str, Any]] = None) -> AuthZResult:
         """
         Check if the current principal has permission to perform an action on a resource.
-        
+
         Args:
             action: str - The action to check permission for
             resource_identifier: str - Identifier for the resource
             context: Optional[Dict[str, Any]] - Additional context for the permission check
-            
+
         Returns:
             AuthZResult - Result of the permission check
-            
+
         Raises:
             PermissionCheckError - If the permission check fails
         """
@@ -613,7 +613,7 @@ class ReasoningSecurityInterfaceImpl(ReasoningSecurityInterface):
             cached_result = self._permission_cache.get(cache_key)
             if cached_result and not self._is_cache_expired(cached_result):
                 return cached_result
-        
+
         # Perform the permission check
         result = self._security_system.check_permission(
             principal=self._principal_info,
@@ -623,7 +623,7 @@ class ReasoningSecurityInterfaceImpl(ReasoningSecurityInterface):
             security_level=self._config.security_level,
             strategy=self._config.permission_strategy
         )
-        
+
         # Update cache if enabled
         if self._permission_cache is not None:
             if len(self._permission_cache) >= self._config.max_auth_cache_size:
@@ -631,17 +631,17 @@ class ReasoningSecurityInterfaceImpl(ReasoningSecurityInterface):
                 self._evict_oldest_cache_entry()
             cache_key = self._generate_cache_key(action, resource_identifier, context)
             self._permission_cache[cache_key] = result
-        
+
         # Track request
         self._request_count += 1
-        
+
         # Return the result
         return result
-    
+
     def get_security_context(self) -> Dict[str, Any]:
         """
         Get the current security context.
-        
+
         Returns:
             Dict[str, Any] - The current security context
         """
@@ -654,20 +654,20 @@ class ReasoningSecurityInterfaceImpl(ReasoningSecurityInterface):
             **self._config.context_binding
         }
         return context
-    
-    def generate_secure_token(self, token_type: str, expiration_seconds: int = 3600, 
+
+    def generate_secure_token(self, token_type: str, expiration_seconds: int = 3600,
                             claims: Optional[Dict[str, Any]] = None) -> SecureToken:
         """
         Generate a secure token for use in further operations.
-        
+
         Args:
             token_type: str - Type of token to generate
             expiration_seconds: int - Token expiration time in seconds
             claims: Optional[Dict[str, Any]] - Claims to include in the token
-            
+
         Returns:
             SecureToken - The generated token
-            
+
         Raises:
             TokenGenerationError - If the token generation fails
         """
@@ -679,7 +679,7 @@ class ReasoningSecurityInterfaceImpl(ReasoningSecurityInterface):
             **self._config.context_binding,
             **(claims or {})
         }
-        
+
         # Generate the token
         return self._security_system.generate_token(
             token_type=token_type,
@@ -687,7 +687,7 @@ class ReasoningSecurityInterfaceImpl(ReasoningSecurityInterface):
             claims=merged_claims,
             issuer=f"rsi:{self._principal_info.id}"
         )
-    
+
     # Private helper methods
     def _generate_cache_key(self, action: str, resource: str, context: Optional[Dict] = None) -> str:
         """Generate a cache key for permission checks."""
@@ -696,22 +696,22 @@ class ReasoningSecurityInterfaceImpl(ReasoningSecurityInterface):
             # Sort context keys for consistent cache keys
             ctx_str = json.dumps(context, sort_keys=True)
         return f"{action}:{resource}:{ctx_str}"
-    
+
     def _is_cache_expired(self, result: AuthZResult) -> bool:
         """Check if a cached result has expired."""
         if result.expiration and result.expiration <= datetime.now():
             return True
         cache_age = (datetime.now() - result.timestamp).total_seconds()
         return cache_age > self._config.cache_ttl_seconds
-    
+
     def _evict_oldest_cache_entry(self) -> None:
         """Evict the oldest entry from the permission cache."""
         if not self._permission_cache:
             return
-        oldest_key = min(self._permission_cache.keys(), 
+        oldest_key = min(self._permission_cache.keys(),
                         key=lambda k: self._permission_cache[k].timestamp)
         del self._permission_cache[oldest_key]
-    
+
     def _log_principal_access(self) -> None:
         """Log access to principal information for audit purposes."""
         self._security_system.log_audit_event(
@@ -745,7 +745,7 @@ class RSICreatedEvent:
     session_id: Optional[str] = None  # ID of the session, if applicable
     rsi_config_hash: str  # Hash of the RSI configuration for tracking
     metadata: Dict[str, Any] = {}  # Additional metadata about the RSI creation
-    
+
     class Payload:
         """
         Payload containing details of the RSI creation event.
@@ -789,7 +789,7 @@ class RSIPermissionCheckEvent:
     duration_ms: int = 0  # Time taken for the check in milliseconds
     constraints_applied: Optional[Dict[str, Any]] = None  # Constraints applied to the permission
     metadata: Dict[str, Any] = {}  # Additional metadata about the check
-    
+
     class Payload:
         """
         Payload containing details of the RSI permission check event.
@@ -833,7 +833,7 @@ def handle_rsi_created(event: RSICreatedEvent):
         f"RSI created for agent {event.agent_id} with principal {event.principal_id} "
         f"using {event.reasoning_approach} reasoning approach"
     )
-    
+
     # Register the RSI in the security administration interface
     admin_interface.register_active_rsi(
         rsi_id=event.rsi_id,
@@ -844,13 +844,13 @@ def handle_rsi_created(event: RSICreatedEvent):
         security_level=event.security_level,
         session_id=event.session_id
     )
-    
+
     # Store the configuration hash for integrity verification
     rsi_integrity_checker.store_config_hash(
         rsi_id=event.rsi_id,
         config_hash=event.rsi_config_hash
     )
-    
+
     # If this is a BDI reasoning approach, apply additional security monitoring
     if event.reasoning_approach == "bdi":
         bdi_security_monitor.monitor_rsi(
@@ -859,7 +859,7 @@ def handle_rsi_created(event: RSICreatedEvent):
             principal_id=event.principal_id
         )
         logger.debug(f"Applied BDI-specific security monitoring to RSI {event.rsi_id}")
-    
+
     # If this is an LLM-based reasoning approach, apply content filtering
     elif event.reasoning_approach == "llm":
         llm_content_filter.configure_for_rsi(
@@ -881,7 +881,7 @@ def handle_permission_check(event: RSIPermissionCheckEvent):
         f"Permission check: Principal {event.principal_id} attempting {event.action} "
         f"on {event.resource}. Result: {'ALLOWED' if event.is_allowed else 'DENIED'}"
     )
-    
+
     # Record detailed audit entry
     security_audit_system.record_permission_check(
         check_id=event.check_id,
@@ -897,7 +897,7 @@ def handle_permission_check(event: RSIPermissionCheckEvent):
         from_cache=event.from_cache,
         duration_ms=event.duration_ms
     )
-    
+
     # Detect and respond to potential security anomalies
     if anomaly_detector.is_anomalous(event):
         security_response_system.trigger_investigation(
@@ -909,7 +909,7 @@ def handle_permission_check(event: RSIPermissionCheckEvent):
             context=event.context_summary
         )
         logger.warning(f"Security anomaly detected for permission check {event.check_id}")
-    
+
     # Update permission analytics
     analytics_system.update_permission_metrics(
         principal_id=event.principal_id,
@@ -995,7 +995,7 @@ agents:
       authorization:
         required_roles: ["user", "admin"]
         required_permissions: ["read_data", "write_data"]
-      
+
     # Reasoning security integration configuration
     reasoning:
       # ... other reasoning configuration ...
@@ -1041,7 +1041,7 @@ security_system:
      class AuthenticationProvider:
          def authenticate(self, credentials: Any) -> AuthenticationResult:
              # Provider-specific implementation
-             
+
      class AuthorizationProvider:
          def authorize(self, principal: SecurityPrincipalInfo, action: str, resource: str) -> AuthorizationResult:
              # Provider-specific implementation
@@ -1053,7 +1053,7 @@ security_system:
      ```python
      class LLMReasoningSecurityInterface(ReasoningSecurityInterface):
          # Inherit base RSI methods
-         
+
          def check_tool_permission(self, tool_name: str) -> AuthZResult:
              """Check if the current principal has permission to use a specific LLM tool."""
              return self.check_permission(action="use_tool", resource_identifier=f"tool:{tool_name}")

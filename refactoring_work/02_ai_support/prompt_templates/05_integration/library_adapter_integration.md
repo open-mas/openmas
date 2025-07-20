@@ -15,11 +15,11 @@ I need you to create/modify an adapter for [LIBRARY_NAME] (version [LIBRARY_VERS
   ```python
   # Verify installed version
   pip show [LIBRARY_NAME]
-  
+
   # Examine module structure
   import [LIBRARY_NAME]
   dir([LIBRARY_NAME])
-  
+
   # Explore key classes
   help([LIBRARY_NAME].[KEY_CLASS])
   ```
@@ -58,19 +58,19 @@ from typing import Optional, List, Dict, Any
 
 class [INTERFACE_NAME](ABC):
     """Interface for [LIBRARY_NAME] functionality."""
-    
+
     @abstractmethod
     async def [METHOD_NAME](self, param1: str, param2: Optional[int] = None) -> Dict[str, Any]:
         """
         [METHOD_DESCRIPTION]
-        
+
         Args:
             param1: [PARAM_DESCRIPTION]
             param2: [PARAM_DESCRIPTION]
-            
+
         Returns:
             [RETURN_DESCRIPTION]
-            
+
         Raises:
             [EXCEPTION_TYPE]: [EXCEPTION_DESCRIPTION]
         """
@@ -84,17 +84,17 @@ from [PACKAGE].interfaces import [INTERFACE_NAME]
 
 class [ADAPTER_NAME]([INTERFACE_NAME]):
     """Adapter for [LIBRARY_NAME]."""
-    
+
     def __init__(self, config: Dict[str, Any], **kwargs):
         """
         Initialize the adapter with necessary configuration.
-        
+
         Args:
             config: Configuration dict for [LIBRARY_NAME]
             **kwargs: Additional configuration options
         """
         # Initialize actual library client/instance
-        
+
     async def [METHOD_NAME](self, param1: str, param2: Optional[int] = None) -> Dict[str, Any]:
         """Implementation using real [LIBRARY_NAME] API."""
         # Call actual library method
@@ -116,15 +116,15 @@ def [FIXTURE_NAME]():
 def test_[METHOD_NAME]_integration([FIXTURE_NAME]):
     """Test [METHOD_NAME] with real [LIBRARY_NAME] library."""
     # Arrange: Prepare test data
-    
+
     # Act: Call adapter method
-    
+
     # Assert: Verify correct behavior with real library
-    
+
 def test_[METHOD_NAME]_error_handling([FIXTURE_NAME]):
     """Test [METHOD_NAME] error handling with real [LIBRARY_NAME] library."""
     # Arrange: Prepare data that will trigger an error
-    
+
     # Act & Assert: Verify proper error handling
 ```
 
@@ -175,11 +175,11 @@ I need you to create/modify an adapter for OpenAI (version 1.5.0) that follows O
   ```python
   # Verify installed version
   pip show openai
-  
+
   # Examine module structure
   import openai
   dir(openai)
-  
+
   # Explore key classes
   help(openai.OpenAI)
   help(openai.AsyncOpenAI)

@@ -114,7 +114,7 @@ class SecureExtension(BaseExtension):
         super().__init__(config)
         # Use secure secret management
         self.secret_manager = SecretManager()
-    
+
     async def initialize(self):
         # Retrieve secret securely
         api_key = await self.secret_manager.get_secret("my_extension_api_key")
@@ -140,11 +140,11 @@ class SecureExtension(BaseExtension):
         },
         "required": ["name"]
     }
-    
+
     async def process(self, input_data):
         # Validate input against schema
         validate_schema(input_data, self.input_schema)
-        
+
         # Process validated input
         return self._process_validated_input(input_data)
 ```
@@ -158,7 +158,7 @@ class SecureExtension(BaseExtension):
     async def process(self, input_data):
         # Sanitize input data
         sanitized = sanitize_input(input_data)
-        
+
         # Process sanitized input
         return self._process_sanitized_input(sanitized)
 ```
@@ -178,23 +178,23 @@ class SecureCommunicator(CommunicatorExtension):
         super().__init__(config)
         self.url = config.get("url")
         self.tls_config = self._create_tls_config(config.get("tls", {}))
-    
+
     def _create_tls_config(self, tls_config):
         context = ssl.create_default_context()
-        
+
         # Configure TLS parameters
         if "cert_file" in tls_config and "key_file" in tls_config:
             context.load_cert_chain(
                 tls_config["cert_file"],
                 tls_config["key_file"]
             )
-        
+
         # Set minimum TLS version
         context.minimum_version = ssl.TLSVersion.TLSv1_2
-        
+
         # Set cipher preferences
         context.set_ciphers("HIGH:!aNULL:!eNULL:!MD5:!RC4")
-        
+
         return context
 ```
 
@@ -220,7 +220,7 @@ def load_extension(extension_path):
     # Check extension signature
     if not verify_signature(extension_path):
         raise SecurityError("Extension signature verification failed")
-    
+
     # Load verified extension
     return import_extension(extension_path)
 ```
@@ -245,7 +245,7 @@ from openmas.security import verify_extension
 # Verify an extension manually
 async def manually_verify_extension(extension_path):
     verification_result = await verify_extension(extension_path)
-    
+
     if verification_result.signature_valid and verification_result.no_vulnerabilities:
         print("Extension verified successfully")
         return True
@@ -329,26 +329,26 @@ from openmas.security import SecureAdapter
 class SecureMultiProtocolExtension(MultiProtocolExtension):
     def __init__(self, config):
         super().__init__(config)
-        
+
         # Register secure protocol adapters
         self.register_protocol_adapter(
-            "a2a", 
+            "a2a",
             SecureAdapter("a2a", config.get("a2a_security", {}))
         )
-        
+
         self.register_protocol_adapter(
-            "mcp", 
+            "mcp",
             SecureAdapter("mcp", config.get("mcp_security", {}))
         )
-    
+
     async def handle_request(self, request, protocol):
         # Get protocol-specific security adapter
         adapter = self.get_protocol_adapter(protocol)
-        
+
         # Validate request with protocol-specific security checks
         if not adapter.validate_request(request):
             raise SecurityError(f"Invalid {protocol} request")
-        
+
         # Process valid request
         return await self._process_request(request)
 ```

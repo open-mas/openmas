@@ -35,7 +35,7 @@ class Agent:
         # Register with topology system
         self.topology_manager = TopologyManager(self)
         await self.topology_manager.register()
-        
+
         # Roles and relationships are established based on configuration
         await self.topology_manager.establish_relationships()
 ```

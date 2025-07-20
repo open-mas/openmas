@@ -42,19 +42,19 @@ All protocol adapters implement a common interface:
 ```python
 class ProtocolAdapter:
     """Base class for protocol adapters."""
-    
+
     def __init__(self, protocol_name):
         """Initialize with protocol name."""
         self.protocol_name = protocol_name
-    
+
     async def adapt_outgoing(self, message, pattern_name):
         """Adapt an outgoing message to this protocol."""
         raise NotImplementedError
-    
+
     async def adapt_incoming(self, protocol_message, pattern_name):
         """Adapt an incoming protocol message to the pattern format."""
         raise NotImplementedError
-    
+
     def get_pattern_options(self, pattern_name):
         """Get protocol-specific options for a pattern."""
         raise NotImplementedError
@@ -67,16 +67,16 @@ Adapters are registered with a central registry:
 ```python
 class ProtocolAdapterRegistry:
     """Registry for protocol adapters."""
-    
+
     def __init__(self):
         """Initialize the registry."""
         self._adapters = {}
-    
+
     def register(self, protocol_name, adapter_class):
         """Register an adapter for a protocol."""
         self._adapters[protocol_name] = adapter_class
         return self
-    
+
     def get(self, protocol_name):
         """Get an adapter for a protocol."""
         adapter_class = self._adapters.get(protocol_name)
@@ -92,12 +92,12 @@ class ProtocolAdapterRegistry:
 ```python
 class A2AProtocolAdapter(ProtocolAdapter):
     """Adapts patterns to A2A protocol."""
-    
+
     async def adapt_outgoing(self, message, pattern_name):
         """Adapt an outgoing message to A2A format."""
         # Get pattern-specific options
         options = self.get_pattern_options(pattern_name)
-        
+
         if pattern_name == "request_response":
             return {
                 "type": "request",
@@ -115,11 +115,11 @@ class A2AProtocolAdapter(ProtocolAdapter):
                 }
             }
         # Additional patterns...
-    
+
     async def adapt_incoming(self, protocol_message, pattern_name):
         """Adapt an incoming A2A message to the pattern format."""
         options = self.get_pattern_options(pattern_name)
-        
+
         if pattern_name == "request_response":
             if protocol_message.get("type") == "response":
                 return {
@@ -128,7 +128,7 @@ class A2AProtocolAdapter(ProtocolAdapter):
                     "status": protocol_message.get("status", "success")
                 }
         # Additional patterns...
-    
+
     def get_pattern_options(self, pattern_name):
         """Get A2A-specific options for a pattern."""
         # Default options for each pattern
@@ -143,7 +143,7 @@ class A2AProtocolAdapter(ProtocolAdapter):
             },
             # Additional patterns...
         }
-        
+
         return options.get(pattern_name, {})
 ```
 
@@ -152,11 +152,11 @@ class A2AProtocolAdapter(ProtocolAdapter):
 ```python
 class MCPProtocolAdapter(ProtocolAdapter):
     """Adapts patterns to MCP protocol."""
-    
+
     async def adapt_outgoing(self, message, pattern_name):
         """Adapt an outgoing message to MCP format."""
         options = self.get_pattern_options(pattern_name)
-        
+
         if pattern_name == "request_response":
             return {
                 "type": "tool_call",
@@ -174,11 +174,11 @@ class MCPProtocolAdapter(ProtocolAdapter):
                 }
             }
         # Additional patterns...
-    
+
     async def adapt_incoming(self, protocol_message, pattern_name):
         """Adapt an incoming MCP message to the pattern format."""
         options = self.get_pattern_options(pattern_name)
-        
+
         if pattern_name == "request_response":
             if protocol_message.get("type") == "tool_result":
                 return {
@@ -187,7 +187,7 @@ class MCPProtocolAdapter(ProtocolAdapter):
                     "status": "error" if protocol_message.get("error") else "success"
                 }
         # Additional patterns...
-    
+
     def get_pattern_options(self, pattern_name):
         """Get MCP-specific options for a pattern."""
         # Default options for each pattern
@@ -202,7 +202,7 @@ class MCPProtocolAdapter(ProtocolAdapter):
             },
             # Additional patterns...
         }
-        
+
         return options.get(pattern_name, {})
 ```
 
@@ -211,11 +211,11 @@ class MCPProtocolAdapter(ProtocolAdapter):
 ```python
 class HTTPProtocolAdapter(ProtocolAdapter):
     """Adapts patterns to HTTP protocol."""
-    
+
     async def adapt_outgoing(self, message, pattern_name):
         """Adapt an outgoing message to HTTP format."""
         options = self.get_pattern_options(pattern_name)
-        
+
         if pattern_name == "request_response":
             return {
                 "method": options.get("method", "POST"),
@@ -238,22 +238,22 @@ class HTTPProtocolAdapter(ProtocolAdapter):
                 }
             }
         # Additional patterns...
-    
+
     async def adapt_incoming(self, protocol_message, pattern_name):
         """Adapt an incoming HTTP message to the pattern format."""
         options = self.get_pattern_options(pattern_name)
-        
+
         if pattern_name == "request_response":
             # Extract correlation ID from headers
             correlation_id = protocol_message.get("headers", {}).get("X-Correlation-ID")
-            
+
             return {
                 "content": protocol_message.get("body", {}),
                 "correlation_id": correlation_id,
                 "status": "success" if 200 <= protocol_message.get("status_code", 0) < 300 else "error"
             }
         # Additional patterns...
-    
+
     def get_pattern_options(self, pattern_name):
         """Get HTTP-specific options for a pattern."""
         # Default options for each pattern
@@ -268,7 +268,7 @@ class HTTPProtocolAdapter(ProtocolAdapter):
             },
             # Additional patterns...
         }
-        
+
         return options.get(pattern_name, {})
 ```
 
@@ -277,16 +277,16 @@ class HTTPProtocolAdapter(ProtocolAdapter):
 ```python
 class MQTTProtocolAdapter(ProtocolAdapter):
     """Adapts patterns to MQTT protocol."""
-    
+
     async def adapt_outgoing(self, message, pattern_name):
         """Adapt an outgoing message to MQTT format."""
         options = self.get_pattern_options(pattern_name)
-        
+
         if pattern_name == "request_response":
             correlation_id = message.get("correlation_id", str(uuid.uuid4()))
             request_topic = options.get("request_topic", "requests/{agent_id}")
             request_topic = request_topic.format(agent_id=message.get("recipient"))
-            
+
             return {
                 "topic": request_topic,
                 "payload": {
@@ -301,7 +301,7 @@ class MQTTProtocolAdapter(ProtocolAdapter):
             topic = message.get("topic")
             if not topic.startswith(options.get("topic_prefix", "")):
                 topic = f"{options.get('topic_prefix', '')}/{topic}"
-            
+
             return {
                 "topic": topic,
                 "payload": message.get("message", {}),
@@ -309,14 +309,14 @@ class MQTTProtocolAdapter(ProtocolAdapter):
                 "retain": options.get("retain", False)
             }
         # Additional patterns...
-    
+
     async def adapt_incoming(self, protocol_message, pattern_name):
         """Adapt an incoming MQTT message to the pattern format."""
         options = self.get_pattern_options(pattern_name)
-        
+
         if pattern_name == "request_response":
             payload = protocol_message.get("payload", {})
-            
+
             return {
                 "content": payload.get("content", {}),
                 "correlation_id": payload.get("correlation_id"),
@@ -325,16 +325,16 @@ class MQTTProtocolAdapter(ProtocolAdapter):
         elif pattern_name == "publish_subscribe":
             topic = protocol_message.get("topic", "")
             prefix = options.get("topic_prefix", "")
-            
+
             if topic.startswith(prefix):
                 topic = topic[len(prefix):].lstrip("/")
-            
+
             return {
                 "topic": topic,
                 "message": protocol_message.get("payload", {})
             }
         # Additional patterns...
-    
+
     def get_pattern_options(self, pattern_name):
         """Get MQTT-specific options for a pattern."""
         # Default options for each pattern
@@ -351,7 +351,7 @@ class MQTTProtocolAdapter(ProtocolAdapter):
             },
             # Additional patterns...
         }
-        
+
         return options.get(pattern_name, {})
 ```
 
@@ -367,20 +367,20 @@ request_response:
   a2a:
     capability_name: "request"
     response_capability: "response"
-    
+
   mcp:
     tool_name: "request"
     result_type: "tool_result"
-    
+
   http:
     method: "POST"
     response_codes: [200, 201]
-    
+
   mqtt:
     request_topic: "requests/{agent_id}"
     response_topic: "responses/{sender_id}"
     qos: 1
-    
+
   grpc:
     service: "RequestService"
     method: "MakeRequest"
@@ -394,20 +394,20 @@ publish_subscribe:
   a2a:
     capability_name: "publish"
     subscribe_capability: "subscribe"
-    
+
   mcp:
     event_name: "publish"
     subscribe_event: "subscribe"
-    
+
   http:
     publish_endpoint: "/publish"
     subscribe_endpoint: "/subscribe"
-    
+
   mqtt:
     topic_prefix: "pubsub"
     qos: 0
     retain: false
-    
+
   grpc:
     service: "PubSubService"
     publish_method: "Publish"
@@ -423,22 +423,22 @@ delegation:
     capability_name: "delegate"
     progress_capability: "progress"
     result_capability: "result"
-    
+
   mcp:
     tool_name: "delegate"
     progress_event: "progress"
     result_type: "task_result"
-    
+
   http:
     delegate_endpoint: "/delegate"
     progress_endpoint: "/progress"
     result_endpoint: "/result"
-    
+
   mqtt:
     task_topic: "tasks/{agent_id}"
     progress_topic: "progress/{task_id}"
     result_topic: "results/{task_id}"
-    
+
   grpc:
     service: "TaskService"
     delegate_method: "DelegateTask"
@@ -453,17 +453,17 @@ delegation:
 pipeline:
   a2a:
     capability_name: "pipeline_step"
-    
+
   mcp:
     tool_name: "pipeline_process"
-    
+
   http:
     endpoint: "/pipeline/{pipeline_id}/step/{step_id}"
-    
+
   mqtt:
     input_topic: "pipeline/{pipeline_id}/input/{step_id}"
     output_topic: "pipeline/{pipeline_id}/output/{step_id}"
-    
+
   grpc:
     service: "PipelineService"
     method: "ProcessStep"
@@ -477,19 +477,19 @@ event_based:
   a2a:
     capability_name: "broadcast_event"
     handler_capability: "handle_event"
-    
+
   mcp:
     event_name: "broadcast"
     handler_registration: "register_handler"
-    
+
   http:
     broadcast_endpoint: "/events/broadcast"
     handler_endpoint: "/events/handlers"
-    
+
   mqtt:
     event_topic: "events/{event_type}"
     handler_topic: "handlers/{handler_id}"
-    
+
   grpc:
     service: "EventService"
     broadcast_method: "BroadcastEvent"
@@ -503,19 +503,19 @@ event_based:
 streaming:
   a2a:
     capability_name: "stream"
-    
+
   mcp:
     incremental_response: true
     stream_tool: "create_stream"
-    
+
   http:
     mode: "sse"  # or "websocket"
     endpoint: "/streams/{stream_id}"
-    
+
   mqtt:
     data_topic: "streams/{stream_id}/data"
     control_topic: "streams/{stream_id}/control"
-    
+
   grpc:
     service: "StreamService"
     method: "StreamData"

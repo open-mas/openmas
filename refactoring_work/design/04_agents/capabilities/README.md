@@ -36,7 +36,7 @@ agents:
   weather_agent:
     # Agent configuration
     class: "agents.weather.WeatherAgent"
-    
+
     # Capability configuration
     capabilities:
       multi_protocol_capabilities:
@@ -88,7 +88,7 @@ class WeatherAgent(Agent):
             core_capability_id="get_weather",  # Must match the ID in multi_protocol_capabilities.core
             handler_method=self.get_weather_logic
         )
-    
+
     async def get_weather_logic(self, location):
         # Capability implementation
         weather_data = await self.weather_service.fetch(location)
@@ -277,29 +277,29 @@ class MultiReasoningAgent(Agent):
             handler_method=self.analyze_data_llm,
             reasoning="llm"
         )
-        
+
         self.register_capability_handler(
             core_capability_id="analyze_data",
             handler_method=self.analyze_data_rules,
             reasoning="rule_based"
         )
-        
+
         self.register_capability_handler(
             core_capability_id="analyze_data",
             handler_method=self.analyze_data_bdi,
             reasoning="bdi"
         )
-    
+
     async def analyze_data_llm(self, data):
         # LLM-based implementation
         result = await self.llm.analyze(data)
         return result
-    
+
     async def analyze_data_rules(self, data):
         # Rule-based implementation
         result = self.rule_engine.analyze(data)
         return result
-    
+
     async def analyze_data_bdi(self, data):
         # BDI-based implementation
         self.belief_base.update({"data": data})
@@ -335,7 +335,7 @@ agents:
   weather_agent:
     # Agent configuration
     class: "agents.weather.WeatherAgent"
-    
+
     # Capability configuration
     capabilities:
       multi_protocol_capabilities:
@@ -383,20 +383,20 @@ class WeatherAgent(Agent):
             handler_method=self.get_weather_llm,
             reasoning="llm"
         )
-        
+
         self.register_capability_handler(
             core_capability_id="get_weather",
             handler_method=self.get_weather_rule_based,
             reasoning="rule_based"
         )
-    
+
     async def get_weather_llm(self, location):
         # LLM-based implementation
         context = f"What is the current weather in {location}?"
         response = await self.llm.generate(context)
         parsed_data = self.parse_weather_from_text(response)
         return parsed_data
-    
+
     async def get_weather_rule_based(self, location):
         # Rule-based implementation
         weather_data = await self.weather_service.fetch(location)

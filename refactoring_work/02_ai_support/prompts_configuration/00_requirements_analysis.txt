@@ -117,4 +117,4 @@ Important considerations:
 - Prioritize clean implementation over backward compatibility
 - Focus on testability through proper dependency injection
 - Ensure the design supports all communication protocols consistently
-- Consider how to validate configurations against the schema early 
+- Consider how to validate configurations against the schema early

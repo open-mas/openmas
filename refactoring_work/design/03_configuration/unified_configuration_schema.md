@@ -23,7 +23,7 @@ properties:
   description:
     type: string
     description: "Description of the project"
-  
+
   # Global default configuration
   defaults:
     type: object
@@ -39,7 +39,7 @@ properties:
             description: "Default log level"
             enum: ["error", "warning", "info", "debug"]
             default: "info"
-      
+
       # Default topology configuration
       # For detailed implementation, see: /01_architecture/topology_design.md
       topology:
@@ -88,7 +88,7 @@ properties:
                       type: string
                       description: "Default communication pattern for this relationship"
                       enum: ["request_response", "publish_subscribe", "streaming", "event_based", "pipeline", "delegation"]
-      
+
       # Default communication patterns
       communication_patterns:
         type: object
@@ -102,7 +102,7 @@ properties:
             protocol_adaptations:
               type: object
               description: "Protocol-specific adaptations"
-      
+
       # Default protocol configuration
       protocols:
         type: object
@@ -246,7 +246,7 @@ properties:
                 type: integer
                 description: "Default timeout in milliseconds for gRPC requests"
                 default: 30000
-      
+
       # Default security configuration
       security:
         type: object
@@ -265,7 +265,7 @@ properties:
                 description: "Default authentication provider"
                 enum: ["jwt", "api_key", "oauth", "none"]
                 default: "api_key"
-      
+
       # Default session management
       sessions:
         type: object
@@ -361,7 +361,7 @@ properties:
                 description: "Retention policy for messages"
                 enum: ["session", "permanent", "custom"]
                 default: "session"
-      
+
       # Default observability configuration
       observability:
         type: object
@@ -462,7 +462,7 @@ properties:
                 type: boolean
                 description: "Whether to include component details in health check"
                 default: true
-      
+
       # Asset and resource management configuration
       asset_management:
         type: object
@@ -537,7 +537,7 @@ properties:
                         description: "Default representation method"
                         enum: ["inline", "reference", "hybrid"]
                         default: "inline"
-      
+
       # Extensions system configuration
       extensions:
         type: object
@@ -577,7 +577,7 @@ properties:
                 description: "Extension isolation level"
                 enum: ["none", "process", "container"]
                 default: "none"
-      
+
       # Prompt management configuration
       prompts:
         type: object
@@ -598,7 +598,7 @@ properties:
             type: boolean
             description: "Whether to track prompt versions"
             default: true
-  
+
   # Agent definitions
   agents:
     type: object
@@ -614,7 +614,7 @@ properties:
           type: string
           description: "Agent type classification (distinct from reasoning approach)"
           enum: ["assistant", "tool", "manager", "autonomous", "collaborative", "custom"]
-        
+
         # Agent topology configuration
         # See detailed patterns in: /01_architecture/topology_patterns/
         topology:
@@ -644,7 +644,7 @@ properties:
                   communication_pattern:
                     type: string
                     description: "Communication pattern for this relationship"
-        
+
         # Protocol configuration
         protocols:
           type: array
@@ -823,7 +823,7 @@ properties:
                     type: integer
                     description: "Maximum message size in MB"
                     default: 4
-        
+
         # Agent capabilities
         capabilities:
           type: object
@@ -938,7 +938,7 @@ properties:
                       description: "How to handle permission check failures in the reasoning engine"
                       enum: ["strict", "warn", "permissive"]
                       default: "strict"
-        
+
         # Agent-specific security configuration
         security:
           type: object
@@ -951,12 +951,12 @@ properties:
                 providers:
                   type: object
                   description: "Authentication provider configuration"
-        
+
         # Agent-specific session configuration
         sessions:
           type: object
           description: "Agent-specific session configuration"
-        
+
         # Agent state management configuration
         state:
           type: object
@@ -972,7 +972,7 @@ properties:
                   description: "Storage backend type"
                   enum: ["memory", "file", "database", "redis"]
                   default: "memory"
-                
+
                 # File storage options
                 directory:
                   type: string
@@ -983,7 +983,7 @@ properties:
                   description: "File format for file storage (when type is 'file')"
                   enum: ["json", "pickle", "yaml"]
                   default: "json"
-                
+
                 # Database storage options
                 connection_string:
                   type: string
@@ -992,7 +992,7 @@ properties:
                   type: string
                   description: "Table or collection name for database storage"
                   default: "agent_state"
-                
+
                 # Redis storage options
                 redis_url:
                   type: string
@@ -1004,7 +1004,7 @@ properties:
                   default: "agent_state:"
               required:
                 - type
-            
+
             # Expiration settings
             expiration:
               type: object
@@ -1026,7 +1026,7 @@ properties:
                   type: integer
                   description: "Expiration time in seconds for shared state"
                   default: 86400  # 1 day
-            
+
             # Serialization settings
             serialization:
               type: object
@@ -1045,17 +1045,17 @@ properties:
                   type: integer
                   description: "Maximum size in bytes for a single state entry"
                   default: 1048576  # 1MB
-        
+
         # Agent-specific observability
         observability:
           type: object
           description: "Agent-specific observability configuration"
-        
+
         # Agent-specific asset management
         asset_management:
           type: object
           description: "Agent-specific asset management configuration"
-        
+
         # Agent-specific extensions
         extensions:
           type: object
@@ -1066,7 +1066,7 @@ properties:
               description: "Extensions enabled for this agent"
               items:
                 type: string
-        
+
         # Agent knowledge management configuration
         knowledge_management_config:
           type: object
@@ -1105,7 +1105,7 @@ properties:
             integration_options:
               type: object
               description: "Additional options for how the reasoning engine integrates with knowledge bases"
-        
+
         # Agent-specific prompt management
         prompts:
           type: object
@@ -1121,7 +1121,7 @@ properties:
                 type: object
       required:
         - class
-  
+
   # Environment-specific configuration
   environments:
     type: object
@@ -1129,7 +1129,7 @@ properties:
     additionalProperties:
       type: object
       description: "Configuration for a specific environment"
-  
+
   # Deployment configuration
   deployment:
     type: object
@@ -1142,7 +1142,7 @@ properties:
       services:
         type: object
         description: "Service configuration"
-        
+
 required:
   - name
   - version
@@ -1172,7 +1172,7 @@ description: "Multi-agent travel planning system"
 defaults:
   common:
     log_level: "info"
-  
+
   # Default topology is centralized
   topology:
     pattern: "centralized"
@@ -1186,7 +1186,7 @@ defaults:
       types:
         - name: "orchestrator_to_worker"
           communication_pattern: "request_response"
-  
+
   # Default communication patterns
   communication_patterns:
     request_response:
@@ -1200,7 +1200,7 @@ defaults:
     event_based:
       options:
         event_buffer_size: 100
-  
+
   # Default protocol configuration
   protocols:
     a2a:
@@ -1209,13 +1209,13 @@ defaults:
     mcp:
       server_instructions: "Default server instructions"
       tool_registration: "auto"
-  
+
   # Default security
   security:
     authentication:
       enabled: true
       default_provider: "api_key"
-  
+
   # Default observability
   observability:
     logging:
@@ -1228,7 +1228,7 @@ agents:
   travel_coordinator:
     class: "agents.coordinator.TravelCoordinator"
     type: "hybrid"
-    
+
     # Topology configuration
     topology:
       role: "orchestrator"
@@ -1237,7 +1237,7 @@ agents:
           relationship_type: "orchestrator_to_worker"
         - agent_id: "hotel_search"
           relationship_type: "orchestrator_to_worker"
-    
+
     # Protocols exposed
     protocols:
       - type: "a2a-http"
@@ -1251,7 +1251,7 @@ agents:
         options:
           server_mode: true
           server_instructions: "Travel coordination service"
-    
+
     # Capabilities
     capabilities:
       multi_protocol_capabilities:
@@ -1264,12 +1264,12 @@ agents:
             coordinate_trip: "tasks/coordinate"
           mcp:
             coordinate_trip: "coordinate_trip_tool"
-  
+
   # Flight search agent
   flight_search:
     class: "agents.flight.FlightSearchAgent"
     type: "rule_based"
-    
+
     # Topology configuration
     topology:
       role: "worker"
@@ -1277,7 +1277,7 @@ agents:
         - agent_id: "travel_coordinator"
           relationship_type: "worker_to_orchestrator"
           communication_pattern: "event_based"
-    
+
     # Protocols exposed
     protocols:
       - type: "a2a-http"
@@ -1297,7 +1297,7 @@ environments:
     observability:
       logging:
         level: "debug"
-  
+
   production:
     observability:
       logging:

@@ -98,7 +98,7 @@ agents:
     reasoning:
       approach: "symbolic_engine"  # This is the "brain" - a reasoning engine
       # ...reasoning engine specific configuration...
-    
+
     # Knowledge management configuration - how the reasoning engine uses the KR&R System
     knowledge_management_config:
       enabled: true

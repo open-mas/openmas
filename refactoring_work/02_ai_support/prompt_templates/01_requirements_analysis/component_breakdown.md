@@ -5,7 +5,7 @@ Use this prompt template to break down a large component into manageable sub-com
 ## Prompt Template
 
 ```
-I need to refactor the [COMPONENT_NAME] component of OpenMAS. This component is responsible for [BRIEF_DESCRIPTION]. 
+I need to refactor the [COMPONENT_NAME] component of OpenMAS. This component is responsible for [BRIEF_DESCRIPTION].
 
 The design documentation is located at:
 [DESIGN_DOC_LINK]
@@ -77,4 +77,4 @@ The design documentation is located at:
 /refactoring_work/01_configuration/design/index.md
 
 [Rest of prompt follows...]
-``` 
+```

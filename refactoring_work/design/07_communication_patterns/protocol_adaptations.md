@@ -46,19 +46,19 @@ All protocol adapters implement a common interface:
 ```python
 class ProtocolAdapter:
     """Base class for protocol adapters."""
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         self.config = config
-        
+
     async def process_incoming(self, message, pattern):
         """Process an incoming message."""
         raise NotImplementedError("Subclasses must implement")
-        
+
     async def prepare_outgoing(self, message, pattern):
         """Prepare an outgoing message."""
         raise NotImplementedError("Subclasses must implement")
-        
+
     async def handle_error(self, error, message, pattern):
         """Handle an error."""
         raise NotImplementedError("Subclasses must implement")
@@ -71,13 +71,13 @@ Each protocol has specific adapter implementations:
 ```python
 class A2AProtocolAdapter(ProtocolAdapter):
     """Adapts patterns to A2A protocol."""
-    
+
     async def process_incoming(self, message, pattern):
         """Process an incoming A2A message."""
         # Extract relevant parts from A2A message
         # Map to pattern-specific format
         return transformed_message
-        
+
     async def prepare_outgoing(self, message, pattern):
         """Prepare an outgoing A2A message."""
         # Transform internal message to A2A format
@@ -86,13 +86,13 @@ class A2AProtocolAdapter(ProtocolAdapter):
 
 class MCPProtocolAdapter(ProtocolAdapter):
     """Adapts patterns to MCP protocol."""
-    
+
     async def process_incoming(self, message, pattern):
         """Process an incoming MCP message."""
         # Extract relevant parts from MCP message
         # Map to pattern-specific format
         return transformed_message
-        
+
     async def prepare_outgoing(self, message, pattern):
         """Prepare an outgoing MCP message."""
         # Transform internal message to MCP format
@@ -107,7 +107,7 @@ The Adapter Factory creates appropriate adapters:
 ```python
 class ProtocolAdapterFactory:
     """Factory for creating protocol adapters."""
-    
+
     def __init__(self):
         """Initialize the factory."""
         self.adapter_classes = {
@@ -118,12 +118,12 @@ class ProtocolAdapterFactory:
             "redis": RedisProtocolAdapter,
             "grpc": GRPCProtocolAdapter
         }
-        
+
     def create_adapter(self, protocol, config):
         """Create a protocol adapter."""
         if protocol not in self.adapter_classes:
             raise ValueError(f"Unsupported protocol: {protocol}")
-            
+
         adapter_class = self.adapter_classes[protocol]
         return adapter_class(config)
 ```
@@ -170,7 +170,7 @@ class A2ARequestResponseAdapter(ProtocolAdapter):
             }
         }
         return task
-        
+
     async def process_incoming(self, message, pattern):
         # Extract response from A2A task output
         return {
@@ -210,7 +210,7 @@ class A2APublishSubscribeAdapter(ProtocolAdapter):
             }
         }
         return task
-        
+
     async def process_incoming(self, message, pattern):
         # Extract notification from A2A task
         metadata = message.get("metadata", {})
@@ -310,7 +310,7 @@ class MCPRequestResponseAdapter(ProtocolAdapter):
             }
         }
         return function_call
-        
+
     async def process_incoming(self, message, pattern):
         # Extract response from MCP function call result
         return {
@@ -604,7 +604,7 @@ agents:
         protocol_adaptations:
           a2a:
             use_tasks: true
-  
+
   worker:
     communicator_type: "mcp"
     patterns:
@@ -633,8 +633,8 @@ Each protocol has different capabilities. This chart shows pattern compatibility
 | Pipeline | ✓✓✓ | ✓✓ | ✓✓ | ✓ | ✓ | ✓✓ |
 | Delegation | ✓✓✓ | ✓✓✓ | ✓✓ | ✓ | ✓ | ✓✓ |
 
-✓✓✓ = Full native support  
-✓✓ = Good support  
+✓✓✓ = Full native support
+✓✓ = Good support
 ✓ = Basic support
 
 ## Protocol Selection Guidelines
@@ -672,10 +672,10 @@ To add a new protocol to the adaptation system:
 # Example: Adding a new protocol
 class NewProtocolAdapter(ProtocolAdapter):
     """Adapts patterns to a new protocol."""
-    
+
     async def process_incoming(self, message, pattern):
         # Implementation
-        
+
     async def prepare_outgoing(self, message, pattern):
         # Implementation
 

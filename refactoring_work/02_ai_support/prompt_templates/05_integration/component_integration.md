@@ -82,27 +82,27 @@ The component has been implemented as follows:
 ```python
 class ConfigLoader:
     """Loads and validates configuration for OpenMAS."""
-    
+
     def __init__(self, config_path: Optional[str] = None, file_reader: Optional[FileReader] = None):
         """Initialize the config loader.
-        
+
         Args:
             config_path: Path to the configuration file
             file_reader: Optional file reader for testing
         """
         self.config_path = config_path
         self.file_reader = file_reader or DefaultFileReader()
-        
+
     async def load_config(self) -> ProjectConfig:
         """Load and validate configuration."""
         if not self.config_path:
             raise ConfigError("No configuration path provided")
-            
+
         yaml_config = self._load_yaml_file(self.config_path)
         env_config = self._apply_environment_variables(yaml_config)
-        
+
         return ProjectConfig(**env_config)
-    
+
     # ... rest of implementation ...
 ```
 
@@ -119,4 +119,4 @@ This component needs to be integrated with:
 4. Ensure error handling across component boundaries
 5. Document all integration points clearly
 
-[Rest of prompt follows...] 
+[Rest of prompt follows...]

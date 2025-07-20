@@ -22,13 +22,13 @@ pipeline:
 ```python
 class A2APipelineAdapter(ProtocolAdapter):
     """Adapts the Pipeline pattern to A2A protocol."""
-    
+
     async def process_incoming(self, message, pattern):
         """Process an incoming A2A message."""
         if message.get("type") == pattern.config.get("task_type", "pipeline"):
             # Extract metadata
             metadata = message.get("metadata", {})
-            
+
             # Determine message type
             if "stage_id" in metadata:
                 # This is a stage execution or result
@@ -84,9 +84,9 @@ class A2APipelineAdapter(ProtocolAdapter):
                     },
                     "metadata": metadata
                 }
-                
+
         return message
-        
+
     async def prepare_outgoing(self, message, pattern):
         """Prepare an outgoing A2A message."""
         if message.get("type") == "pipeline_init":
@@ -103,7 +103,7 @@ class A2APipelineAdapter(ProtocolAdapter):
                 }
             }
             return task
-            
+
         elif message.get("type") == "stage_exec":
             # Prepare stage execution
             task = {
@@ -120,7 +120,7 @@ class A2APipelineAdapter(ProtocolAdapter):
                 }
             }
             return task
-            
+
         elif message.get("type") == "stage_result":
             # Prepare stage result
             task = {
@@ -136,7 +136,7 @@ class A2APipelineAdapter(ProtocolAdapter):
                 }
             }
             return task
-            
+
         elif message.get("type") == "pipeline_completion":
             # Prepare pipeline completion
             task = {
@@ -151,7 +151,7 @@ class A2APipelineAdapter(ProtocolAdapter):
                 }
             }
             return task
-            
+
         return message
 ```
 
@@ -174,18 +174,18 @@ pipeline:
 ```python
 class MCPPipelineAdapter(ProtocolAdapter):
     """Adapts the Pipeline pattern to MCP protocol."""
-    
+
     async def process_incoming(self, message, pattern):
         """Process an incoming MCP message."""
         if message.get("type") == "function_call":
             function_name = message.get("name", "")
             stage_prefix = pattern.config.get("stage_function_prefix", "pipeline_stage_")
-            
+
             if function_name.startswith(stage_prefix):
                 # This is a stage execution
                 stage_id = function_name[len(stage_prefix):]
                 args = message.get("arguments", {})
-                
+
                 return {
                     "id": message.get("id"),
                     "type": "stage_exec",
@@ -202,11 +202,11 @@ class MCPPipelineAdapter(ProtocolAdapter):
                         "timestamp": datetime.now().isoformat()
                     }
                 }
-                
+
             elif function_name == pattern.config.get("init_function", "start_pipeline"):
                 # This is a pipeline initialization
                 args = message.get("arguments", {})
-                
+
                 return {
                     "id": message.get("id"),
                     "type": "pipeline_init",
@@ -222,11 +222,11 @@ class MCPPipelineAdapter(ProtocolAdapter):
                         "timeout_ms": args.get("timeout_ms", 300000)
                     }
                 }
-                
+
             elif function_name == pattern.config.get("completion_function", "complete_pipeline"):
                 # This is a pipeline completion
                 args = message.get("arguments", {})
-                
+
                 return {
                     "id": message.get("id"),
                     "type": "pipeline_completion",
@@ -241,11 +241,11 @@ class MCPPipelineAdapter(ProtocolAdapter):
                         "initiator_id": args.get("initiator_id")
                     }
                 }
-                
+
         elif message.get("type") == "function_result":
             # This is a stage result
             result = message.get("result", {})
-            
+
             return {
                 "id": message.get("id"),
                 "type": "stage_result",
@@ -262,9 +262,9 @@ class MCPPipelineAdapter(ProtocolAdapter):
                     "next_stage": result.get("next_stage")
                 }
             }
-            
+
         return message
-        
+
     async def prepare_outgoing(self, message, pattern):
         """Prepare an outgoing MCP message."""
         if message.get("type") == "pipeline_init":
@@ -282,7 +282,7 @@ class MCPPipelineAdapter(ProtocolAdapter):
                 }
             }
             return function_call
-            
+
         elif message.get("type") == "stage_exec":
             # Prepare stage execution
             stage_prefix = pattern.config.get("stage_function_prefix", "pipeline_stage_")
@@ -299,7 +299,7 @@ class MCPPipelineAdapter(ProtocolAdapter):
                 }
             }
             return function_call
-            
+
         elif message.get("type") == "stage_result":
             # Prepare stage result
             function_result = {
@@ -314,7 +314,7 @@ class MCPPipelineAdapter(ProtocolAdapter):
                 "error": message.get("content", {}).get("status") == "failed" and message.get("content", {}).get("error")
             }
             return function_result
-            
+
         elif message.get("type") == "pipeline_completion":
             # Prepare pipeline completion
             function_call = {
@@ -329,7 +329,7 @@ class MCPPipelineAdapter(ProtocolAdapter):
                 }
             }
             return function_call
-            
+
         return message
 ```
 
@@ -399,7 +399,7 @@ async def process_data(self, data_source, parameters):
             }
         }
     ]
-    
+
     # Start the pipeline
     pipeline = await pipeline_pattern.start_pipeline(
         pipeline_type="data_processing",
@@ -409,28 +409,28 @@ async def process_data(self, data_source, parameters):
             "parameters": parameters
         }
     )
-    
+
     # Wait for completion
     result = await pipeline.wait_for_completion()
-    
+
     # Return the result
     return {
         "status": result.get("status"),
         "processed_records": result.get("output", {}).get("processed_records", 0),
         "errors": result.get("output", {}).get("errors", [])
     }
-    
+
 # Data extractor implementing a pipeline stage
 async def handle_pipeline_stage_extract(self, message):
     pipeline_id = message.get("pipeline_id")
     stage_id = message.get("stage_id")
     input_data = message.get("content", {}).get("input", {})
     config = message.get("content", {}).get("config", {})
-    
+
     # Extract data from source
     source = config.get("source")
     batch_size = config.get("batch_size", 1000)
-    
+
     try:
         # Perform extraction
         start_time = time.time()
@@ -440,7 +440,7 @@ async def handle_pipeline_stage_extract(self, message):
             parameters=input_data.get("parameters", {})
         )
         execution_time = int((time.time() - start_time) * 1000)
-        
+
         # Return success result
         return {
             "id": str(uuid.uuid4()),

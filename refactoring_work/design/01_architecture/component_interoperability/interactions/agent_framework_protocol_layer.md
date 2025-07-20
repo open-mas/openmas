@@ -11,19 +11,19 @@
 #### Methods/Functions
 
 ```python
-def send_message(message: InternalMessage, protocol_type: ProtocolType, 
+def send_message(message: InternalMessage, protocol_type: ProtocolType,
                target_info: Optional[TargetInfo] = None) -> MessageSendResult:
     """
     Send a message using the specified protocol.
-    
+
     Args:
         message: InternalMessage - The message in Standard Internal Message Format to be sent
         protocol_type: ProtocolType - Type of protocol to use for sending the message
         target_info: Optional[TargetInfo] - Additional information about the target recipient
-            
+
     Returns:
         MessageSendResult - Result containing the unique message identifier and send status
-        
+
     Raises:
         ProtocolNotAvailableError - If the specified protocol is not available
         MessageTranslationError - If the message cannot be translated to the protocol format
@@ -122,14 +122,14 @@ message_result = protocol_layer.send_message(
 def register_agent(agent_id: str, agent_config: AgentConfig) -> AgentRegistrationResult:
     """
     Register an agent with its capabilities in the protocol layer, making it available for communication.
-    
+
     Args:
         agent_id: str - Unique identifier for the agent
         agent_config: AgentConfig - Configuration containing capabilities and protocol settings
-            
+
     Returns:
         AgentRegistrationResult - Result of the registration operation
-        
+
     Raises:
         AgentAlreadyRegisteredError - If an agent with the same ID is already registered
         InvalidCapabilityError - If any of the capabilities are invalid
@@ -292,7 +292,7 @@ class ProtocolUnavailableEvent:
     timestamp: datetime = datetime.now()  # When the protocol became unavailable
     recovery_action: Optional[str] = None  # Suggested recovery action
     is_transient: bool = True  # Whether the unavailability is expected to be temporary
-    
+
     class Payload:
         """
         Payload containing details of the protocol unavailability.
@@ -326,7 +326,7 @@ class ProtocolUnavailableEvent:
 def handle_message_send_failure(event: MessageSendFailedEvent):
     # Log the failure
     logger.error(f"Message {event.message_id} failed to send using {event.protocol_type}: {event.error_message}")
-    
+
     # Check if the message can be retried
     if event.retryable and event.retry_after_ms is not None:
         # Schedule a retry after the suggested delay
@@ -358,10 +358,10 @@ def handle_protocol_unavailability(event: ProtocolUnavailableEvent):
         f"Protocol {event.protocol_type} became unavailable: {event.reason}. "
         f"Expected duration: {event.expected_duration_ms or 'unknown'}ms"
     )
-    
+
     # Update the protocol availability registry
     protocol_registry.set_availability(event.protocol_type, False)
-    
+
     # If the unavailability affects specific agents, notify them
     for agent_id in event.affected_agents:
         agent_notification_service.notify_protocol_unavailability(
@@ -371,7 +371,7 @@ def handle_protocol_unavailability(event: ProtocolUnavailableEvent):
             expected_duration_ms=event.expected_duration_ms,
             recovery_action=event.recovery_action
         )
-    
+
     # If a recovery action is suggested, attempt it
     if event.recovery_action and event.is_transient:
         protocol_recovery_service.execute_recovery_action(
@@ -391,16 +391,16 @@ The Protocol Layer interacts with the Agent Framework primarily through the `IMe
 def receive_message(raw_message: Any, protocol_adapter: IProtocolAdapter) -> MessageProcessingResult:
     """
     Deliver a message received from an external source through the protocol layer.
-    
+
     This is typically implemented by forwarding to the IMessageHandler's handle_incoming_message method.
-    
+
     Args:
         raw_message: Any - The raw message data as received from the protocol-specific channel
         protocol_adapter: IProtocolAdapter - The adapter that received the message
-            
+
     Returns:
         MessageProcessingResult - Result of the message processing operation including status and potential response
-        
+
     Raises:
         MessageFormatError - If the message cannot be parsed into the internal format
         InvalidMessageError - If the message is well-formed but invalid for processing
@@ -500,15 +500,15 @@ receipt_result = agent_framework.receive_message(
 def validate_capability(capability_id: str, agent_id: str, protocol_type: Optional[ProtocolType] = None) -> CapabilityValidationResult:
     """
     Validate that an agent has a specific capability, optionally for a specific protocol.
-    
+
     Args:
         capability_id: str - Identifier for the capability to validate
         agent_id: str - Identifier of the agent to check
         protocol_type: Optional[ProtocolType] - Protocol to validate the capability for, if applicable
-            
+
     Returns:
         CapabilityValidationResult - Result of the capability validation
-        
+
     Raises:
         AgentNotFoundError - If the agent with the given ID is not found
         UnknownCapabilityError - If the capability is not recognized in the system
@@ -584,7 +584,7 @@ class AgentRegisteredEvent:
     agent_type: str = "standard"  # Type of agent (standard, system, etc.)
     owner_id: Optional[str] = None  # ID of the agent owner, if applicable
     metadata: Dict[str, Any] = {}  # Additional metadata about the agent
-    
+
     class Payload:
         """
         Payload containing details of the agent registration.
@@ -622,7 +622,7 @@ class CapabilityUpdatedEvent:
     protocol_specific_updates: Dict[ProtocolType, Dict[str, str]] = {}  # Protocol-specific capability mappings that were updated
     initiated_by: Optional[str] = None  # ID of the entity that initiated the update
     metadata: Dict[str, Any] = {}  # Additional metadata about the update
-    
+
     class Payload:
         """
         Payload containing details of the capability update.
@@ -654,12 +654,12 @@ class CapabilityUpdatedEvent:
 def handle_agent_registration(event: AgentRegisteredEvent):
     # Log the registration
     logger.info(f"Agent {event.agent_name} (ID: {event.agent_id}) registered with {len(event.capabilities)} capabilities")
-    
+
     # Register the agent in the protocol-specific routing tables
     for protocol_type in event.supported_protocols:
         protocol_id = event.protocol_specific_identifiers.get(protocol_type)
         visibility = event.visibility.get(protocol_type, ProtocolVisibility.PRIVATE)
-        
+
         if protocol_id:
             # A2A protocol registration example
             if protocol_type in [ProtocolType.A2A_HTTP, ProtocolType.A2A_WEBSOCKET, ProtocolType.A2A_GRPC]:
@@ -671,7 +671,7 @@ def handle_agent_registration(event: AgentRegisteredEvent):
                     agent_type=event.agent_type
                 )
                 logger.debug(f"Registered agent {event.agent_id} in A2A registry with protocol {protocol_type}")
-            
+
             # MCP protocol registration example
             elif protocol_type in [ProtocolType.MCP_STDIO, ProtocolType.MCP_SSE, ProtocolType.MCP_STREAMABLE]:
                 mcp_registry.register_agent(
@@ -682,7 +682,7 @@ def handle_agent_registration(event: AgentRegisteredEvent):
                     agent_type=event.agent_type
                 )
                 logger.debug(f"Registered agent {event.agent_id} in MCP registry with protocol {protocol_type}")
-    
+
     # Update agent discovery service
     discovery_service.update_agent_record(
         agent_id=event.agent_id,
@@ -706,7 +706,7 @@ def handle_capability_update(event: CapabilityUpdatedEvent):
         f"{len(event.added_capabilities)} added, {len(event.removed_capabilities)} removed, "
         f"{len(event.modified_capabilities)} modified"
     )
-    
+
     # Update the agent's capabilities in the capability registry
     capability_registry.update_agent_capabilities(
         agent_id=event.agent_id,
@@ -716,7 +716,7 @@ def handle_capability_update(event: CapabilityUpdatedEvent):
         reason=event.reason,
         initiated_by=event.initiated_by
     )
-    
+
     # Update protocol-specific capability mappings
     for protocol_type, capability_mappings in event.protocol_specific_updates.items():
         # A2A protocol capability update example
@@ -726,7 +726,7 @@ def handle_capability_update(event: CapabilityUpdatedEvent):
                 capability_mappings=capability_mappings
             )
             logger.debug(f"Updated agent {event.agent_id} capabilities in A2A registry for protocol {protocol_type}")
-        
+
         # MCP protocol capability update example
         elif protocol_type in [ProtocolType.MCP_STDIO, ProtocolType.MCP_SSE, ProtocolType.MCP_STREAMABLE]:
             mcp_registry.update_agent_capabilities(
@@ -734,7 +734,7 @@ def handle_capability_update(event: CapabilityUpdatedEvent):
                 capability_mappings=capability_mappings
             )
             logger.debug(f"Updated agent {event.agent_id} capabilities in MCP registry for protocol {protocol_type}")
-    
+
     # Update agent discovery service
     discovery_service.update_agent_capabilities(
         agent_id=event.agent_id,
@@ -769,9 +769,9 @@ protocol_layer:
     - type: "mcp"
       enabled: true
       adapter_class: "MCPProtocolAdapter"
-  
+
   default_protocol: "a2a"
-  
+
   connection_settings:
     max_retries: 3
     timeout_seconds: 30
@@ -780,7 +780,7 @@ agent_framework:
   message_routing:
     max_queue_size: 1000
     processing_threads: 4
-  
+
   protocol_settings:
     preferred_protocols:
       - "a2a"
@@ -813,11 +813,11 @@ agent_framework:
          def translate_incoming(self, external_message: Any) -> Message:
              # Translate external protocol message to internal format
              pass
-         
+
          def translate_outgoing(self, internal_message: Message) -> Any:
              # Translate internal message to external protocol format
              pass
-             
+
          def send(self, message: Any) -> MessageId:
              # Send message using protocol-specific mechanism
              pass

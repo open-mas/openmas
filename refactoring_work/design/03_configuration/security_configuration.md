@@ -30,7 +30,7 @@ properties:
             description: "Default authentication provider"
             enum: ["jwt", "api_key", "oauth", "none"]
             default: "jwt"
-          
+
           # Provider configurations
           providers:
             type: object
@@ -117,7 +117,7 @@ properties:
                         description: "Source of webhook authentication token"
                         enum: ["static", "environment", "generated"]
                         default: "environment"
-              
+
               # MCP protocol authentication providers
               mcp:
                 type: object
@@ -210,7 +210,7 @@ properties:
                               description: "User IDs allowed to access this tool"
                               items:
                                 type: string
-              
+
               # Regular JWT provider
               jwt:
                 type: object
@@ -230,7 +230,7 @@ properties:
                     default: 3600
                 required:
                   - secret_key
-              
+
               api_key:
                 type: object
                 description: "API key authentication configuration"
@@ -250,7 +250,7 @@ properties:
                     default: "OPENMAS_API_KEY_"
                 required:
                   - key_source
-              
+
               oauth:
                 type: object
                 description: "OAuth authentication configuration"
@@ -274,7 +274,7 @@ properties:
                   - client_secret
         required:
           - enabled
-      
+
       # Rate limiting configuration
       rate_limiting:
         type: object
@@ -292,7 +292,7 @@ properties:
             type: boolean
             description: "Whether rate limiting is per IP address"
             default: true
-      
+
       # Access control configuration
       access_control:
         type: object
@@ -357,12 +357,12 @@ class JWTAuthConfig(AuthProviderConfig):
     secret_key: str
     algorithm: str = "HS256"
     expiration_minutes: int = 30
-    
+
 class AuthenticationConfig(BaseModel):
     enabled: bool = True
     default_provider: str = "jwt"
     providers: Dict[str, Union[A2AAuthConfig, MCPAuthConfig, JWTAuthConfig]]
-    
+
     # Validate that at least one provider is enabled
     @validator("providers")
     def validate_providers(cls, v):
@@ -374,7 +374,7 @@ class RateLimitingConfig(BaseModel):
     enabled: bool = True
     max_requests: int = 100
     time_window: int = 60
-    
+
 class SecurityConfig(BaseModel):
     authentication: AuthenticationConfig
     rate_limiting: Optional[RateLimitingConfig] = None
@@ -418,7 +418,7 @@ security:
     max_requests: 100
     time_window: 60
     by_endpoint:
-      "/api/generate": 
+      "/api/generate":
         max_requests: 20
         time_window: 60
 ```
@@ -565,15 +565,15 @@ from openmas.security import SecurityMiddleware
 async def setup_security(app, config):
     # Initialize security middleware with configuration
     security = SecurityMiddleware(config["security"])
-    
+
     # Add authentication middleware
     app.add_middleware(security.authentication_middleware)
-    
+
     # Add rate limiting middleware
     if config["security"]["rate_limiting"]["enabled"]:
         app.add_middleware(security.rate_limiting_middleware)
-    
+
     # Add access control middleware
     if config["security"]["access_control"]["enabled"]:
         app.add_middleware(security.access_control_middleware)
-``` 
+```

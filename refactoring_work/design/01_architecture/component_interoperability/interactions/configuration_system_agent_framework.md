@@ -10,18 +10,18 @@
 
 #### Methods/Functions
 ```python
-def initialize(config: AgentFrameworkConfig, 
+def initialize(config: AgentFrameworkConfig,
              options: Optional[InitializationOptions] = None) -> InitializationResult:
     """
     Initialize the Agent Framework with configuration parameters.
-    
+
     Args:
         config: AgentFrameworkConfig - Configuration object containing all Agent Framework settings
         options: Optional[InitializationOptions] - Additional initialization options
-        
+
     Returns:
         InitializationResult - Detailed result of the initialization process
-        
+
     Raises:
         ConfigurationValidationError - If configuration validation fails
         ComponentInitializationError - If component initialization fails
@@ -318,14 +318,14 @@ try:
         config=agent_framework_config,
         options=initialization_options
     )
-    
+
     if result.success:
         logger.info(f"Agent Framework initialized successfully in {result.initialization_time_ms}ms")
         logger.info(f"Initialized components: {len(result.initialized_components)}")
         logger.info(f"Initialized agent types: {result.initialized_agent_types}")
         logger.info(f"Initialized protocols: {result.initialized_protocols}")
         logger.info(f"Initialized reasoning engines: {result.initialized_reasoning_engines}")
-        
+
         # Emit initialization complete event
         event_system.emit("agent_framework_initialized", {
             "initialization_time_ms": result.initialization_time_ms,
@@ -337,24 +337,24 @@ try:
         logger.error(f"Agent Framework initialization failed: {result.error_message}")
         logger.error(f"Failed components: {result.failed_components}")
         logger.error(f"Missing dependencies: {result.missing_dependencies}")
-        
+
         # Handle initialization failure
         if result.failed_components:
             logger.info("Attempting to initialize with reduced functionality")
-            
+
             # Create new initialization options skipping failed components
             retry_options = InitializationOptions(
                 fail_fast=False,
                 skip_components=result.failed_components,
                 initialization_log_level="debug"
             )
-            
+
             # Retry initialization with reduced functionality
             retry_result = agent_framework.initialize(
                 config=agent_framework_config,
                 options=retry_options
             )
-            
+
             if retry_result.success:
                 logger.info("Agent Framework initialized with reduced functionality")
             else:
@@ -394,18 +394,18 @@ except Exception as e:
 ```
 
 ```python
-def update_configuration(updates: Dict[str, Any], 
+def update_configuration(updates: Dict[str, Any],
                        options: Optional[ConfigurationUpdateOptions] = None) -> ConfigurationUpdateResult:
     """
     Update specific configuration parameters at runtime.
-    
+
     Args:
         updates: Dict[str, Any] - Dictionary with configuration updates using dot notation paths
         options: Optional[ConfigurationUpdateOptions] - Options for the configuration update
-        
+
     Returns:
         ConfigurationUpdateResult - Detailed result of the configuration update
-        
+
     Raises:
         ConfigurationValidationError - If the updated configuration fails validation
         InvalidConfigurationPathError - If a configuration path is invalid
@@ -502,21 +502,21 @@ updates = {
     "message_processing.processing_threads": 12,  # Increase thread count
     "message_processing.max_queue_size": 3000,  # Increase queue size
     "message_processing.batch_size": 30,  # Increase batch size
-    
+
     # Update timeout and priorities
     "default_timeout_seconds": 60,  # Increase default timeout
-    
+
     # Update specific component configuration
     "components.message_router.config.default_strategy": "content_based",  # Change routing strategy
-    
+
     # Enable additional capabilities for an agent type
     "agent_types[type=reasoning_agent].default_capabilities": [
         "reasoning", "tool_use", "memory_access", "planning", "knowledge_retrieval"
     ],
-    
+
     # Update protocol adapter configuration
     "protocol_adapters.mcp.config.capability_mapping.knowledge_retrieval": "mcp:knowledge_access",
-    
+
     # Update security integration
     "security_integration.authorization_required": True
 }
@@ -539,11 +539,11 @@ try:
         updates=updates,
         options=update_options
     )
-    
+
     if result.success:
         logger.info(f"Configuration updated successfully at {result.update_time}")
         logger.info(f"Updated {result.paths_updated} configuration paths")
-        
+
         # Check if restart is required
         if result.requires_restart:
             logger.warning("Some configuration changes require a framework restart")
@@ -558,11 +558,11 @@ try:
                     "affected_components": result.affected_components
                 }
             )
-        
+
         # Log details about affected components
         if result.affected_components:
             logger.info(f"Affected components: {', '.join(result.affected_components)}")
-            
+
             # If components were reloaded, verify their status
             if update_options.reload_affected_components:
                 for component in result.affected_components:
@@ -571,7 +571,7 @@ try:
                         logger.info(f"Component {component} successfully reloaded")
                     else:
                         logger.error(f"Component {component} failed to reload: {component_status.error_message}")
-        
+
         # Emit configuration updated event with details
         event_system.emit("configuration_updated", {
             "update_id": result.update_id,
@@ -584,31 +584,31 @@ try:
         })
     else:
         logger.error(f"Configuration update failed: {result.error_message}")
-        
+
         # Log detailed validation errors
         if result.validation_errors:
             logger.error("Validation errors:")
             for error in result.validation_errors:
                 logger.error(f"Error at path {error['path']}: {error['message']}")
-        
+
         # Log paths that were successfully updated before failure
         if result.paths_updated > 0:
             logger.info(f"Note: {result.paths_updated} paths were updated before failure")
-            
+
             # Get list of successful paths
             successful_paths = [status.path for status in result.path_results if status.success]
             logger.info(f"Successfully updated paths: {', '.join(successful_paths)}")
-            
+
             # Check if a rollback is needed
             if not update_options.ignore_errors:
                 logger.info("Initiating rollback of partial updates...")
-                
+
                 # Create rollback updates to restore previous values
                 rollback_updates = {}
                 for status in result.path_results:
                     if status.success:
                         rollback_updates[status.path] = status.previous_value
-                
+
                 # Perform rollback
                 rollback_result = agent_framework.update_configuration(
                     updates=rollback_updates,
@@ -621,7 +621,7 @@ try:
                         update_priority="critical"
                     )
                 )
-                
+
                 if rollback_result.success:
                     logger.info("Rollback completed successfully")
                 else:
@@ -687,10 +687,10 @@ try:
         updates=a2a_protocol_updates,
         options=validation_options
     )
-    
+
     if validation_result.success:
         logger.info("A2A protocol configuration updates validated successfully")
-        
+
         # Notify about upcoming changes
         notification_service.notify_upcoming_changes(
             title="A2A Protocol Endpoint Migration",
@@ -703,7 +703,7 @@ try:
                 "auth_changes": "Switching from JWT to OAuth2 authentication"
             }
         )
-        
+
         # Schedule the actual update for later
         scheduler.schedule_task(
             task_type="configuration_update",
@@ -722,15 +722,15 @@ try:
             },
             task_id="a2a_protocol_migration"
         )
-        
+
         logger.info("A2A protocol migration scheduled for execution in 2 days")
     else:
         logger.error(f"A2A protocol configuration validation failed: {validation_result.error_message}")
-        
+
         # Log validation errors in detail
         for error in validation_result.validation_errors:
             logger.error(f"Validation error at {error['path']}: {error['message']}")
-        
+
         # Cancel the scheduled migration if it exists
         if scheduler.task_exists("a2a_protocol_migration"):
             scheduler.cancel_task("a2a_protocol_migration")
@@ -738,7 +738,7 @@ try:
 
 except Exception as e:
     logger.error(f"Error validating A2A protocol configuration: {str(e)}")
-    
+
     # Cancel the migration if scheduled
     if scheduler.task_exists("a2a_protocol_migration"):
         scheduler.cancel_task("a2a_protocol_migration")
@@ -746,18 +746,18 @@ except Exception as e:
 ```
 
 ```python
-def create_agent_from_config(agent_config: AgentConfig, 
+def create_agent_from_config(agent_config: AgentConfig,
                            options: Optional[AgentCreationOptions] = None) -> AgentCreationResult:
     """
     Create an agent instance based on configuration.
-    
+
     Args:
         agent_config: AgentConfig - Agent configuration object
         options: Optional[AgentCreationOptions] - Options for agent creation
-        
+
     Returns:
         AgentCreationResult - Result containing the created agent and metadata
-        
+
     Raises:
         ConfigurationValidationError - If the agent configuration fails validation
         AgentTypeNotFoundError - If the specified agent type is not found
@@ -1092,45 +1092,45 @@ try:
         agent_config=agent_config,
         options=creation_options
     )
-    
+
     if result.success:
         logger.info(f"Agent created successfully: {result.agent_id}")
         logger.info(f"Agent type: {result.agent_type}")
         logger.info(f"Reasoning engine: {result.reasoning_engine}")
         logger.info(f"Enabled capabilities: {result.enabled_capabilities}")
         logger.info(f"Enabled protocols: {result.enabled_protocols}")
-        
+
         # Access the agent instance
         agent = result.agent
-        
+
         # Check if agent was started
         if result.started:
             logger.info("Agent was started automatically")
-            
+
             # Get agent status
             status = agent.get_status()
             logger.info(f"Agent status: {status.state}")
-            
+
             # Initialize agent with domain-specific knowledge if needed
             if status.state == "active":
                 # Load domain knowledge
                 domain_knowledge = knowledge_repository.get_domain_knowledge("strategic_planning")
-                
+
                 # Initialize agent with domain knowledge
                 agent.initialize_knowledge_base(domain_knowledge)
                 logger.info("Agent initialized with strategic planning domain knowledge")
-                
+
                 # Assign initial tasks if needed
                 initial_task = task_repository.get_task("strategic_analysis_01")
                 agent.assign_task(initial_task)
                 logger.info(f"Assigned initial task to agent: {initial_task.id}")
         else:
             logger.info("Agent created but not started")
-            
+
             # Start the agent manually if needed
             agent.start()
             logger.info("Agent started manually")
-        
+
         # Emit agent created event
         event_system.emit("agent_created", {
             "agent_id": result.agent_id,
@@ -1143,13 +1143,13 @@ try:
         })
     else:
         logger.error(f"Agent creation failed: {result.error_message}")
-        
+
         # Log detailed validation errors
         if result.validation_errors:
             logger.error("Validation errors:")
             for error in result.validation_errors:
                 logger.error(f"Error at {error['path']}: {error['message']}")
-        
+
         # Log warnings
         if result.warnings:
             logger.warning("Creation warnings:")
@@ -1252,10 +1252,10 @@ try:
     result = agent_framework.create_agent_from_config(
         agent_config=conversational_agent_config
     )  # Using default options
-    
+
     if result.success:
         logger.info(f"Conversational agent created: {result.agent_id}")
-        
+
         # Register agent with the conversation service
         conversation_service.register_agent(
             agent_id=result.agent_id,
@@ -1263,7 +1263,7 @@ try:
             specialization="customer_support",
             supported_protocols=["mcp", "http"]
         )
-        
+
         logger.info("Agent registered with conversation service")
     else:
         logger.error(f"Failed to create conversational agent: {result.error_message}")
@@ -1285,7 +1285,7 @@ class ConfigurationUpdatedEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         update_id: str  # Unique identifier for this update
         update_time: datetime  # When the update was performed
@@ -1307,14 +1307,14 @@ def handle_configuration_update(event: ConfigurationUpdatedEvent):
     update_id = payload.update_id
     updated_paths = payload.updated_paths
     affected_components = payload.affected_components
-    
+
     logger.info(f"Configuration update {update_id} received with {len(updated_paths)} path updates")
-    
+
     # Check if this component is affected
     component_name = get_current_component_name()
     if component_name in affected_components:
         logger.info(f"This component ({component_name}) is affected by the update")
-        
+
         # Process updates relevant to this component
         component_updates = {}
         for path in updated_paths:
@@ -1323,26 +1323,26 @@ def handle_configuration_update(event: ConfigurationUpdatedEvent):
                 config_value = configuration_system.get_configuration_value(path)
                 # Store in component updates
                 component_updates[path] = config_value
-        
+
         if component_updates:
             logger.info(f"Processing {len(component_updates)} updates for this component")
-            
+
             # Apply the updates to the component
             try:
                 result = apply_component_updates(component_updates)
                 logger.info(f"Applied {result.applied_count} updates successfully")
-                
+
                 # If any updates require a component restart
                 if result.requires_restart:
                     logger.info("Component restart required after configuration update")
-                    
+
                     # Check if we should restart automatically
                     if payload.update_details.get("auto_restart_components", False):
                         logger.info("Automatically restarting component...")
                         restart_component()
                     else:
                         logger.warning("Manual restart required for component to apply all updates")
-                        
+
                 # Emit component updated event
                 event_system.emit("component_configuration_updated", {
                     "component_name": component_name,
@@ -1350,10 +1350,10 @@ def handle_configuration_update(event: ConfigurationUpdatedEvent):
                     "updated_paths": list(component_updates.keys()),
                     "requires_restart": result.requires_restart
                 })
-                
+
             except Exception as e:
                 logger.error(f"Error applying configuration updates: {str(e)}")
-                
+
                 # Report configuration update failure
                 error_reporting.report_error(
                     error_type="configuration_update_failure",
@@ -1364,11 +1364,11 @@ def handle_configuration_update(event: ConfigurationUpdatedEvent):
                         "updated_paths": list(component_updates.keys())
                     }
                 )
-    
+
     # If framework restart is required, notify administrators
     if payload.requires_restart:
         logger.warning("Framework restart required to apply all configuration updates")
-        
+
         # Send notification if configured
         if notification_config.get("notify_on_restart_required", True):
             notification_service.send_admin_notification(
@@ -1395,7 +1395,7 @@ class AgentConfigurationValidatedEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         agent_id: str  # ID of the agent whose configuration was validated
         agent_type: str  # Type of the agent
@@ -1419,29 +1419,29 @@ def handle_agent_configuration_validation(event: AgentConfigurationValidatedEven
     agent_id = payload.agent_id
     agent_type = payload.agent_type
     is_valid = payload.is_valid
-    
+
     logger.info(f"Agent configuration validation for {agent_id} (type: {agent_type}): Valid={is_valid}")
-    
+
     # If validation was successful
     if is_valid:
         logger.info(f"Validated capabilities: {', '.join(payload.validated_capabilities)}")
         logger.info(f"Validated protocols: {', '.join(payload.validated_protocols)}")
-        
+
         if payload.reasoning_engine:
             logger.info(f"Validated reasoning engine: {payload.reasoning_engine}")
-        
+
         # If we're in agent creation process, proceed with creation
         creation_context = payload.validation_context.get("creation_context")
         if creation_context and creation_context.get("is_creation_validation", False):
             logger.info("Proceeding with agent creation after successful validation")
-            
+
             # Retrieve the validated configuration
             agent_config = configuration_system.get_agent_configuration(agent_id)
-            
+
             # Create the agent
             creation_options = creation_context.get("creation_options", {})
             result = agent_framework.create_agent_instance(agent_config, creation_options)
-            
+
             if result.success:
                 logger.info(f"Agent {agent_id} created successfully after validation")
             else:
@@ -1451,18 +1451,18 @@ def handle_agent_configuration_validation(event: AgentConfigurationValidatedEven
         logger.error(f"Agent configuration validation failed with {len(payload.validation_errors)} errors")
         for error in payload.validation_errors:
             logger.error(f"Validation error at {error['path']}: {error['message']}")
-        
+
         # Log validation warnings
         if payload.validation_warnings:
             logger.warning(f"Validation produced {len(payload.validation_warnings)} warnings")
             for warning in payload.validation_warnings:
                 logger.warning(f"Validation warning at {warning['path']}: {warning['message']}")
-        
+
         # If in creation process, report failure
         creation_context = payload.validation_context.get("creation_context")
         if creation_context and creation_context.get("is_creation_validation", False):
             logger.error("Agent creation aborted due to validation failure")
-            
+
             # Notify creator about validation failure
             creator_id = creation_context.get("creator_id")
             if creator_id:
@@ -1491,7 +1491,7 @@ class AgentConfigurationChangedEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         agent_id: str  # ID of the agent whose configuration was changed
         agent_type: str  # Type of the agent
@@ -1513,11 +1513,11 @@ class AgentConfigurationChangedEvent:
 def update_agent_protocol_config(agent_id: str, protocol_name: str, protocol_config: Dict[str, Any]) -> bool:
     # Get the current agent configuration
     agent_config = configuration_system.get_agent_configuration(agent_id)
-    
+
     if not agent_config:
         logger.error(f"Cannot update protocol config: Agent {agent_id} not found")
         return False
-    
+
     # Check if the protocol exists in the agent configuration
     protocol_found = False
     for protocol in agent_config.protocols:
@@ -1529,24 +1529,24 @@ def update_agent_protocol_config(agent_id: str, protocol_name: str, protocol_con
             if protocol.name == protocol_name:
                 protocol_found = True
                 break
-    
+
     if not protocol_found:
         logger.error(f"Protocol {protocol_name} not found in agent {agent_id} configuration")
         return False
-    
+
     # Build the configuration path
     config_path = f"agents[id={agent_id}].protocols[name={protocol_name}].configuration"
-    
+
     # Update the protocol configuration
     update_result = configuration_system.update_configuration({
         config_path: protocol_config
     })
-    
+
     if update_result.success:
         # Determine if restart is required based on protocol configuration changes
         requires_restart = any(key in protocol_config for key in ["endpoint_type", "adapter_instance"])
         active_session_affected = "message_format" in protocol_config or "streaming_enabled" in protocol_config
-        
+
         # Emit agent configuration changed event
         event_system.emit(
             event_name="agent_configuration_changed",
@@ -1567,9 +1567,9 @@ def update_agent_protocol_config(agent_id: str, protocol_name: str, protocol_con
                 }
             )
         )
-        
+
         logger.info(f"Protocol {protocol_name} configuration updated for agent {agent_id}")
-        
+
         # If restart is required, notify agent manager
         if requires_restart:
             agent_manager.queue_agent_restart(
@@ -1577,9 +1577,9 @@ def update_agent_protocol_config(agent_id: str, protocol_name: str, protocol_con
                 restart_reason=f"Protocol {protocol_name} configuration update requires restart",
                 restart_delay_seconds=30  # Give time for current operations to complete
             )
-            
+
             logger.info(f"Agent {agent_id} restart queued due to protocol configuration change")
-        
+
         # If active sessions are affected, notify session manager
         if active_session_affected:
             session_manager.notify_protocol_config_change(
@@ -1587,9 +1587,9 @@ def update_agent_protocol_config(agent_id: str, protocol_name: str, protocol_con
                 protocol_name=protocol_name,
                 affected_config_keys=list(protocol_config.keys())
             )
-            
+
             logger.info(f"Session manager notified of protocol configuration change affecting active sessions")
-        
+
         return True
     else:
         logger.error(f"Failed to update protocol {protocol_name} configuration: {update_result.error_message}")
@@ -1598,13 +1598,13 @@ def update_agent_protocol_config(agent_id: str, protocol_name: str, protocol_con
 # Function to get previous protocol configuration (for comparison)
 def get_previous_protocol_config(agent_id: str, protocol_name: str) -> Dict[str, Any]:
     agent_config = configuration_system.get_agent_configuration(agent_id)
-    
+
     for protocol in agent_config.protocols:
         if isinstance(protocol, str):
             continue
         if protocol.name == protocol_name:
             return protocol.configuration
-    
+
     return {}
 ```
 
@@ -1619,7 +1619,7 @@ class ConfigurationSchemaRegisteredEvent:
     timestamp: datetime  # When the event was generated
     source_component: str  # Component that generated the event
     severity: str = "info"  # Severity of the event ("info", "warning", "error", "critical")
-    
+
     class Payload:
         schema_name: str  # Name of the schema that was registered
         schema_id: str  # Unique identifier for the schema
@@ -1643,25 +1643,25 @@ def handle_schema_registration(event: ConfigurationSchemaRegisteredEvent):
     schema_name = payload.schema_name
     component_name = payload.component_name
     schema_version = payload.schema_version
-    
+
     logger.info(f"Configuration schema '{schema_name}' registered by component '{component_name}' (version: {schema_version})")
-    
+
     # If this is a schema for your component, update your validation logic
     if component_name == get_current_component_name():
         logger.info("Updating local schema validation rules based on registered schema")
-        
+
         # Retrieve the full schema
         schema = configuration_system.get_configuration_schema(schema_name)
-        
+
         # Update local validation rules
         update_validation_rules(schema)
-        
+
         logger.info(f"Updated validation rules with {payload.schema_properties_count} properties from schema")
-    
+
     # If this is a new agent type schema, update agent type registry
     if payload.schema_type == "agent" and not payload.replaced_existing:
         logger.info(f"New agent type schema registered: {schema_name}")
-        
+
         # Update agent type registry
         agent_type_registry.add_agent_type(
             type_name=schema_name,
@@ -1670,13 +1670,13 @@ def handle_schema_registration(event: ConfigurationSchemaRegisteredEvent):
             required_properties=payload.required_properties,
             metadata=payload.metadata
         )
-        
+
         logger.info(f"Agent type {schema_name} added to registry")
-    
+
     # If this is a capability schema, update capability registry
     if payload.schema_type == "capability":
         logger.info(f"Capability schema registered: {schema_name}")
-        
+
         # Update capability registry
         capability_registry.update_capability_schema(
             capability_name=schema_name,
@@ -1685,7 +1685,7 @@ def handle_schema_registration(event: ConfigurationSchemaRegisteredEvent):
             required_properties=payload.required_properties,
             metadata=payload.metadata
         )
-        
+
         logger.info(f"Capability {schema_name} updated in registry")
 ```
 
@@ -1763,27 +1763,27 @@ agent_framework:
     - type: "reasoning_agent"
       implementation_class: "ReasoningAgent"
       default_capabilities: ["reasoning", "tool_use"]
-      
+
     - type: "task_agent"
       implementation_class: "TaskAgent"
       default_capabilities: ["task_execution", "reporting"]
-  
+
   message_processing:
     max_queue_size: 1000
     processing_threads: 4
     priority_levels: 3
-  
+
   default_timeout_seconds: 30
-  
+
   components:
     lifecycle_manager:
       enabled: true
       implementation_class: "DefaultLifecycleManager"
-    
+
     message_router:
       enabled: true
       implementation_class: "DefaultMessageRouter"
-      
+
     capability_registry:
       enabled: true
       implementation_class: "DefaultCapabilityRegistry"
@@ -1838,11 +1838,11 @@ agents:
          def get_configuration(self, path: str) → Any:
              # Get configuration at specified path
              pass
-         
+
          def set_configuration(self, path: str, value: Any) → bool:
              # Set configuration at specified path
              pass
-             
+
          def validate_configuration(self, schema_name: str, config: Any) → ValidationResult:
              # Validate configuration against named schema
              pass
@@ -1894,7 +1894,7 @@ agent_framework:
             description: "Default capabilities for this agent type"
             items:
               type: "string"
-    
+
     message_processing:
       type: "object"
       description: "Message processing configuration"
@@ -1914,13 +1914,13 @@ agent_framework:
           description: "Number of priority levels for messages"
           default: 3
           minimum: 1
-    
+
     default_timeout_seconds:
       type: "integer"
       description: "Default timeout for operations in seconds"
       default: 30
       minimum: 1
-    
+
     components:
       type: "object"
       description: "Configuration for Agent Framework subcomponents"
@@ -1934,7 +1934,7 @@ agent_framework:
             implementation_class:
               type: "string"
               default: "DefaultLifecycleManager"
-        
+
         message_router:
           type: "object"
           properties:
@@ -1944,7 +1944,7 @@ agent_framework:
             implementation_class:
               type: "string"
               default: "DefaultMessageRouter"
-        
+
         capability_registry:
           type: "object"
           properties:

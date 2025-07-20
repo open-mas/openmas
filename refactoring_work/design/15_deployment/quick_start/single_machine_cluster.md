@@ -150,7 +150,7 @@ components:
       memory: "256Mi"
     ports:
       - 8000:8000
-  
+
   worker1:
     type: agent
     config: config/worker1_config.yaml
@@ -159,7 +159,7 @@ components:
       memory: "256Mi"
     depends_on:
       - coordinator
-  
+
   worker2:
     type: agent
     config: config/worker2_config.yaml
@@ -168,7 +168,7 @@ components:
       memory: "256Mi"
     depends_on:
       - coordinator
-  
+
   observer:
     type: agent
     config: config/observer_config.yaml
@@ -179,7 +179,7 @@ components:
       - coordinator
       - worker1
       - worker2
-  
+
   interface:
     type: agent
     config: config/interface_config.yaml

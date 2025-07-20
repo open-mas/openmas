@@ -86,58 +86,58 @@ import logging
 
 class LoggingAgentExtension(AgentExtension):
     """Extension that adds enhanced logging to agents."""
-    
+
     extension_type = "agent"
     extension_name = "logging_extension"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.logger = logging.getLogger("agent.extension.logging")
         self.log_level = config.get("options", {}).get("log_level", "INFO")
-        self.log_format = config.get("options", {}).get("log_format", 
+        self.log_format = config.get("options", {}).get("log_format",
                                                      "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    
+
     def validate_config(self):
         """Validate the extension configuration."""
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if self.log_level not in valid_levels:
             raise ValueError(f"Invalid log_level: {self.log_level}. Must be one of {valid_levels}")
-    
+
     def enhance_agent(self, agent):
         """Enhance agent with logging capabilities."""
         # Set up handler
         handler = logging.StreamHandler()
         formatter = logging.Formatter(self.log_format)
         handler.setFormatter(formatter)
-        
+
         # Get agent logger and configure it
         agent_logger = logging.getLogger(f"agent.{agent.agent_id}")
         agent_logger.setLevel(getattr(logging, self.log_level))
         agent_logger.addHandler(handler)
-        
+
         # Add logger to agent
         agent.logger = agent_logger
         agent.log = agent_logger.info  # Shorthand for common logging
-        
+
         self.logger.info(f"Enhanced agent {agent.agent_id} with logging capabilities")
-    
+
     def on_agent_startup(self, agent):
         """Log when agent starts up."""
         if hasattr(agent, "logger"):
             agent.logger.info(f"Agent {agent.agent_id} starting up")
-    
+
     def on_agent_shutdown(self, agent):
         """Log when agent shuts down."""
         if hasattr(agent, "logger"):
             agent.logger.info(f"Agent {agent.agent_id} shutting down")
-    
+
     def pre_message_processing(self, agent, message):
         """Log incoming messages."""
         if hasattr(agent, "logger"):
             agent.logger.debug(f"Processing message: {message.id}")
         return message
-    
+
     def post_message_processing(self, agent, message, response):
         """Log outgoing responses."""
         if hasattr(agent, "logger"):

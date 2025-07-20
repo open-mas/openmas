@@ -28,15 +28,15 @@ from openmas.extensions import AgentExtension
 
 class CustomAgentType(AgentExtension):
     """Custom agent type implementation."""
-    
+
     extension_type = "agent"
     extension_name = "custom_agent"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.custom_property = config.get("custom_property", "default")
-    
+
     async def setup(self, agent):
         """Set up the agent extension."""
         # Register custom capabilities
@@ -46,10 +46,10 @@ class CustomAgentType(AgentExtension):
             parameters={"type": "object", "properties": {}},
             returns={"type": "object", "properties": {}}
         )
-        
+
         # Add custom event handlers
         agent.on("message", self._on_message)
-    
+
     async def _on_message(self, message):
         """Handle incoming messages."""
         # Custom message handling logic
@@ -63,15 +63,15 @@ from openmas.extensions import AgentMiddlewareExtension
 
 class LoggingMiddleware(AgentMiddlewareExtension):
     """Middleware for logging agent messages."""
-    
+
     extension_type = "agent_middleware"
     extension_name = "logging_middleware"
-    
+
     async def before_process_message(self, agent, message):
         """Called before processing a message."""
         print(f"Incoming message: {message}")
         return message
-    
+
     async def after_process_message(self, agent, message, result):
         """Called after processing a message."""
         print(f"Outgoing result: {result}")
@@ -89,35 +89,35 @@ from openmas.extensions import CommunicatorExtension
 
 class WebSocketCommunicator(CommunicatorExtension):
     """WebSocket-based communicator implementation."""
-    
+
     extension_type = "communicator"
     extension_name = "websocket"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.url = config.get("url", "ws://localhost:8080")
         self.client = None
-    
+
     async def initialize(self):
         """Initialize the communicator."""
         self.client = await self._create_client()
         self.initialized = True
-    
+
     async def send_message(self, message):
         """Send a message over WebSocket."""
         if not self.client:
             raise RuntimeError("WebSocket client not initialized")
-        
+
         await self.client.send(message)
-    
+
     async def receive_message(self):
         """Receive a message from WebSocket."""
         if not self.client:
             raise RuntimeError("WebSocket client not initialized")
-        
+
         return await self.client.receive()
-    
+
     async def _create_client(self):
         """Create a WebSocket client."""
         # Implement WebSocket client creation
@@ -135,21 +135,21 @@ from openmas.extensions import AssetProviderExtension
 
 class CustomModelProvider(AssetProviderExtension):
     """Provider for custom model types."""
-    
+
     extension_type = "asset_provider"
     extension_name = "custom_model_provider"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.model_directory = config.get("model_directory", "./models")
-    
+
     async def get_asset(self, asset_id):
         """Get an asset by ID."""
         # Load the model from the specified directory
         model_path = os.path.join(self.model_directory, asset_id)
         return await self._load_model(model_path)
-    
+
     async def list_assets(self):
         """List available assets."""
         # List all models in the directory
@@ -158,7 +158,7 @@ class CustomModelProvider(AssetProviderExtension):
             if filename.endswith(".model"):
                 models.append(filename.replace(".model", ""))
         return models
-    
+
     async def _load_model(self, model_path):
         """Load a model from the specified path."""
         # Implement model loading logic
@@ -176,27 +176,27 @@ from openmas.extensions import PromptTemplateExtension
 
 class CustomTemplateEngine(PromptTemplateExtension):
     """Custom prompt template engine."""
-    
+
     extension_type = "prompt_template"
     extension_name = "custom_template"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.template_directory = config.get("template_directory", "./templates")
-    
+
     def render_template(self, template_name, variables):
         """Render a template with variables."""
         template_path = os.path.join(self.template_directory, f"{template_name}.tpl")
         with open(template_path, "r") as f:
             template_content = f.read()
-        
+
         # Replace variables in the template
         for key, value in variables.items():
             template_content = template_content.replace(f"{{{key}}}", str(value))
-        
+
         return template_content
-    
+
     def get_template_schema(self, template_name):
         """Get the schema for a template."""
         schema_path = os.path.join(self.template_directory, f"{template_name}.schema.json")
@@ -215,37 +215,37 @@ from openmas.extensions import LLMProviderExtension
 
 class CustomLLMProvider(LLMProviderExtension):
     """Provider for custom LLM integration."""
-    
+
     extension_type = "llm_provider"
     extension_name = "custom_llm"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.api_key = config.get("api_key")
         self.model = config.get("model", "default")
         self.client = None
-    
+
     async def initialize(self):
         """Initialize the LLM provider."""
         # Initialize the LLM client
         self.client = self._create_client()
         self.initialized = True
-    
+
     async def generate(self, prompt, options=None):
         """Generate text from the LLM."""
         if not self.client:
             raise RuntimeError("LLM client not initialized")
-        
+
         options = options or {}
         response = await self.client.generate(
             prompt=prompt,
             max_tokens=options.get("max_tokens", 1024),
             temperature=options.get("temperature", 0.7)
         )
-        
+
         return response.text
-    
+
     def _create_client(self):
         """Create an LLM client."""
         # Implement LLM client creation
@@ -263,35 +263,35 @@ from openmas.extensions import ReasoningExtension
 
 class RuleBasedReasoner(ReasoningExtension):
     """Rule-based reasoning implementation."""
-    
+
     extension_type = "reasoning"
     extension_name = "rule_based"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.rule_file = config.get("rule_file", "rules.json")
         self.rules = []
-    
+
     async def initialize(self):
         """Initialize the reasoning engine."""
         # Load rules from the rule file
         with open(self.rule_file, "r") as f:
             self.rules = json.load(f)
-        
+
         self.initialized = True
-    
+
     async def reason(self, input_data):
         """Perform reasoning on input data."""
         results = []
-        
+
         # Apply rules to the input data
         for rule in self.rules:
             if self._matches_condition(input_data, rule["condition"]):
                 results.append(rule["action"])
-        
+
         return results
-    
+
     def _matches_condition(self, data, condition):
         """Check if data matches a condition."""
         # Implement condition matching logic
@@ -309,14 +309,14 @@ from openmas.extensions import ProtocolAdapterExtension
 
 class A2AToMCPAdapter(ProtocolAdapterExtension):
     """Adapter from A2A to MCP protocol."""
-    
+
     extension_type = "protocol_adapter"
     extension_name = "a2a_to_mcp"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
-    
+
     def adapt_request(self, request, source_protocol="a2a", target_protocol="mcp"):
         """Adapt a request between protocols."""
         if source_protocol == "a2a" and target_protocol == "mcp":
@@ -333,10 +333,10 @@ class A2AToMCPAdapter(ProtocolAdapterExtension):
                 "capability": request.get("name", "default"),
                 "content": request.get("parameters", {})
             }
-        
+
         # Unsupported conversion
         raise ValueError(f"Unsupported protocol conversion: {source_protocol} -> {target_protocol}")
-    
+
     def adapt_response(self, response, source_protocol="a2a", target_protocol="mcp"):
         """Adapt a response between protocols."""
         if source_protocol == "a2a" and target_protocol == "mcp":
@@ -352,7 +352,7 @@ class A2AToMCPAdapter(ProtocolAdapterExtension):
                 "status": "success" if not response.get("error") else "error",
                 "content": response.get("result", {})
             }
-        
+
         # Unsupported conversion
         raise ValueError(f"Unsupported protocol conversion: {source_protocol} -> {target_protocol}")
 ```
@@ -368,23 +368,23 @@ from openmas.extensions import ToolExtension
 
 class WeatherToolExtension(ToolExtension):
     """Tool for retrieving weather information."""
-    
+
     extension_type = "tool"
     extension_name = "weather_tool"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
         self.api_key = config.get("api_key")
         self.api_url = config.get("api_url", "https://api.weather.example.com")
         self.client = None
-    
+
     async def initialize(self):
         """Initialize the tool."""
         # Set up the API client
         self.client = self._create_client()
         self.initialized = True
-    
+
     def get_tool_definition(self):
         """Get the tool definition for agent systems."""
         return {
@@ -423,24 +423,24 @@ class WeatherToolExtension(ToolExtension):
                 }
             }
         }
-    
+
     async def invoke(self, parameters):
         """Invoke the tool with parameters."""
         if not self.client:
             raise RuntimeError("Weather API client not initialized")
-        
+
         location = parameters.get("location")
         units = parameters.get("units", "metric")
-        
+
         # Fetch weather data from the API
         weather_data = await self.client.get_weather(location, units)
-        
+
         return {
             "temperature": weather_data["temp"],
             "conditions": weather_data["conditions"],
             "humidity": weather_data["humidity"]
         }
-    
+
     def _create_client(self):
         """Create a weather API client."""
         # Implement API client creation
@@ -456,18 +456,18 @@ from openmas.extensions import BaseExtension
 
 class MyCustomExtension(BaseExtension):
     """Base class for custom extensions."""
-    
+
     extension_type = "my_custom_extension"
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         super().__init__(config)
-    
+
     async def initialize(self):
         """Initialize the extension."""
         # Initialization logic
         self.initialized = True
-    
+
     async def my_custom_method(self):
         """Custom method for this extension type."""
         raise NotImplementedError("Subclasses must implement my_custom_method")
@@ -499,7 +499,7 @@ extensions:
     options:
       api_key: "${WEATHER_API_KEY}"
       api_url: "https://api.weather.example.com"
-  
+
   websocket_communicator:
     type: "communicator"
     name: "websocket"

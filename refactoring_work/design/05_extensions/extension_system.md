@@ -18,17 +18,17 @@ properties:
     type: string
     description: "The type of extension to use"
     enum: [
-      "communicator", 
-      "agent", 
-      "asset", 
-      "prompt", 
-      "llm", 
-      "reasoning", 
-      "protocol", 
+      "communicator",
+      "agent",
+      "asset",
+      "prompt",
+      "llm",
+      "reasoning",
+      "protocol",
       "protocol_adapter",
       "tool"
     ]
-  
+
   # Extension metadata
   metadata:
     type: object
@@ -63,7 +63,7 @@ properties:
       documentation:
         type: string
         description: "Documentation URL for the extension"
-  
+
   # Extension configuration
   config:
     type: object
@@ -84,7 +84,7 @@ properties:
             description: "Whether this extension is enabled for A2A protocol"
             default: true
           # A2A-specific extension configuration
-      
+
       mcp:
         type: object
         description: "MCP protocol configuration"
@@ -134,7 +134,7 @@ properties:
           default: false
       required:
         - name
-  
+
   # Extension requirements
   requirements:
     type: object
@@ -180,19 +180,19 @@ required:
   # Interface definition code
   from abc import ABC, abstractmethod
   from typing import Dict, Any, Optional, List
-  
+
   class CommunicatorExtension(ABC):
       """Interface for communicator extensions."""
-      
+
       @abstractmethod
       def setup(self, config: Dict[str, Any]) -> None:
           """Set up the communicator extension.
-          
+
           Args:
               config: Extension configuration
           """
           pass
-      
+
       @abstractmethod
       def shutdown(self) -> None:
           """Clean up resources when shutting down."""
@@ -204,16 +204,16 @@ required:
   ```python
   from typing import Dict, Any, Optional, List
   from openmas.extensions import CommunicatorExtension
-  
+
   class CustomProtocolCommunicator(CommunicatorExtension):
       """A custom protocol communicator extension."""
-      
+
       def __init__(self) -> None:
           self.connection: Optional[Any] = None
-      
+
       def setup(self, config: Dict[str, Any]) -> None:
           """Set up the custom protocol communicator.
-          
+
           Args:
               config: Configuration dictionary
           """
@@ -221,28 +221,28 @@ required:
           port: int = config.get('port', 8080)
           timeout: int = config.get('timeout', 30)
           self.connection = self._create_connection(host, port, timeout)
-          
+
           # Register protocol interfaces based on configuration
           if config.get('protocols', {}).get('a2a', {}).get('enabled', False):
               self.register_protocol_interface('a2a', A2AProtocolAdapter(self.connection))
-              
+
           if config.get('protocols', {}).get('mcp', {}).get('enabled', False):
               self.register_protocol_interface('mcp', MCPProtocolAdapter(self.connection))
-      
+
       def shutdown(self) -> None:
           """Clean up resources when shutting down."""
           if self.connection:
               self.connection.close()
               self.connection = None
-      
+
       def _create_connection(self, host: str, port: int, timeout: int) -> Any:
           """Create a connection to the custom protocol server.
-          
+
           Args:
               host: Server hostname
               port: Server port
               timeout: Connection timeout
-              
+
           Returns:
               Connection object
           """
@@ -271,13 +271,13 @@ from openmas.extensions import extension, Extension
 )
 class DataAnalyzer(Extension):
     """Analyzes data regardless of protocol."""
-    
+
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Core functionality exposed through multiple protocols.
-        
+
         Args:
             data: The data to analyze
-            
+
         Returns:
             Dict[str, Any]: Analysis results
         """
@@ -305,13 +305,13 @@ from openmas.protocols.mcp import McpResource, McpResourceProvider
 )
 class McpResourceProvider(Extension, McpResourceProvider):
     """Provides MCP-specific resources."""
-    
+
     def get_resource(self, resource_id: str) -> Optional[McpResource]:
         """MCP-specific implementation.
-        
+
         Args:
             resource_id: ID of the resource to retrieve
-            
+
         Returns:
             Optional[McpResource]: The resource if found
         """
@@ -340,13 +340,13 @@ from openmas.protocols.mcp import McpMessage, McpContentType
 )
 class MqttToMcpAdapter(Extension):
     """Adapts MQTT messages to MCP format."""
-    
+
     def adapt(self, mqtt_message: MqttMessage) -> McpMessage:
         """Convert MQTT message to MCP format.
-        
+
         Args:
             mqtt_message: The MQTT message to convert
-            
+
         Returns:
             McpMessage: Converted MCP message
         """
@@ -360,13 +360,13 @@ class MqttToMcpAdapter(Extension):
                 "mqtt_qos": mqtt_message.qos
             }
         )
-        
+
     def _determine_content_type(self, mqtt_message: MqttMessage) -> McpContentType:
         """Determine MCP content type from MQTT message.
-        
+
         Args:
             mqtt_message: MQTT message
-            
+
         Returns:
             McpContentType: Appropriate content type
         """
@@ -390,28 +390,28 @@ from openmas.protocols import ProtocolRegistry, Protocol
 )
 class AdaptiveExtension(Extension):
     """Extension that adapts to available protocols."""
-    
+
     def __init__(self) -> None:
         self.protocol_registry = ProtocolRegistry()
         self.supported_protocols: List[str] = []
-        
+
     async def setup(self) -> None:
         """Discover available protocols and adapt."""
         # Discover available protocols
         available_protocols: List[Protocol] = await self.protocol_registry.discover_protocols()
-        
+
         for protocol in available_protocols:
             if self._supports_protocol(protocol.name):
                 self.supported_protocols.append(protocol.name)
                 adapter = self._create_adapter_for_protocol(protocol)
                 self.register_protocol_adapter(protocol.name, adapter)
-                
+
     def _supports_protocol(self, protocol_name: str) -> bool:
         """Check if this extension supports a protocol.
-        
+
         Args:
             protocol_name: Name of the protocol
-            
+
         Returns:
             bool: True if supported
         """
@@ -432,20 +432,20 @@ from openmas.extensions import extension, Extension, ExtensionComposition
 )
 class CompositeExtension(ExtensionComposition):
     """Combines multiple extensions across protocols."""
-    
+
     def __init__(self) -> None:
         super().__init__()
         # Add child extensions
         self.add_extension("data_analyzer", DataAnalyzer())
         self.add_extension("mcp_resource_provider", McpResourceProvider())
-        
+
     async def process_request(self, protocol: str, request: Any) -> Any:
         """Process a request using the appropriate extension.
-        
+
         Args:
             protocol: Protocol name
             request: The request object
-            
+
         Returns:
             Any: Response from the appropriate extension
         """
@@ -453,7 +453,7 @@ class CompositeExtension(ExtensionComposition):
         if protocol == "mcp" and isinstance(request, dict) and "resource_id" in request:
             extension = self.get_extension("mcp_resource_provider")
             return await extension.get_resource(request["resource_id"])
-        
+
         # Default to data analyzer for other requests
         extension = self.get_extension("data_analyzer")
         return await extension.analyze(request)
@@ -473,19 +473,19 @@ from typing import Dict, Any
 
 class MyExtension(DefaultMultiProtocolExtension):
     """Extension using default implementations."""
-    
+
     def __init__(self) -> None:
         super().__init__()
         # Default implementations handle most protocol interactions
         # Just override specific methods as needed
-        
+
     async def handle_request(self, protocol: str, request: Dict[str, Any]) -> Dict[str, Any]:
         """Handle a request from any protocol.
-        
+
         Args:
             protocol: Protocol name
             request: The request data
-            
+
         Returns:
             Dict[str, Any]: Response data
         """
@@ -533,17 +533,17 @@ async def test_extension_with_real_protocols(protocol: str, client_cls: Any):
     """Test extension with real protocol implementations."""
     client = client_cls()
     await client.connect()
-    
+
     # Same request through different protocol clients should yield equivalent results
     result = await client.invoke_extension(
         "data_analyzer",
         "analyze",
         {"data": [1, 2, 3]}
     )
-    
+
     assert "mean" in result
     assert result["mean"] == 2.0
-    
+
     await client.disconnect()
 ```
 
@@ -559,17 +559,17 @@ async def test_extension_registration():
     """Test that extension registers properly with protocols."""
     registry = ExtensionRegistry()
     extension = DataAnalyzer()
-    
+
     await registry.register(extension)
-    
+
     # Check registration with each protocol
     assert registry.is_registered_with_protocol("data_analyzer", "mcp")
     assert registry.is_registered_with_protocol("data_analyzer", "a2a")
-    
+
     # Check capability exposure
     mcp_capabilities = registry.get_capabilities("data_analyzer", "mcp")
     assert "analyze" in [cap["name"] for cap in mcp_capabilities]
-    
+
     a2a_capabilities = registry.get_capabilities("data_analyzer", "a2a")
     assert "analyze" in [cap["name"] for cap in a2a_capabilities]
 ```

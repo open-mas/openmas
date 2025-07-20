@@ -65,7 +65,7 @@ def _truncate_history(self, history):
     """Truncate history to max_history_items by removing oldest items."""
     if len(history) <= self.max_history_items:
         return history
-        
+
     return history[-self.max_history_items:]
 ```
 
@@ -92,28 +92,28 @@ async def _summarize_history(self, history):
     """Summarize older parts of history."""
     if len(history) <= self.max_history_items:
         return history
-    
+
     # Always preserve the most recent exchanges
     preserve_count = self.pruning_config.get("preserve_last_n_exchanges", 5)
     recent_history = history[-preserve_count:] if preserve_count > 0 else []
-    
+
     # Determine what to summarize
     to_summarize = history[:-preserve_count] if preserve_count > 0 else history
-    
+
     # Nothing to summarize
     if not to_summarize:
         return history
-    
+
     # Get the summarization prompt
     prompt_name = self.pruning_config.get("summarization_prompt", "summarize_context")
-    
+
     # Summarize using the prompt management system
     prompt_manager = self._get_prompt_manager()
     summary = await prompt_manager.render_template(
         prompt_name,
         {"history": to_summarize}
     )
-    
+
     # Create a summary message
     summary_message = {
         "role": "system",
@@ -124,7 +124,7 @@ async def _summarize_history(self, history):
             "summary_time": datetime.now().isoformat()
         }
     }
-    
+
     # Return the summary followed by recent history
     return [summary_message] + recent_history
 ```
@@ -153,26 +153,26 @@ async def _selective_prune(self, history):
     """Selectively prune less important messages."""
     if len(history) <= self.max_history_items:
         return history
-    
+
     # Always preserve system messages if configured
     preserve_system = self.pruning_config.get("preserve_system_messages", True)
-    
+
     # Always preserve the most recent exchanges
     preserve_count = self.pruning_config.get("preserve_last_n_exchanges", 5)
     recent_indices = set(range(len(history) - preserve_count, len(history))) if preserve_count > 0 else set()
-    
+
     # Score messages by importance
     scores = await self._score_message_importance(history)
-    
+
     # Determine importance threshold
     threshold = self.pruning_config.get("importance_threshold", 0.7)
-    
+
     # Select which messages to keep
     keep_indices = set()
-    
+
     # Always keep recent messages
     keep_indices.update(recent_indices)
-    
+
     # Add important messages
     for i, (message, score) in enumerate(zip(history, scores)):
         # Always keep system messages if configured
@@ -181,21 +181,21 @@ async def _selective_prune(self, history):
         # Keep important messages
         elif score >= threshold:
             keep_indices.add(i)
-    
+
     # If we're still over the limit, sort by importance and take the top N
     if len(keep_indices) > self.max_history_items:
         scored_indices = [(i, scores[i]) for i in keep_indices if i not in recent_indices]
         sorted_indices = sorted(scored_indices, key=lambda x: x[1], reverse=True)
-        
+
         # Keep only the most important ones, plus the recent ones
         available_slots = self.max_history_items - len(recent_indices)
         important_indices = {idx for idx, _ in sorted_indices[:available_slots]}
-        
+
         keep_indices = recent_indices.union(important_indices)
-    
+
     # Build the pruned history
     pruned_history = [history[i] for i in sorted(keep_indices)]
-    
+
     return pruned_history
 
 async def _score_message_importance(self, history):
@@ -203,27 +203,27 @@ async def _score_message_importance(self, history):
     # Implement relevance scoring logic
     # This could use simple heuristics or more sophisticated models
     scores = []
-    
+
     for message in history:
         score = 0.0
-        
+
         # Higher score for system messages
         if message.get("role") == "system":
             score += 0.3
-        
+
         # Higher score for user messages
         if message.get("role") == "user":
             score += 0.2
-        
+
         # Higher score for questions
         content = message.get("content", "")
         if "?" in content:
             score += 0.2
-        
+
         # Higher score for longer messages (more content)
         content_length = len(content)
         score += min(0.2, content_length / 500)
-        
+
         # Adjust for recency (older messages get lower scores)
         time_str = message.get("timestamp", "")
         if time_str:
@@ -235,9 +235,9 @@ async def _score_message_importance(self, history):
                 score += recency_score
             except:
                 pass
-        
+
         scores.append(min(1.0, score))
-    
+
     return scores
 ```
 
@@ -250,23 +250,23 @@ async def get_token_count(self, history):
     """Estimate token count for history."""
     # Use the token counting utility
     from openmas.util.tokens import count_tokens
-    
+
     total_tokens = 0
-    
+
     for message in history:
         content = message.get("content", "")
         role = message.get("role", "")
-        
+
         # Count tokens in the message
         message_tokens = count_tokens(f"{role}: {content}")
         total_tokens += message_tokens
-        
+
         # Count tokens in function calls if present
         function_calls = message.get("function_calls", [])
         for call in function_calls:
             function_tokens = count_tokens(str(call))
             total_tokens += function_tokens
-    
+
     return total_tokens
 ```
 
@@ -283,11 +283,11 @@ async def adapt_for_a2a(self, context):
     """Adapt context for A2A protocol."""
     # Convert internal context format to A2A message parts
     parts = []
-    
+
     for message in context:
         role = message.get("role", "")
         content = message.get("content", "")
-        
+
         # Create appropriate part based on role
         if role == "user":
             parts.append({
@@ -307,7 +307,7 @@ async def adapt_for_a2a(self, context):
                 "content": content,
                 "metadata": {"role": "system"}
             })
-    
+
     return parts
 ```
 
@@ -320,24 +320,24 @@ async def adapt_for_mcp(self, context):
     """Adapt context for MCP protocol."""
     # Convert internal context format to MCP messages
     messages = []
-    
+
     for message in context:
         role = message.get("role", "")
         content = message.get("content", "")
-        
+
         # Create MCP message
         mcp_message = {
             "role": role,
             "content": content
         }
-        
+
         # Add function calls if present
         function_calls = message.get("function_calls", [])
         if function_calls:
             mcp_message["function_calls"] = function_calls
-        
+
         messages.append(mcp_message)
-    
+
     return messages
 ```
 
@@ -361,7 +361,7 @@ This enables collaborative agent scenarios with shared context.
 ```python
 class MultiAgentContextManager:
     """Manages context sharing across multiple agents."""
-    
+
     def __init__(self, config):
         """Initialize with configuration."""
         self.config = config
@@ -369,10 +369,10 @@ class MultiAgentContextManager:
         self.sharing_config = config.get("context_sharing", {})
         self.strategy = self.sharing_config.get("strategy", "shared_db")
         self.scoped_by_conversation = self.sharing_config.get("scoped_by_conversation", True)
-        
+
         # Set up appropriate storage based on strategy
         self.storage = self._create_storage()
-    
+
     def _create_storage(self):
         """Create appropriate storage for the selected strategy."""
         if self.strategy == "shared_db":
@@ -384,15 +384,15 @@ class MultiAgentContextManager:
         else:
             # Default to in-memory storage
             return InMemoryContextStorage(self.sharing_config)
-    
+
     async def share_context(self, agent_id, conversation_id, context):
         """Share context from an agent."""
         if not self.enabled:
             return
-            
+
         # Get the context key
         context_key = self._get_context_key(agent_id, conversation_id)
-        
+
         # Store in shared storage
         await self.storage.set(context_key, {
             "agent_id": agent_id,
@@ -400,18 +400,18 @@ class MultiAgentContextManager:
             "context": context,
             "updated_at": datetime.now().isoformat()
         })
-    
+
     async def get_shared_context(self, agent_id, conversation_id):
         """Get shared context for an agent and conversation."""
         if not self.enabled:
             return []
-            
+
         shared_context = []
-        
+
         if self.scoped_by_conversation:
             # Get all contexts for this conversation
             context_keys = await self.storage.list_by_conversation(conversation_id)
-            
+
             for key in context_keys:
                 if key != self._get_context_key(agent_id, conversation_id):  # Skip own context
                     context_data = await self.storage.get(key)
@@ -420,15 +420,15 @@ class MultiAgentContextManager:
         else:
             # Get all contexts (not scoped by conversation)
             context_keys = await self.storage.list_all()
-            
+
             for key in context_keys:
                 if not key.startswith(f"{agent_id}:"):  # Skip own contexts
                     context_data = await self.storage.get(key)
                     if context_data:
                         shared_context.append(context_data)
-        
+
         return shared_context
-    
+
     def _get_context_key(self, agent_id, conversation_id):
         """Get the storage key for a context."""
         if self.scoped_by_conversation:

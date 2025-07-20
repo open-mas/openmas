@@ -56,7 +56,7 @@ topology:
     - from_role: "orchestrator"
       to_role: "coordinator"
       relationship_type: "manages"
-    - from_role: "coordinator" 
+    - from_role: "coordinator"
       to_role: "worker"
       relationship_type: "manages"
   discovery:

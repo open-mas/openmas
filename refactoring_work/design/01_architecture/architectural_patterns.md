@@ -26,14 +26,14 @@ class Agent:
     def __init__(self, communicator, reasoning_engine):
         self.communicator = communicator  # "Body" - handles external communication
         self.reasoning = reasoning_engine  # "Brain" - handles decision making
-        
+
     async def process_message(self, message):
         # Communication layer handles message parsing
         context = self.communicator.parse_message(message)
-        
+
         # Reasoning layer decides on response
         action = await self.reasoning.decide_action(context)
-        
+
         # Communication layer formats and sends response
         return self.communicator.format_response(action)
 ```
@@ -62,7 +62,7 @@ class McpAdapter(ProtocolAdapter):
             content=mcp_message.content,
             context=mcp_message.context
         )
-    
+
     def translate_outbound(self, internal_message):
         # Convert internal format to MCP format
         return McpMessage(
@@ -93,16 +93,16 @@ The Capability-Based Design pattern structures agents around discrete capabiliti
 class Agent:
     def __init__(self):
         self.capabilities = CapabilityRegistry()
-        
+
     def register_capability(self, capability):
         self.capabilities.register(capability)
-        
+
     async def handle_request(self, request):
         capability_id = request.get_capability_id()
-        
+
         if not self.capabilities.has(capability_id):
             return ErrorResponse("Capability not supported")
-        
+
         capability = self.capabilities.get(capability_id)
         return await capability.execute(request)
 ```
@@ -128,29 +128,29 @@ The Multi-Protocol Communication pattern enables agents to communicate over diff
 class Communicator:
     def __init__(self):
         self.protocols = {}
-        
+
     def register_protocol(self, protocol_type, protocol_handler):
         self.protocols[protocol_type] = protocol_handler
-        
+
     async def send_message(self, message, protocol_type=None):
         # Determine protocol to use
         if protocol_type is None:
             protocol_type = self.determine_protocol(message)
-            
+
         if protocol_type not in self.protocols:
             raise ProtocolError(f"Protocol not supported: {protocol_type}")
-            
+
         protocol = self.protocols[protocol_type]
         return await protocol.send(message)
-        
+
     async def receive_message(self, raw_message, protocol_type=None):
         # Determine protocol to use
         if protocol_type is None:
             protocol_type = self.detect_protocol(raw_message)
-            
+
         if protocol_type not in self.protocols:
             raise ProtocolError(f"Protocol not supported: {protocol_type}")
-            
+
         protocol = self.protocols[protocol_type]
         return await protocol.receive(raw_message)
 ```
@@ -217,7 +217,7 @@ The Adapter pattern allows classes with incompatible interfaces to work together
 class A2aToMcpAdapter:
     def __init__(self, a2a_client):
         self.a2a_client = a2a_client
-    
+
     async def invoke_tool(self, tool_name, params):
         # Convert MCP tool invocation to A2A capability invocation
         a2a_response = await self.a2a_client.invoke_capability(
@@ -227,7 +227,7 @@ class A2aToMcpAdapter:
                 "parameters": params
             }
         )
-        
+
         # Convert A2A response to MCP response
         return {
             "type": "function_response",
@@ -260,21 +260,21 @@ class AgentFacade:
         self.reasoning = ReasoningFactory.create(config)
         self.lifecycle = LifecycleManager(config)
         self.observation = ObservationSystem(config)
-        
+
     async def initialize(self):
         # Handle complex initialization
         await self.communicator.initialize()
         await self.reasoning.initialize()
         await self.lifecycle.initialize()
         await self.observation.initialize()
-        
+
     async def process_message(self, message):
         # Simplified interface for message processing
         return await self.communicator.process(
-            message, 
+            message,
             self.reasoning
         )
-        
+
     async def shutdown(self):
         # Handle complex shutdown
         await self.observation.shutdown()
@@ -304,11 +304,11 @@ The Bridge pattern decouples abstraction from implementation, allowing them to v
 class Communicator(ABC):
     def __init__(self, implementation):
         self.implementation = implementation
-        
+
     @abstractmethod
     async def send_message(self, message):
         pass
-    
+
     @abstractmethod
     async def receive_message(self):
         pass
@@ -318,7 +318,7 @@ class CommunicationImplementation(ABC):
     @abstractmethod
     async def send_raw(self, data):
         pass
-    
+
     @abstractmethod
     async def receive_raw(self):
         pass
@@ -328,15 +328,15 @@ class AsyncCommunicator(Communicator):
     async def send_message(self, message):
         data = self.serialize(message)
         await self.implementation.send_raw(data)
-        
+
     async def receive_message(self):
         data = await self.implementation.receive_raw()
         return self.deserialize(data)
-    
+
     def serialize(self, message):
         # Serialize message to raw data
         pass
-    
+
     def deserialize(self, data):
         # Deserialize raw data to message
         pass
@@ -345,11 +345,11 @@ class AsyncCommunicator(Communicator):
 class HttpCommunication(CommunicationImplementation):
     def __init__(self, endpoint):
         self.endpoint = endpoint
-        
+
     async def send_raw(self, data):
         async with aiohttp.ClientSession() as session:
             await session.post(self.endpoint, data=data)
-    
+
     async def receive_raw(self):
         async with aiohttp.ClientSession() as session:
             async with session.get(self.endpoint) as response:
@@ -382,7 +382,7 @@ class LeafAgent(Component):
     async def execute(self, request):
         # Perform actual work
         return self.process_request(request)
-    
+
     def process_request(self, request):
         # Process the request
         pass
@@ -390,13 +390,13 @@ class LeafAgent(Component):
 class CompositeAgent(Component):
     def __init__(self):
         self.children = []
-    
+
     def add(self, component):
         self.children.append(component)
-        
+
     def remove(self, component):
         self.children.remove(component)
-    
+
     async def execute(self, request):
         # Delegate to children and aggregate results
         results = []
@@ -404,7 +404,7 @@ class CompositeAgent(Component):
             result = await child.execute(request)
             results.append(result)
         return self.aggregate_results(results)
-    
+
     def aggregate_results(self, results):
         # Aggregate results from children
         pass
@@ -433,13 +433,13 @@ The Observer pattern defines a dependency between objects where observers are no
 class Subject(ABC):
     def __init__(self):
         self.observers = []
-    
+
     def attach(self, observer):
         self.observers.append(observer)
-    
+
     def detach(self, observer):
         self.observers.remove(observer)
-    
+
     def notify(self, event):
         for observer in self.observers:
             observer.update(event)
@@ -454,7 +454,7 @@ class Agent(Subject):
         super().__init__()
         self.id = id
         self.state = "initialized"
-    
+
     def set_state(self, state):
         old_state = self.state
         self.state = state
@@ -496,7 +496,7 @@ class ReasoningStrategy(ABC):
 class RuleBasedReasoning(ReasoningStrategy):
     def __init__(self, rule_set):
         self.rule_set = rule_set
-    
+
     async def reason(self, context):
         # Apply rules to context
         for rule in self.rule_set:
@@ -508,17 +508,17 @@ class LlmReasoning(ReasoningStrategy):
     def __init__(self, model, prompt_template):
         self.model = model
         self.prompt_template = prompt_template
-    
+
     async def reason(self, context):
         # Generate prompt from context
         prompt = self.prompt_template.format(**context)
-        
+
         # Get response from LLM
         response = await self.model.generate(prompt)
-        
+
         # Parse response
         return self.parse_response(response)
-    
+
     def parse_response(self, response):
         # Parse LLM response
         pass
@@ -526,10 +526,10 @@ class LlmReasoning(ReasoningStrategy):
 class Agent:
     def __init__(self, reasoning_strategy):
         self.reasoning_strategy = reasoning_strategy
-    
+
     def set_reasoning_strategy(self, reasoning_strategy):
         self.reasoning_strategy = reasoning_strategy
-    
+
     async def process(self, context):
         return await self.reasoning_strategy.reason(context)
 ```
@@ -555,7 +555,7 @@ class Command(ABC):
     @abstractmethod
     async def execute(self):
         pass
-    
+
     @abstractmethod
     async def undo(self):
         pass
@@ -566,14 +566,14 @@ class SendMessageCommand(Command):
         self.recipient = recipient
         self.content = content
         self.message_id = None
-    
+
     async def execute(self):
         self.message_id = await self.agent.send_message(
             recipient=self.recipient,
             content=self.content
         )
         return self.message_id
-    
+
     async def undo(self):
         if self.message_id:
             await self.agent.retract_message(self.message_id)
@@ -581,12 +581,12 @@ class SendMessageCommand(Command):
 class CommandProcessor:
     def __init__(self):
         self.history = []
-    
+
     async def execute_command(self, command):
         result = await command.execute()
         self.history.append(command)
         return result
-    
+
     async def undo_last(self):
         if self.history:
             command = self.history.pop()

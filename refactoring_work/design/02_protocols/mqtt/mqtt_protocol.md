@@ -231,14 +231,14 @@ class WeatherPublisherAgent(Agent):
             "client_id": "weather_publisher_agent",
             "topic_prefix": "openmas/agents/weather"
         })
-        
+
         # Set up periodic data publishing
         self.add_task(self.publish_weather_data, interval=300)  # every 5 minutes
-    
+
     async def publish_weather_data(self):
         # Get weather data
         weather_data = await self.weather_service.get_current()
-        
+
         # Format message
         message = {
             "message_id": self.generate_id(),
@@ -249,7 +249,7 @@ class WeatherPublisherAgent(Agent):
                 "location": "san-francisco"
             }
         }
-        
+
         # Publish to topic
         result = await self.mqtt_client.publish(
             "forecasts/current",  # Will be prefixed with topic_prefix
@@ -257,7 +257,7 @@ class WeatherPublisherAgent(Agent):
             qos=1,
             retain=True
         )
-        
+
         if result.is_published:
             self.log.info(f"Published weather data with ID {message['message_id']}")
         else:
@@ -280,38 +280,38 @@ class WeatherMonitorAgent(Agent):
             "client_id": "weather_monitor_agent",
             "topic_prefix": "openmas/agents"
         })
-        
+
         # Subscribe to weather topics
         await self.mqtt_client.subscribe(
             "weather/forecasts/#",  # Will be prefixed with topic_prefix
             qos=1,
             callback=self.handle_weather_update
         )
-        
+
         self.log.info("Subscribed to weather forecast topics")
-    
+
     async def handle_weather_update(self, topic, payload, properties):
         try:
             # Parse message
             message = json.loads(payload)
-            
+
             # Extract data
             weather_data = message.get("data", {})
             metadata = message.get("metadata", {})
-            
+
             # Process the weather update
             location = metadata.get("location", "unknown")
             temperature = weather_data.get("temperature")
             conditions = weather_data.get("conditions")
-            
+
             self.log.info(f"Weather update for {location}: {temperature}°C, {conditions}")
-            
+
             # Take appropriate actions based on the weather
             await self.evaluate_weather_conditions(location, weather_data)
-            
+
         except Exception as e:
             self.log.error(f"Error processing weather update: {e}")
-    
+
     async def evaluate_weather_conditions(self, location, weather_data):
         # Agent-specific logic to evaluate and respond to weather conditions
         if weather_data.get("alerts"):

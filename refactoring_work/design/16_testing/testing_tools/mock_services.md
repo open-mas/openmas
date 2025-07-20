@@ -480,19 +480,19 @@ services:
       - "8080:8080"
     environment:
       CAPABILITIES: test-capability,data-processing
-  
+
   mock-mcp:
     image: openmas/mock-mcp:latest
     ports:
       - "8100:8100"
     environment:
       FUNCTIONS: test_function,process_data
-  
+
   mock-mqtt:
     image: openmas/mock-mqtt:latest
     ports:
       - "1883:1883"
-  
+
   mock-agent-supervisor:
     image: openmas/mock-supervisor:latest
     ports:

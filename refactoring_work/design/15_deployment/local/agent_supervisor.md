@@ -52,13 +52,13 @@ supervisor:
   host: "localhost"
   port: 8000
   log_level: "INFO"
-  
+
   # Process management
   process_management:
     max_restarts: 3
     restart_delay: 5  # seconds
     graceful_shutdown_timeout: 10  # seconds
-  
+
   # Resource limits
   resource_limits:
     max_memory_per_agent: "500MB"
@@ -71,7 +71,7 @@ agents:
     name: "Agent 1"
     config_path: "./configs/agent1.yaml"
     autostart: true
-    
+
   - id: "agent2"
     name: "Agent 2"
     config_path: "./configs/agent2.yaml"

@@ -30,12 +30,12 @@ async def test_agent():
             "transport": "memory"
         }
     })
-    
+
     agent = AgentFixture(config)
     await agent.initialize()
-    
+
     yield agent
-    
+
     await agent.shutdown()
 
 @pytest.fixture
@@ -53,7 +53,7 @@ async def test_agent_pair():
             "transport": "memory"
         }
     })
-    
+
     agent2_config = Configuration.from_dict({
         "id": "agent2",
         "name": "Agent 2",
@@ -66,15 +66,15 @@ async def test_agent_pair():
             "transport": "memory"
         }
     })
-    
+
     agent1 = AgentFixture(agent1_config)
     agent2 = AgentFixture(agent2_config)
-    
+
     await agent1.initialize()
     await agent2.initialize()
-    
+
     yield agent1, agent2
-    
+
     await agent1.shutdown()
     await agent2.shutdown()
 ```
@@ -98,12 +98,12 @@ async def mcp_protocol():
             "queue_size": 100
         }
     }
-    
+
     protocol = ProtocolFactory.create("mcp", config)
     await protocol.initialize()
-    
+
     yield protocol
-    
+
     await protocol.shutdown()
 
 @pytest.fixture
@@ -116,12 +116,12 @@ async def a2a_protocol():
             "queue_size": 100
         }
     }
-    
+
     protocol = ProtocolFactory.create("a2a", config)
     await protocol.initialize()
-    
+
     yield protocol
-    
+
     await protocol.shutdown()
 
 @pytest.fixture
@@ -135,12 +135,12 @@ async def http_protocol():
             "port": 0  # Use ephemeral port
         }
     }
-    
+
     protocol = ProtocolFactory.create("http", config)
     await protocol.initialize()
-    
+
     yield protocol
-    
+
     await protocol.shutdown()
 ```
 
@@ -168,12 +168,12 @@ async def mock_llm_reasoning():
             ]
         }
     }
-    
+
     reasoning = ReasoningFactory.create("llm", config)
     await reasoning.initialize()
-    
+
     yield reasoning
-    
+
     await reasoning.shutdown()
 
 @pytest.fixture
@@ -188,12 +188,12 @@ async def rule_based_reasoning():
             ]
         }
     }
-    
+
     reasoning = ReasoningFactory.create("rule_based", config)
     await reasoning.initialize()
-    
+
     yield reasoning
-    
+
     await reasoning.shutdown()
 
 @pytest.fixture
@@ -213,12 +213,12 @@ async def bdi_reasoning():
             ]
         }
     }
-    
+
     reasoning = ReasoningFactory.create("bdi", config)
     await reasoning.initialize()
-    
+
     yield reasoning
-    
+
     await reasoning.shutdown()
 ```
 
@@ -285,13 +285,13 @@ def test_config_file():
             }
         ]
     }
-    
+
     with tempfile.NamedTemporaryFile(suffix=".yaml", delete=False) as temp:
         temp_path = temp.name
         Configuration.to_yaml_file(config, temp_path)
-    
+
     yield temp_path
-    
+
     # Cleanup
     if os.path.exists(temp_path):
         os.unlink(temp_path)
@@ -341,24 +341,24 @@ async def test_system():
             }
         ]
     })
-    
+
     system = MultiAgentSystem(config)
     await system.initialize()
-    
+
     yield system
-    
+
     await system.shutdown()
 
 @pytest.fixture
 async def test_supervisor():
     """Create a test supervisor."""
     from openmas.testing import TestSupervisor
-    
+
     supervisor = TestSupervisor()
     await supervisor.initialize()
-    
+
     yield supervisor
-    
+
     await supervisor.shutdown()
 ```
 
@@ -374,48 +374,48 @@ from openmas.testing.mocks import MockService
 async def mock_database():
     """Create a mock database service."""
     service = MockService("database")
-    
+
     # Configure mock responses
     service.add_response(
         method="query",
         args={"query": "SELECT * FROM users"},
         result=[{"id": 1, "name": "User 1"}, {"id": 2, "name": "User 2"}]
     )
-    
+
     service.add_response(
         method="insert",
         args={"table": "users", "data": {"name": "User 3"}},
         result={"id": 3, "name": "User 3"}
     )
-    
+
     await service.start()
-    
+
     yield service
-    
+
     await service.stop()
 
 @pytest.fixture
 async def mock_llm_service():
     """Create a mock LLM service."""
     service = MockService("llm")
-    
+
     # Configure mock responses
     service.add_response(
         method="generate",
         args={"prompt": "Hello"},
         result={"text": "Hi there!", "tokens": 5}
     )
-    
+
     service.add_response(
         method="generate",
         args={"prompt": "Help"},
         result={"text": "How can I assist you?", "tokens": 10}
     )
-    
+
     await service.start()
-    
+
     yield service
-    
+
     await service.stop()
 ```
 
@@ -501,14 +501,14 @@ def env_variables():
     """Set up environment variables for testing."""
     # Save original environment
     original_env = dict(os.environ)
-    
+
     # Set test environment variables
     os.environ["OPENMAS_TEST_MODE"] = "true"
     os.environ["OPENMAS_LOG_LEVEL"] = "DEBUG"
     os.environ["OPENMAS_CONFIG_PATH"] = "/tmp/test-config.yaml"
-    
+
     yield
-    
+
     # Restore original environment
     os.environ.clear()
     os.environ.update(original_env)
@@ -526,9 +526,9 @@ from openmas.testing import create_protocol_pair
 async def mcp_protocol_pair():
     """Create a pair of connected MCP protocols."""
     client, server = await create_protocol_pair("mcp", "memory")
-    
+
     yield client, server
-    
+
     await client.shutdown()
     await server.shutdown()
 
@@ -536,9 +536,9 @@ async def mcp_protocol_pair():
 async def a2a_protocol_pair():
     """Create a pair of connected A2A protocols."""
     client, server = await create_protocol_pair("a2a", "memory")
-    
+
     yield client, server
-    
+
     await client.shutdown()
     await server.shutdown()
 
@@ -546,9 +546,9 @@ async def a2a_protocol_pair():
 async def http_protocol_pair():
     """Create a pair of connected HTTP protocols."""
     client, server = await create_protocol_pair("http", "http")
-    
+
     yield client, server
-    
+
     await client.shutdown()
     await server.shutdown()
 ```
@@ -571,9 +571,9 @@ async def mock_reasoning():
             "Help": "How can I assist you?"
         }
     )
-    
+
     yield reasoning
-    
+
     await reasoning.shutdown()
 ```
 

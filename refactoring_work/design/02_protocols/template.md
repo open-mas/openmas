@@ -148,7 +148,7 @@ class ProtocolAgent(Agent):
         self.protocol = await self.setup_protocol("[protocol-type]", {
             "option1": "value1"
         })
-        
+
     async def handle_message(self, message):
         # Message handling example
         response = await self.process_message(message)

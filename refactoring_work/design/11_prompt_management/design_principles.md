@@ -84,13 +84,13 @@ prompts:
     version: "1.0.0"
     template: |
       System: {{system_instruction}}
-      
+
       User: {{user_input}}
-      
+
       Assistant: {{assistant_response}}
     variables:
       system_instruction: "You are a helpful assistant."
-      
+
   coding_assistant:
     extends: "base_assistant"
     description: "Coding-specialized assistant"
@@ -108,14 +108,14 @@ prompts:
     version: "1.0.0"
     template: |
       System: You are a helpful assistant.
-      
+
       {% if context %}
       Context:
       {{context}}
       {% endif %}
-      
+
       User: {{user_input}}
-      
+
       Assistant:
 ```
 
@@ -128,14 +128,14 @@ prompts:
     version: "1.0.0"
     template: |
       System: {{system_instruction}}
-      
+
       {% prioritized %}
       Previous conversation:
       {{conversation_history}}
       {% endprioritized %}
-      
+
       User: {{user_input}}
-      
+
       Assistant:
 ```
 
@@ -148,11 +148,11 @@ prompts:
     version: "1.0.0"
     template: |
       {% include "system_header" %}
-      
+
       {% include "context_section" %}
-      
+
       User: {{user_input}}
-      
+
       {% include "response_format" %}
 ```
 

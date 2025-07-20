@@ -13,7 +13,7 @@ Security configuration is defined in the [unified configuration schema](/refacto
 Security configuration in OpenMAS consists of several components:
 
 1. **Authentication** - Identity verification mechanisms
-2. **Authorization** - Access control permissions  
+2. **Authorization** - Access control permissions
 3. **Encryption** - Data protection measures
 4. **Compliance** - Security compliance settings
 5. **Rate Limiting** - Request rate controls
@@ -39,7 +39,7 @@ security:
           - name: "admin"
             key: "${ADMIN_API_KEY}"
             roles: ["admin"]
-  
+
   authorization:
     enabled: true
     default_policy: "deny"
@@ -48,7 +48,7 @@ security:
         permissions: ["*"]
       - name: "user"
         permissions: ["read:*", "write:own"]
-  
+
   rate_limiting:
     enabled: true
     default_limit: 100

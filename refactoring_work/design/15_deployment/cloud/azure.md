@@ -150,7 +150,7 @@ Components:
 
 Azure deployments maintain OpenMAS's reasoning-agnostic architecture through:
 
-1. **Communication Layer ("Body")**: 
+1. **Communication Layer ("Body")**:
    - Deployed as Azure Functions or containers
    - Handles protocol-specific messaging (A2A, MCP, HTTP, etc.)
    - Manages service discovery and routing
@@ -216,7 +216,7 @@ components:
       type: function
       memory: 512
       timeout: 300
-  
+
   agent2:
     type: agent
     config: config/agent2_config.yaml

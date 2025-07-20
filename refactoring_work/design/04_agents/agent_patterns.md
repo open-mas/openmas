@@ -71,7 +71,7 @@ The observer pattern enables agents to monitor and react to changes in state, ev
 class MonitoringAgent(BaseAgent, EventObserver):
     def setup(self):
         self.event_bus.subscribe("system_event", self)
-        
+
     def on_event(self, event_type, event_data):
         if event_type == "system_event":
             self.process_system_event(event_data)
@@ -127,7 +127,7 @@ class PublisherAgent(BaseAgent):
 class SubscriberAgent(BaseAgent):
     def setup(self):
         self.message_bus.subscribe("data_updates", self.on_data_update)
-        
+
     def on_data_update(self, data):
         self.process_update(data)
 ```
@@ -153,14 +153,14 @@ class OrchestratorAgent(BaseAgent):
     def process_task(self, task):
         # Decompose task
         subtasks = self.task_decomposer.decompose(task)
-        
+
         # Delegate to appropriate agents
         results = []
         for subtask in subtasks:
             agent = self.capability_matcher.find_agent_for(subtask)
             result = self.delegate(agent, subtask)
             results.append(result)
-            
+
         # Aggregate results
         return self.result_aggregator.aggregate(results)
 ```
@@ -191,7 +191,7 @@ class StatefulAgent(BaseAgent):
             "goals": self.goal_manager.serialize(),
             "context": self.context_manager.serialize()
         }
-        
+
     def restore_from_memento(self, memento):
         # Restore state
         self.belief_set.deserialize(memento["beliefs"])

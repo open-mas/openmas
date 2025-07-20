@@ -81,8 +81,8 @@ logger.error("Error message")
 logger.critical("Critical message")
 
 # Structured logging with fields
-logger.info("User registered", 
-            user_id="user123", 
+logger.info("User registered",
+            user_id="user123",
             registration_time=datetime.now())
 
 # With context
@@ -179,7 +179,7 @@ Context can be carried through operations:
 async def process_request(request):
     # Create a context logger for this request
     logger = logging.get_logger("request_processor")
-    
+
     # Start a logging context
     with logger.context(
         request_id=request.id,
@@ -187,10 +187,10 @@ async def process_request(request):
         operation="process_request"
     ):
         logger.info("Request received", request_type=request.type)
-        
+
         # Process the request
         result = await handle_request(request, logger)
-        
+
         logger.info("Request processed", result_status=result.status)
         return result
 ```

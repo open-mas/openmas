@@ -147,7 +147,7 @@ class LLMAgent(Agent):
                 }
             }
         )
-    
+
     @capability("answer_question")
     async def answer_question(self, question):
         # LLM-specific reasoning implementation
@@ -191,7 +191,7 @@ class RuleBasedAgent(Agent):
                 }
             }
         )
-    
+
     @capability("evaluate_condition")
     async def evaluate_condition(self, condition, facts):
         # Rule-based reasoning implementation

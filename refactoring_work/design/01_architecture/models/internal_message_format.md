@@ -30,7 +30,7 @@ class MessageType(str, Enum):
     ERROR_MESSAGE = "ERROR_MESSAGE"
     PLAIN_TEXT_MESSAGE = "PLAIN_TEXT_MESSAGE"
     MULTI_PART_MESSAGE = "MULTI_PART_MESSAGE"
-    
+
     # Note: This enum is extensible. New message types can be added by extensions.
 
 class PayloadType(str, Enum):
@@ -44,7 +44,7 @@ class PayloadType(str, Enum):
     STREAM_CONTEXT_CONTENT = "stream_context_content"
     KNOWLEDGE_REPRESENTATION_CONTENT = "knowledge_representation_content"
     EVENT_CONTENT = "event_content"
-    
+
     # Note: This enum is extensible. New payload types can be added by extensions.
 
 # Base Payload Model
@@ -135,7 +135,7 @@ PayloadUnion = Union[
 class InternalMessageFormat(BaseModel):
     """
     Standard Internal Message Format used within the OpenMAS Agent Framework.
-    This format serves as the critical intermediary between protocol-specific messages 
+    This format serves as the critical intermediary between protocol-specific messages
     and reasoning components.
     """
     message_id: str = Field(..., description="Unique identifier for this message, typically a UUID")

@@ -21,7 +21,7 @@ properties:
         type: boolean
         description: "Whether unified asset management is enabled"
         default: true
-      
+
       # Universal asset handling
       asset_handling:
         type: object
@@ -48,7 +48,7 @@ properties:
             type: integer
             description: "Cleanup interval for asset cache in seconds"
             default: 300
-      
+
       # Protocol representation configuration
       protocol_representation:
         type: object
@@ -162,7 +162,7 @@ properties:
                     type: string
                     description: "Resource type for binary data"
                     default: "file"
-      
+
       # Environmental Configuration
       environment:
         type: object
@@ -313,17 +313,17 @@ OpenMAS provides an asset bridge that maps between its internal asset system and
 class AssetProtocolBridge:
     async def asset_to_mcp_resource(self, asset_id: str) -> str:
         """Convert an OpenMAS asset to an MCP resource.
-        
+
         Returns the MCP resource ID.
         """
         asset = await self.asset_manager.get_asset(asset_id)
         resource_id = f"resource_{uuid.uuid4().hex}"
-        
+
         # Register with MCP resource registry based on asset type
         if asset.type == "text":
             await self.mcp_registry.register_text_resource(
-                resource_id, 
-                asset.content, 
+                resource_id,
+                asset.content,
                 metadata=asset.metadata
             )
         elif asset.type == "image":
@@ -338,15 +338,15 @@ class AssetProtocolBridge:
                 asset.content_url or asset.content,
                 metadata=asset.metadata
             )
-        
+
         # Store mapping for future reference
         self.asset_resource_map[asset_id] = resource_id
         return resource_id
-    
+
     async def asset_to_a2a_part(self, asset_id: str) -> Dict[str, Any]:
         """Convert an OpenMAS asset to an A2A message part."""
         asset = await self.asset_manager.get_asset(asset_id)
-        
+
         if asset.type == "text":
             return {
                 "type": "text",
@@ -392,7 +392,7 @@ asset_management:
     default_strategy: "hybrid"
     max_inline_size_kb: 64
     cache_enabled: true
-  
+
   protocol_representation:
     content_handling:
       text:
@@ -424,7 +424,7 @@ asset_management:
     max_inline_size_kb: 32
     storage_path: "/data/assets"
     url_base: "https://assets.example.com"
-  
+
   # File-specific optimizations
   protocol_representation:
     content_handling:

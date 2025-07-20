@@ -57,10 +57,10 @@ async def collaborative_task(coordinator_agent, problem_description):
             {"agent_id": "writer_agent_1", "roles": ["writer"]}
         ]
     )
-    
+
     # Start the workflow
     workflow_execution = await workflow.start()
-    
+
     # Monitor progress
     while not workflow_execution.is_complete:
         status = await workflow_execution.get_status()
@@ -72,7 +72,7 @@ async def collaborative_task(coordinator_agent, problem_description):
                 guidance="Consider limiting analysis to key metrics X, Y, Z"
             )
         await asyncio.sleep(10)
-    
+
     # Get final result
     result = await workflow_execution.get_result()
     return result

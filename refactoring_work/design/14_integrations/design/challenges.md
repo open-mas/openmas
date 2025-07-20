@@ -109,7 +109,7 @@ The following challenges were identified in previous integration approaches:
 
 The Google A2A protocol presented specific integration challenges:
 
-**Challenge:** 
+**Challenge:**
 - Limited documentation on how to extend A2A with external integrations
 - Uncertainty around credential management in A2A contexts
 - Tool integration patterns not clearly defined

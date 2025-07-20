@@ -38,7 +38,7 @@ defaults:
                   type: string
                   enum: ["fixed", "exponential", "linear"]
                   default: "exponential"
-    
+
     publish_subscribe:
       type: object
       description: "Publish-subscribe pattern configuration"
@@ -56,7 +56,7 @@ defaults:
               type: boolean
               description: "Whether to retain the message"
               default: false
-    
+
     event_based:
       type: object
       description: "Event-based pattern configuration"
@@ -73,7 +73,7 @@ defaults:
               type: string
               enum: ["at-least-once", "at-most-once", "exactly-once"]
               default: "at-least-once"
-    
+
     streaming:
       type: object
       description: "Streaming pattern configuration"
@@ -90,7 +90,7 @@ defaults:
               type: integer
               description: "Chunk size for transmission"
               default: 4096
-    
+
     # Protocol-specific adaptations for patterns
     protocol_adaptations:
       a2a:
@@ -98,13 +98,13 @@ defaults:
         description: "A2A protocol adaptations"
         properties:
           # (specific adaptations)
-      
+
       mcp:
         type: object
         description: "MCP protocol adaptations"
         properties:
           # (specific adaptations)
-      
+
       http:
         type: object
         description: "HTTP protocol adaptations"
@@ -239,7 +239,7 @@ PUBLISH weather/updates {"location":"San Francisco","temperature":22}
 ```python
 # Publisher agent
 await agent.publish(
-    topic="weather/updates", 
+    topic="weather/updates",
     content={"location": "San Francisco", "temperature": 22}
 )
 
@@ -469,7 +469,7 @@ class WeatherAgent(Agent):
                 retry={"enabled": True, "max_attempts": 3}
             )
         )
-    
+
     async def get_weather(self, request):
         location = request.get("location", "default")
         # Get weather data
@@ -508,7 +508,7 @@ class WeatherStation(Agent):
                 retain=False
             )
         )
-    
+
     async def run(self):
         # Publish weather updates periodically
         while True:
@@ -525,7 +525,7 @@ class WeatherDisplay(Agent):
             topic="weather/updates",
             handler=self.display_weather
         )
-    
+
     async def display_weather(self, content):
         print(f"Weather update for {content['location']}: {content['temperature']}°C")
 ```

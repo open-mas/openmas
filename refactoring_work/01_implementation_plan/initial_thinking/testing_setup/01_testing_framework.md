@@ -167,10 +167,10 @@ class TestAgentCapabilities:
         """Test that capabilities can be registered."""
         # Arrange
         caps = AgentCapabilities()
-        
+
         # Act
         caps.register("test_capability", {"type": "test"})
-        
+
         # Assert
         assert "test_capability" in caps.get_all()
         assert caps.get("test_capability")["type"] == "test"
@@ -180,20 +180,20 @@ class TestAgentCapabilities:
         # Arrange
         caps = AgentCapabilities()
         caps.register("test_capability", {"type": "test"})
-        
+
         # Act/Assert
         with pytest.raises(ValueError):
             caps.register("test_capability", {"type": "different"})
-    
+
     def test_capability_discovery(self):
         """Test that capabilities can be discovered."""
         # Arrange
         caps = AgentCapabilities()
         caps.register("test_capability", {"type": "test"})
-        
+
         # Act
         discovered = caps.discover(capability_type="test")
-        
+
         # Assert
         assert len(discovered) == 1
         assert "test_capability" in discovered
@@ -221,35 +221,35 @@ class TestA2AProtocolIntegration:
         # Arrange
         agent1 = Agent(id="agent1", config=a2a_config)
         agent2 = Agent(id="agent2", config=a2a_config)
-        
+
         # Act
         agent1.start()
         agent2.start()
         response = agent1.send_message(agent2.id, {"content": "hello"})
-        
+
         # Assert
         assert response
         assert response.get("status") == "received"
-        
+
         # Cleanup
         agent1.stop()
         agent2.stop()
-    
+
     def test_agent_discovery(self, a2a_config):
         """Test that agents can discover each other using A2A protocol."""
         # Arrange
         agent1 = Agent(id="agent1", config=a2a_config)
         agent2 = Agent(id="agent2", config=a2a_config)
-        
+
         # Act
         agent1.start()
         agent2.start()
         discovered = agent1.discover_agents()
-        
+
         # Assert
         assert len(discovered) >= 1
         assert agent2.id in [a.id for a in discovered]
-        
+
         # Cleanup
         agent1.stop()
         agent2.stop()
@@ -317,13 +317,13 @@ def test_a2a_communication_with_mock(mocker):
     # Mock the HTTP client
     mock_client = mocker.patch("openmas.communicators.protocols.a2a.http.client.HTTPClient")
     mock_client.return_value.send.return_value = {"status": "success"}
-    
+
     # Create communicator with mocked client
     communicator = A2ACommunicator(config={"base_url": "http://example.com"})
-    
+
     # Act
     result = communicator.send_message("agent1", {"content": "test"})
-    
+
     # Assert
     assert result["status"] == "success"
     mock_client.return_value.send.assert_called_once()
@@ -411,30 +411,30 @@ def test_reasoning_agnosticism():
     """Test that different reasoning approaches can be used with the same communication protocols."""
     # Test with rule-based reasoning
     rule_agent = Agent(id="rule_agent", config={"reasoning": "rule_based"})
-    
+
     # Test with BDI reasoning
     bdi_agent = Agent(id="bdi_agent", config={"reasoning": "bdi"})
-    
+
     # Test with LLM reasoning
     llm_agent = Agent(id="llm_agent", config={"reasoning": "llm"})
-    
+
     # Verify all agents can communicate using the same protocol
     rule_agent.start()
     bdi_agent.start()
     llm_agent.start()
-    
+
     # Rule agent can send messages to BDI and LLM agents
     assert rule_agent.send_message(bdi_agent.id, {"content": "hello"})
     assert rule_agent.send_message(llm_agent.id, {"content": "hello"})
-    
+
     # BDI agent can receive messages from rule and LLM agents
     assert bdi_agent.send_message(rule_agent.id, {"content": "hello"})
     assert bdi_agent.send_message(llm_agent.id, {"content": "hello"})
-    
+
     # LLM agent can communicate with rule and BDI agents
     assert llm_agent.send_message(rule_agent.id, {"content": "hello"})
     assert llm_agent.send_message(bdi_agent.id, {"content": "hello"})
-    
+
     # Cleanup
     rule_agent.stop()
     bdi_agent.stop()

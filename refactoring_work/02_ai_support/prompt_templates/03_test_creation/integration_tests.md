@@ -51,7 +51,7 @@ For integration points using real implementations:
 4. Add teardown steps to clean up after tests
 5. Document any external requirements (e.g., API keys, databases)
 
-## Mock-Based Testing Approach  
+## Mock-Based Testing Approach
 For integration points using mocks:
 1. Define explicit interfaces that the mocks must implement
 2. Create realistic mock behaviors that simulate real components
@@ -102,10 +102,10 @@ The component has been implemented as follows:
 ```python
 class DatabaseConnector:
     """Connects to various database types."""
-    
+
     def __init__(self, config: DbConfig, driver_factory: Optional[DriverFactory] = None):
         """Initialize the database connector.
-        
+
         Args:
             config: Database configuration
             driver_factory: Factory for creating database drivers
@@ -113,19 +113,19 @@ class DatabaseConnector:
         self.config = config
         self.driver_factory = driver_factory or DefaultDriverFactory()
         self.driver = None
-        
+
     async def connect(self) -> None:
         """Connect to the database."""
         driver_class = self.driver_factory.get_driver(self.config.db_type)
         self.driver = driver_class(self.config)
         await self.driver.connect()
-        
+
     async def execute_query(self, query: str, params: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Execute a query against the database."""
         if not self.driver:
             await self.connect()
         return await self.driver.execute_query(query, params)
-        
+
     async def close(self) -> None:
         """Close the database connection."""
         if self.driver:

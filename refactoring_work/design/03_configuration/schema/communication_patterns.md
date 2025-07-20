@@ -31,7 +31,7 @@ communication_patterns:
         use_streaming: false
       http:
         method: "POST"
-  
+
   publish_subscribe:
     options:
       delivery_guarantee: "at_least_once"
@@ -41,22 +41,22 @@ communication_patterns:
       mqtt:
         qos_level: 1
         retain: true
-  
+
   event_based:
     options:
       event_history_size: 100
       filtering_enabled: true
-  
+
   streaming:
     options:
       buffer_size: 1024
       chunk_size: 64
-  
+
   pipeline:
     options:
       stage_timeout: 60000
       error_handling: "continue" # or "abort"
-  
+
   delegation:
     options:
       delegation_timeout: 120000
@@ -80,7 +80,7 @@ agents:
         protocol_adaptations:
           a2a:
             use_streaming: true  # Override global A2A setting
-      
+
       # Use other patterns with default configuration
       publish_subscribe: {}
       event_based: {}
@@ -188,22 +188,22 @@ communication_patterns:
         use_streaming: false
         use_agent_cards: true
         error_response_format: "standard"
-      
+
       http:
         method: "POST"
         response_codes: [200, 201]
         content_type: "application/json"
         timeout_header: "X-Request-Timeout"
-      
+
       grpc:
         service_method: "Invoke"
         timeout_metadata: "request-timeout"
         use_streaming: false
-      
+
       mcp:
         function_call_based: true
         timeout_metadata: "timeout"
-      
+
       mqtt:
         request_topic_format: "{agent_id}/request/{correlation_id}"
         response_topic_format: "{agent_id}/response/{correlation_id}"

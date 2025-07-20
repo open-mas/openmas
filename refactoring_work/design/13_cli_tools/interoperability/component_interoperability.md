@@ -168,19 +168,19 @@ class AgentInterface:
     async def create_agent(self, config):
         """Create a new agent."""
         pass
-    
+
     async def start_agent(self, agent_id):
         """Start an agent."""
         pass
-    
+
     async def stop_agent(self, agent_id):
         """Stop an agent."""
         pass
-    
+
     async def get_agent_status(self, agent_id):
         """Get agent status."""
         pass
-    
+
     async def list_agents(self):
         """List all agents."""
         pass
@@ -203,15 +203,15 @@ class ProtocolInterface:
     async def register_protocol(self, protocol_config):
         """Register a protocol adapter."""
         pass
-    
+
     async def test_protocol(self, protocol_id, test_message):
         """Test a protocol adapter."""
         pass
-    
+
     async def list_protocols(self):
         """List all protocol adapters."""
         pass
-    
+
     async def get_protocol_status(self, protocol_id):
         """Get protocol adapter status."""
         pass
@@ -233,15 +233,15 @@ class ConfigInterface:
     async def validate_config(self, config_path):
         """Validate a configuration file."""
         pass
-    
+
     async def generate_config(self, template, output_path):
         """Generate a configuration file from a template."""
         pass
-    
+
     async def merge_configs(self, config_paths, output_path):
         """Merge multiple configuration files."""
         pass
-    
+
     async def get_config_schema(self, component_type):
         """Get configuration schema for a component type."""
         pass
@@ -263,19 +263,19 @@ class DeploymentInterface:
     async def deploy(self, deployment_config):
         """Deploy a system according to deployment configuration."""
         pass
-    
+
     async def undeploy(self, deployment_id):
         """Undeploy a previously deployed system."""
         pass
-    
+
     async def get_deployment_status(self, deployment_id):
         """Get deployment status."""
         pass
-    
+
     async def list_deployments(self):
         """List all deployments."""
         pass
-    
+
     async def scale_deployment(self, deployment_id, component_type, replicas):
         """Scale a deployment component."""
         pass
@@ -302,10 +302,10 @@ from openmas.cli.command import Command
 class CustomCommand(Command):
     name = "custom"
     description = "Custom command"
-    
+
     def configure_parser(self, parser):
         parser.add_argument("--option", help="Custom option")
-    
+
     async def execute(self, args):
         # Custom command implementation
         pass
@@ -324,7 +324,7 @@ from openmas.cli.interface import ComponentInterface
 
 class CustomInterface(ComponentInterface):
     component_type = "custom"
-    
+
     async def custom_operation(self, *args, **kwargs):
         # Custom operation implementation
         pass

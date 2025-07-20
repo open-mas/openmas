@@ -8,7 +8,7 @@ The refactored OpenMAS architecture is guided by these fundamental principles:
 
 1. **Reasoning Agnosticism** - Clear separation between agent "body" (communication infrastructure) and "brain" (reasoning approach)
 2. **Modularity** - Well-defined interfaces between components with minimal dependencies
-3. **Protocol Agnosticism** - Consistent interfaces across multiple communication protocols 
+3. **Protocol Agnosticism** - Consistent interfaces across multiple communication protocols
 4. **Topology Flexibility** - Support for various agent organization patterns independent of protocols
 5. **Pattern-Based Communication** - Standardized communication patterns across different topologies
 6. **Configuration-Driven** - Schema-first design with behavior determined by structured configuration defined in the [Unified Configuration Schema](/03_configuration/unified_configuration_schema.md)

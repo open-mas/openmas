@@ -18,15 +18,15 @@ from typing import Dict, List, Optional, Any
 
 class AgentConfig(BaseModel):
     """Configuration for an OpenMAS agent."""
-    
+
     name: str = Field(..., description="Unique name for the agent")
     module: str = Field(..., description="Python module containing agent code")
     class_name: str = Field("Agent", description="Class name of the agent")
     communicator: CommunicatorConfig
     parameters: Dict[str, Any] = Field(default_factory=dict)
-    
+
     model_config = {"extra": "forbid"}
-    
+
     @validator("name")
     def name_must_be_valid(cls, v):
         if not v or not v.strip():
@@ -48,12 +48,12 @@ import asyncio
 async def setup_agent(agent):
     """Set up an agent asynchronously."""
     await agent.setup()
-    
+
 async def main():
     """Main entry point."""
     agents = [create_agent("agent1"), create_agent("agent2")]
     await asyncio.gather(*(setup_agent(agent) for agent in agents))
-    
+
 if __name__ == "__main__":
     asyncio.run(main())
 ```
@@ -74,7 +74,7 @@ def load_config(config_path: str) -> dict:
     """Load configuration from a YAML file."""
     with open(config_path, 'r') as f:
         return yaml.safe_load(f)
-        
+
 def save_config(config: dict, config_path: str) -> None:
     """Save configuration to a YAML file."""
     with open(config_path, 'w') as f:
@@ -96,7 +96,7 @@ import click
 def cli():
     """OpenMAS command line interface."""
     pass
-    
+
 @cli.command()
 @click.option("--config", "-c", help="Path to configuration file")
 @click.option("--agent", "-a", help="Agent to run")
@@ -124,7 +124,7 @@ logger = structlog.get_logger()
 def process_request(request_id, data):
     """Process a request with structured logging."""
     logger.info("Processing request", request_id=request_id)
-    
+
     try:
         result = process_data(data)
         logger.info("Request processed successfully", request_id=request_id)
@@ -153,12 +153,12 @@ async def fetch_data(url):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             return await response.json()
-            
+
 # Server
 async def handle_request(request):
     data = await request.json()
     return web.json_response({"status": "success", "data": data})
-    
+
 app = web.Application()
 app.router.add_post("/api/data", handle_request)
 ```
@@ -183,14 +183,14 @@ app = FastMCP()
 async def handle_tool_call(ctx: Context, name: str, parameters: dict) -> CallToolResult:
     result = f"Processed {name} with {parameters}"
     return CallToolResult(content=result)
-    
+
 app.tool("process_data", handle_tool_call)
 
 # Client
 async with ClientSession() as session:
     async with session.connect("http://localhost:8000/mcp", transport=sse_client) as connection:
         prompt = {"role": "user", "content": "Hello, can you process this data?"}
-        
+
         async for event in connection.completion([prompt]):
             if event.type == "content":
                 print(event.content.text, end="", flush=True)
@@ -211,11 +211,11 @@ import json
 def on_connect(client, userdata, flags, rc):
     print(f"Connected with result code {rc}")
     client.subscribe("openmas/agents/#")
-    
+
 def on_message(client, userdata, msg):
     payload = json.loads(msg.payload)
     print(f"Received message on {msg.topic}: {payload}")
-    
+
 client = mqtt.Client()
 client.on_connect = on_connect
 client.on_message = on_message
@@ -247,7 +247,7 @@ def mock_config():
             }
         }
     }
-    
+
 def test_config_loader(mock_config):
     loader = ConfigLoader()
     config = loader.load(mock_config)
@@ -271,7 +271,7 @@ import asyncio
 async def test_async_function():
     result = await async_function()
     assert result == expected_value
-    
+
 @pytest.fixture
 async def async_resource():
     resource = await create_resource()
@@ -292,10 +292,10 @@ def test_with_mock(mocker):
     # Create a mock
     mock_function = mocker.patch("module.function")
     mock_function.return_value = "mocked_result"
-    
+
     # Use the mock
     result = use_function()
-    
+
     # Assert the mock was called correctly
     mock_function.assert_called_once_with(expected_args)
     assert result == "mocked_result"
@@ -349,9 +349,9 @@ try:
     GRPC_AVAILABLE = True
 except ImportError:
     GRPC_AVAILABLE = False
-    
+
 class GRPCCommunicator(BaseCommunicator):
     def __init__(self, config: Dict[str, Any]):
         if not GRPC_AVAILABLE:
             raise ImportError("gRPC is not available. Install it with 'pip install grpcio'")
-        super().__init__(config) 
+        super().__init__(config)

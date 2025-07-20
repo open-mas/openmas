@@ -16,7 +16,7 @@ componentDiagram
             component "ReasoningEngine" as Reasoning
             component "KR&R System" as KRR
         }
-        
+
         component "Protocol Interfaces" as Protocols {
             component "A2A Protocol Interface" as A2A
             component "MCP Protocol Interface" as MCP
@@ -24,31 +24,31 @@ componentDiagram
             component "MQTT Protocol Interface" as MQTT
             component "gRPC Protocol Interface" as GRPC
         }
-        
+
         Reasoning --> KRR : uses
     }
-    
+
     component "A2A Client" as A2AClient
     component "MCP Client" as MCPClient
     component "HTTP Client" as HTTPClient
     component "MQTT Broker" as MQTTBroker
     component "gRPC Client" as GRPCClient
-    
+
     A2AClient --> A2A : A2A Protocol
     MCPClient --> MCP : MCP Protocol
     HTTPClient --> HTTP : HTTP Protocol
     MQTTBroker --> MQTT : MQTT Protocol
     GRPCClient --> GRPC : gRPC Protocol
-    
+
     A2A --> Framework : SIMF
     MCP --> Framework : SIMF
     HTTP --> Framework : SIMF
     MQTT --> Framework : SIMF
     GRPC --> Framework : SIMF
-    
+
     Framework --> Reasoning : SIMF
     Reasoning --> Framework : SIMF
-    
+
     Framework --> A2A : SIMF
     Framework --> MCP : SIMF
     Framework --> HTTP : SIMF
@@ -120,7 +120,7 @@ agents:
     reasoning:
       approach: "llm_engine"
       # reasoning-specific config...
-    
+
     # Multiple protocol configurations
     protocols:
       - type: "a2a-http"
@@ -128,12 +128,12 @@ agents:
         options:
           base_url: "http://localhost:8080"
           # A2A-specific options...
-      
+
       - type: "mcp-sse"
         enabled: true
         options:
           # MCP-specific options...
-      
+
       - type: "http-rest"
         enabled: true
         options:

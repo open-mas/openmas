@@ -22,7 +22,7 @@ agents:
       type: string
       description: "Agent reasoning type"
       enum: ["llm", "rule_based", "hybrid", "bdi", "symbolic"]
-  
+
     # Protocol configuration
     protocols:
       type: array
@@ -61,7 +61,7 @@ agents:
                   type: string
                   description: "Format adapter class name"
               required: ["source_format", "target_format", "adapter_class"]
-  
+
   # Agent capabilities configuration
   capabilities:
     type: object
@@ -71,15 +71,15 @@ agents:
       tool_usage:
         type: boolean
         description: "Whether the agent can use tools"
-      
+
       memory:
         type: boolean
         description: "Whether the agent has memory"
-      
+
       reasoning:
         type: boolean
         description: "Whether the agent has reasoning capabilities"
-      
+
       # Multi-protocol capability configuration
       multi_protocol_capabilities:
         type: object
@@ -113,7 +113,7 @@ agents:
                   items:
                     type: object
                 # Protocol-specific overrides can be defined below
-                
+
           # Protocol-specific capability representation
           protocol_mapping:
             type: object
@@ -128,7 +128,7 @@ agents:
                     type: string
                     description: "Format for A2A capabilities"
                     default: "agent_card"
-                  
+
               # MCP representation
               mcp:
                 type: object
@@ -138,7 +138,7 @@ agents:
                     type: string
                     description: "Format for MCP capabilities"
                     default: "tool_definition"
-                  
+
           # Protocol exposure configuration
           capability_exposure:
             type: object
@@ -163,7 +163,7 @@ agents:
                   type: array
                   items:
                     type: string
-  
+
   # Note on A2A Agent Card configuration
   # A2A Agent Card details must be configured within the agent's A2A protocol options section:
   # protocols.ITEM_WHERE_TYPE_IS_A2A.options.agent_card
@@ -201,7 +201,7 @@ agents:
             type: string
             description: "Path where the agent card is accessible"
             default: "/.well-known/agent.json"
-  
+
   # Knowledge representation configuration
   knowledge:
     type: object
@@ -211,7 +211,7 @@ agents:
         type: string
         description: "Type of knowledge representation"
         enum: ["symbolic", "graph", "vector", "probabilistic", "neural", "hybrid"]
-      
+
       storage:
         type: object
         description: "Knowledge storage configuration"
@@ -223,7 +223,7 @@ agents:
           connection_string:
             type: string
             description: "Connection string for database storage"
-  
+
   # Reasoning configuration
   reasoning:
     type: object
@@ -233,7 +233,7 @@ agents:
         type: string
         description: "Reasoning approach"
         enum: ["rule_based", "bdi", "llm", "hybrid", "symbolic", "probabilistic"]
-      
+
       # BDI-specific configuration
       bdi:
         type: object
@@ -251,7 +251,7 @@ agents:
             type: boolean
             description: "Whether to reconsider intentions"
             default: true
-      
+
       # LLM-specific configuration
       llm:
         type: object
@@ -266,7 +266,7 @@ agents:
           prompt_template:
             type: string
             description: "Reference to prompt template for reasoning"
-      
+
       # Hybrid reasoning configuration
       hybrid:
         type: object
@@ -289,7 +289,7 @@ agents:
                 config:
                   type: object
                   description: "Reasoner-specific configuration"
-  
+
   # Role configuration
   roles:
     type: array
@@ -308,7 +308,7 @@ agents:
         activation_condition:
           type: string
           description: "Condition for activating this role"
-        
+
   # Agent-specific configuration
   config:
     type: object
@@ -474,11 +474,11 @@ class CapabilityInfo(BaseModel):
 
 class ICapabilityManager(ABC):
     """Interface for managing agent capabilities.
-    
+
     The ICapabilityManager provides methods for registering, unregistering,
     listing, and invoking capabilities within an agent.
     """
-    
+
     @abstractmethod
     async def register_capability(
         self,
@@ -493,7 +493,7 @@ class ICapabilityManager(ABC):
         examples: Optional[List[Dict[str, Any]]] = None
     ) -> None:
         """Register a new capability with the agent.
-        
+
         Args:
             id: Unique identifier for the capability
             handler_function: Async function that implements the capability
@@ -504,46 +504,46 @@ class ICapabilityManager(ABC):
             version: Version string for the capability
             protocol_specific_names: Mapping of protocol names to protocol-specific identifiers
             examples: Example uses of this capability with inputs and expected outputs
-            
+
         Raises:
             ValueError: If a capability with the same id is already registered
             TypeError: If input_schema or output_schema are not valid Pydantic models
         """
         pass
-    
+
     @abstractmethod
     async def unregister_capability(self, id: str) -> bool:
         """Unregister a capability from the agent.
-        
+
         Args:
             id: Identifier of the capability to unregister
-            
+
         Returns:
             bool: True if the capability was found and unregistered, False otherwise
         """
         pass
-    
+
     @abstractmethod
     async def list_capabilities(self) -> List[CapabilityInfo]:
         """List all capabilities registered with this agent.
-        
+
         Returns:
             List[CapabilityInfo]: List of capability metadata objects
         """
         pass
-    
+
     @abstractmethod
     async def get_capability_details(self, id: str) -> Optional[CapabilityInfo]:
         """Get detailed information about a specific capability.
-        
+
         Args:
             id: Identifier of the capability
-            
+
         Returns:
             Optional[CapabilityInfo]: Capability metadata if found, None otherwise
         """
         pass
-    
+
     @abstractmethod
     async def invoke_capability(
         self,
@@ -552,31 +552,31 @@ class ICapabilityManager(ABC):
         context: 'AgentContext'
     ) -> Any:
         """Invoke a capability with the given input data.
-        
+
         Args:
             id: Identifier of the capability to invoke
             input_data: Input data for the capability (either a dict or Pydantic model)
             context: Agent context object providing access to agent resources
-            
+
         Returns:
             Any: Result of the capability invocation
-            
+
         Raises:
             ValueError: If the capability is not found
             ValidationError: If input data fails validation against the input schema
         """
         pass
-    
+
     @abstractmethod
     async def load_capabilities_from_config(self, config: Dict[str, Any]) -> None:
         """Load capability definitions from configuration.
-        
+
         This method processes the declarative capability definitions from the
         agent's configuration and connects them to the registered handler functions.
-        
+
         Args:
             config: Agent configuration dictionary containing capability definitions
-            
+
         Raises:
             ValueError: If a required handler function is not registered
             ConfigurationError: If the configuration is invalid
@@ -594,11 +594,11 @@ async def capability_handler_function(
     context: AgentContext
 ) -> OutputModelType:
     """Handle a capability invocation.
-    
+
     Args:
         input_data: Validated input data conforming to the input schema
         context: Agent context providing access to agent resources
-        
+
     Returns:
         OutputModelType: Result conforming to the output schema
     """
@@ -618,49 +618,49 @@ The `AgentContext` object provides capability handlers with access to agent reso
 ```python
 class AgentContext:
     """Context object passed to capability handlers.
-    
+
     Provides access to agent resources, state, and services.
     """
-    
+
     @property
     def agent_id(self) -> str:
         """Get the unique identifier of the agent."""
         pass
-        
+
     @property
     def session_id(self) -> Optional[str]:
         """Get the current session ID if available."""
         pass
-    
+
     @property
     def logger(self) -> 'Logger':
         """Get the agent's logger."""
         pass
-    
+
     @property
     def state_manager(self) -> 'StateManager':
         """Get the agent's state manager for accessing agent state."""
         pass
-    
+
     @property
     def communication_manager(self) -> 'CommunicationManager':
         """Get the communication manager for sending messages."""
         pass
-    
+
     @property
     def capability_manager(self) -> 'ICapabilityManager':
         """Get the capability manager for accessing other capabilities."""
         pass
-    
+
     @property
     def knowledge_manager(self) -> 'IKnowledgeManager':
         """Get the knowledge manager for accessing knowledge bases."""
         pass
-    
+
     def get_config(self) -> Dict[str, Any]:
         """Get the agent's configuration."""
         pass
-    
+
     async def get_session_context(self) -> 'SessionContext':
         """Get the current session context for managing conversation history."""
         pass
@@ -735,28 +735,28 @@ async def get_weather_handler(
     context: AgentContext
 ) -> WeatherQueryOutput:
     """Handler for the get_weather capability.
-    
+
     Args:
         input_data: Validated weather query parameters
         context: Agent context with access to resources
-        
+
     Returns:
         WeatherQueryOutput: Weather data for the requested location
     """
     # Log the request
     context.logger.info(f"Weather requested for {input_data.location} in {input_data.units} units")
-    
+
     # In a real implementation, this would call a weather service API
     # For this example, we'll return mock data
-    
+
     # You could use the state manager to cache results
     cache_key = f"weather:{input_data.location}:{input_data.units}"
     cached_result = await context.state_manager.get(cache_key)
-    
+
     if cached_result and not input_data.forecast_days > 1:
         context.logger.info(f"Returning cached weather data for {input_data.location}")
         return cached_result
-    
+
     # Simulate API call to weather service
     # In a real implementation, this might use an HTTP client or dedicated SDK
     current = WeatherCondition(
@@ -766,7 +766,7 @@ async def get_weather_handler(
         humidity=65,
         wind_speed=10.0 if input_data.units == "metric" else 6.2
     )
-    
+
     # Generate forecast if requested
     forecast = None
     if input_data.forecast_days > 1:
@@ -780,7 +780,7 @@ async def get_weather_handler(
             )
             for i in range(1, input_data.forecast_days)
         ]
-    
+
     # Create the result
     result = WeatherQueryOutput(
         location=input_data.location,
@@ -788,11 +788,11 @@ async def get_weather_handler(
         current_conditions=current,
         forecast=forecast
     )
-    
+
     # Cache the result for future requests
     if not input_data.forecast_days > 1:
         await context.state_manager.set(cache_key, result, ttl_seconds=1800)  # 30 minute cache
-    
+
     return result
 
 
@@ -800,7 +800,7 @@ async def get_weather_handler(
 class WeatherAgent:
     async def initialize(self):
         # Other initialization code...
-        
+
         # Register the weather capability
         await self.capability_manager.register_capability(
             id="get_weather",
@@ -832,7 +832,7 @@ class WeatherAgent:
                 }
             ]
         )
-        
+
         # Load capabilities defined in configuration
         await self.capability_manager.load_capabilities_from_config(self.config)
 
@@ -849,17 +849,17 @@ async def handle_a2a_message(message):
             "units": message.function.parameters.get("units", "metric"),
             "forecast_days": message.function.parameters.get("days", 1)
         }
-        
+
         # Create agent context for this invocation
         context = create_agent_context(message.session_id)
-        
+
         # Invoke the capability
         result = await capability_manager.invoke_capability(
             id="get_weather",
             input_data=input_data,
             context=context
         )
-        
+
         # Convert result back to A2A format
         return create_a2a_response(result)
 
@@ -868,17 +868,17 @@ async def handle_mcp_message(message):
     if message.type == "tool_call" and message.name == "get_weather_data":
         # Extract parameters from MCP tool call
         params = message.parameters
-        
+
         # Create agent context
         context = create_agent_context(message.session_id)
-        
+
         # Invoke capability
         result = await capability_manager.invoke_capability(
             id="get_weather",
             input_data=params,
             context=context
         )
-        
+
         # Return result in MCP format
         return create_mcp_tool_response(result)
 ```
@@ -944,14 +944,14 @@ multi_protocol_capabilities:
         - core_id: "weather_query"
           a2a_capability_name: "get_weather"
           content_type: "application/json"
-    
+
     mcp:
       capability_format: "tool_definition"
       mappings:
         - core_id: "weather_query"
           mcp_tool_name: "getWeather"
           requires_confirmation: false
-    
+
     http:
       capability_format: "rest_endpoint"
       mappings:
@@ -1024,4 +1024,4 @@ agent = Agent(
 # Start the agent with role-based activation
 agent.activate_role("first_level_support")
 agent.start()
-``` 
+```
