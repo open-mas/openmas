@@ -145,9 +145,7 @@ class TestAgentMessageError:
 
     def test_initialization_with_message_id(self):
         """Test initialization with message ID."""
-        error = AgentMessageError(
-            "Invalid message format", agent_id="agent-1", message_id="msg-123"
-        )
+        error = AgentMessageError("Invalid message format", agent_id="agent-1", message_id="msg-123")
 
         expected = "Agent agent-1: Invalid message format (Message ID: msg-123)"
         assert str(error) == expected
@@ -199,12 +197,8 @@ class TestAgentCapabilityError:
 
     def test_capability_scenarios(self):
         """Test common capability error scenarios."""
-        not_found = AgentCapabilityError(
-            "Capability not registered", capability_name="unknown"
-        )
-        execution_failed = AgentCapabilityError(
-            "Execution timeout", capability_name="slow_task"
-        )
+        not_found = AgentCapabilityError("Capability not registered", capability_name="unknown")
+        execution_failed = AgentCapabilityError("Execution timeout", capability_name="slow_task")
 
         assert "unknown" in str(not_found)
         assert "slow_task" in str(execution_failed)
@@ -229,9 +223,7 @@ class TestAgentSessionError:
 
     def test_initialization_with_session_id(self):
         """Test initialization with session ID."""
-        error = AgentSessionError(
-            "Session not found", agent_id="session-agent", session_id="sess-789"
-        )
+        error = AgentSessionError("Session not found", agent_id="session-agent", session_id="sess-789")
 
         expected = "Agent session-agent: Session not found (Session ID: sess-789)"
         assert str(error) == expected
@@ -271,9 +263,7 @@ class TestAgentStateError:
             state_key="user_preferences",
         )
 
-        expected = (
-            "Agent stateful-agent: Invalid state value (State Key: user_preferences)"
-        )
+        expected = "Agent stateful-agent: Invalid state value (State Key: user_preferences)"
         assert str(error) == expected
         assert error.state_key == "user_preferences"
 
@@ -311,20 +301,14 @@ class TestAgentProtocolError:
             protocol_name="mcp",
         )
 
-        expected = (
-            "Agent multi-protocol-agent: Protocol adapter not found (Protocol: mcp)"
-        )
+        expected = "Agent multi-protocol-agent: Protocol adapter not found (Protocol: mcp)"
         assert str(error) == expected
         assert error.protocol_name == "mcp"
 
     def test_protocol_scenarios(self):
         """Test common protocol error scenarios."""
-        connection_failed = AgentProtocolError(
-            "Connection timeout", protocol_name="a2a"
-        )
-        invalid_message = AgentProtocolError(
-            "Invalid message format", protocol_name="http"
-        )
+        connection_failed = AgentProtocolError("Connection timeout", protocol_name="a2a")
+        invalid_message = AgentProtocolError("Invalid message format", protocol_name="http")
 
         assert "a2a" in str(connection_failed)
         assert "http" in str(invalid_message)
@@ -428,9 +412,7 @@ class TestErrorMessageFormatting:
 
     def test_combined_context_formatting(self):
         """Test formatting when multiple context elements are present."""
-        error = AgentMessageError(
-            "Message validation failed", agent_id="validator", message_id="msg-789"
-        )
+        error = AgentMessageError("Message validation failed", agent_id="validator", message_id="msg-789")
 
         error_str = str(error)
         assert "Agent validator:" in error_str

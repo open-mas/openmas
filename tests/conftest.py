@@ -8,22 +8,24 @@ Lessons from 0.2.0: 1000+ passing tests with 80% coverage but NONE worked with r
 This configuration prevents that by enforcing real-first testing patterns.
 """
 
-import pytest
 import asyncio
+import os
 import subprocess
 import tempfile
 import time
-import os
-from typing import AsyncGenerator, Generator
 from pathlib import Path
+from typing import AsyncGenerator, Generator
+
+import pytest
 
 # Real MCP imports - will fail fast if SDK not available
 try:
-    from mcp.server.fastmcp import FastMCP
-    from mcp.server.stdio import stdio_server
+    from mcp import ClientRequest
     from mcp.client.session import ClientSession
     from mcp.client.stdio import stdio_client
-    from mcp import ClientRequestId
+    from mcp.server.fastmcp import FastMCP
+    from mcp.server.stdio import stdio_server
+
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False
@@ -31,11 +33,11 @@ except ImportError:
 # OpenMAS imports
 from openmas.agent.mcp_agent import MCPAgent
 from openmas.core.simf import (
-    SIMFMessage, 
-    MessageType, 
+    MessageType,
+    SIMFMessage,
     create_invocation_message,
+    create_invocation_result_message,
     create_text_message,
-    create_invocation_result_message
 )
 
 
@@ -50,172 +52,91 @@ def check_mcp_availability():
 def real_mcp_server(check_mcp_availability):
     """
     Minimal REAL MCP server - no mocking allowed.
-    
+
     Creates actual FastMCP server with real tools and resources.
     Critical: This validates actual MCP 1.12.0 protocol behavior.
     """
     mcp = FastMCP("anti_hallucination_test_server")
-    
+
     @mcp.tool()
     def test_add(a: int, b: int) -> int:
         """Test tool for validating real MCP tool execution"""
         return a + b
-    
-    @mcp.tool()    
+
+    @mcp.tool()
     def test_echo(message: str) -> str:
         """Test tool for validating message handling"""
         return f"Echo: {message}"
-    
+
     @mcp.tool()
     def test_async_operation() -> str:
         """Test tool for validating async operations"""
         import time
+
         time.sleep(0.1)  # Simulate async work
         return "Async operation completed"
-        
+
     @mcp.resource("test://resource/{id}")
     def test_resource(id: str) -> str:
         """Test resource for validating MCP resource access"""
         return f"Real resource content for {id}"
-    
+
     @mcp.resource("test://config/info")
     def test_config_resource() -> str:
         """Test configuration resource"""
         return "Real MCP server configuration data"
-        
+
     return mcp
 
 
-@pytest.fixture
-async def real_mcp_client_session(real_mcp_server) -> AsyncGenerator[ClientSession, None]:
-    """
-    REAL MCP client connection - validates actual protocol.
-    
-    Critical: This establishes actual stdio-based MCP communication,
-    testing the complete protocol stack without mocking.
-    """
-    # Create temporary script to run the MCP server
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
-        server_script = f"""
-import asyncio
-from mcp.server.stdio import stdio_server
+# real_mcp_client_session fixture removed - no longer needed
 
-# Recreate the same server as in the fixture
-from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("anti_hallucination_test_server")
-
-@mcp.tool()
-def test_add(a: int, b: int) -> int:
-    return a + b
-
-@mcp.tool()    
-def test_echo(message: str) -> str:
-    return f"Echo: {message}"
-
-@mcp.tool()
-def test_async_operation() -> str:
-    import time
-    time.sleep(0.1)
-    return "Async operation completed"
-    
-@mcp.resource("test://resource/{{id}}")
-def test_resource(id: str) -> str:
-    return f"Real resource content for {{id}}"
-
-@mcp.resource("test://config/info")
-def test_config_resource() -> str:
-    return "Real MCP server configuration data"
-
-async def main():
-    async with stdio_server() as (read_stream, write_stream):
-        await mcp.run(read_stream, write_stream, mcp.create_init_options())
-
-if __name__ == "__main__":
-    asyncio.run(main())
-"""
-        f.write(server_script)
-        f.flush()
-        server_script_path = f.name
-
-    try:
-        # Start real MCP server process
-        process = subprocess.Popen(
-            ["python", server_script_path],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
-        )
-        
-        # Give server time to start
-        await asyncio.sleep(0.5)
-        
-        # Create real client connection
-        read_stream, write_stream = stdio_client(process)
-        
-        # Create actual client session
-        session = ClientSession(read_stream, write_stream)
-        await session.initialize()
-        
-        yield session
-        
-    finally:
-        # Cleanup
-        if process.poll() is None:
-            process.terminate()
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                process.kill()
-        
-        # Remove temporary script
-        try:
-            os.unlink(server_script_path)
-        except OSError:
-            pass
+# Helper function removed - no longer needed for deprecated tests
 
 
 @pytest.fixture
 def anti_hallucination_validator():
     """
     Validates no critical paths are mocked.
-    
+
     This fixture prevents the 0.2.0 problem where all tests passed
     but none worked with real libraries.
     """
+
     def validate_no_mocking(module_names: list[str]):
         """
         Ensure specified modules are not mocked.
-        
+
         Args:
             module_names: List of module names that must NOT be mocked
-            
+
         Raises:
             AssertionError: If any critical module is mocked
         """
         import sys
-        
+
         # Check for common mocking patterns
         mocked_modules = []
         for module_name in module_names:
             if module_name in sys.modules:
                 module = sys.modules[module_name]
                 module_type = str(type(module))
-                
+
                 # Check for Mock, MagicMock, patch, etc.
-                if any(mock_indicator in module_type.lower() for mock_indicator in [
-                    'mock', 'patch', 'magicmock', 'spec'
-                ]):
+                if any(
+                    mock_indicator in module_type.lower()
+                    for mock_indicator in ["mock", "patch", "magicmock", "spec"]
+                ):
                     mocked_modules.append(module_name)
-        
+
         assert not mocked_modules, (
             f"CRITICAL ANTI-HALLUCINATION FAILURE: "
             f"The following critical modules are mocked: {mocked_modules}. "
             f"Integration tests must use real implementations to prevent "
             f"the 0.2.0 problem of passing tests that don't work with real libraries."
         )
-    
+
     return validate_no_mocking
 
 
@@ -223,13 +144,14 @@ def anti_hallucination_validator():
 def mcp_timeout_manager():
     """
     Manages timeouts for MCP operations to prevent hanging.
-    
+
     Addresses the demo hanging issue by providing standard timeout patterns.
     """
+
     class TimeoutManager:
         def __init__(self, default_timeout: int = 10):
             self.default_timeout = default_timeout
-        
+
         async def with_timeout(self, coro, timeout: int = None):
             """Execute coroutine with timeout"""
             timeout = timeout or self.default_timeout
@@ -237,19 +159,21 @@ def mcp_timeout_manager():
                 return await asyncio.wait_for(coro, timeout=timeout)
             except asyncio.TimeoutError:
                 raise TimeoutError(f"Operation timed out after {timeout} seconds")
-        
+
         def sync_timeout(self, timeout: int = None) -> int:
             """Get timeout value for sync operations"""
             return timeout or self.default_timeout
-    
+
     return TimeoutManager()
 
 
 @pytest.fixture
-async def real_mcp_agent(real_mcp_client_session, mcp_timeout_manager) -> AsyncGenerator[MCPAgent, None]:
+async def real_mcp_agent(
+    real_mcp_client_session, mcp_timeout_manager
+) -> "AsyncGenerator[MCPAgent, None]":
     """
     Real MCPAgent instance connected to actual MCP server.
-    
+
     Critical: This tests the complete MCPAgent implementation
     against real MCP 1.12.0 protocol without any mocking.
     """
@@ -260,19 +184,19 @@ async def real_mcp_agent(real_mcp_client_session, mcp_timeout_manager) -> AsyncG
         "mcp_config": {
             # Real MCP configuration
             "server_name": "anti_hallucination_test_server",
-            "timeout": mcp_timeout_manager.default_timeout
-        }
+            "timeout": mcp_timeout_manager.default_timeout,
+        },
     }
-    
+
     # Create agent with real MCP session
     agent = MCPAgent(
         agent_id=agent_config["agent_id"],
         name=agent_config["name"],
         description=agent_config["description"],
         mcp_session=real_mcp_client_session,
-        **agent_config.get("mcp_config", {})
+        **agent_config.get("mcp_config", {}),
     )
-    
+
     try:
         # Start agent - this tests real initialization
         await mcp_timeout_manager.with_timeout(agent.start())
@@ -289,9 +213,10 @@ async def real_mcp_agent(real_mcp_client_session, mcp_timeout_manager) -> AsyncG
 def real_simf_messages():
     """
     Factory for creating real SIMF messages for testing.
-    
+
     Provides realistic message patterns for integration testing.
     """
+
     def create_tool_call_message(tool_name: str, **params):
         """Create SIMF message for MCP tool call"""
         return create_invocation_message(
@@ -301,24 +226,24 @@ def real_simf_messages():
             sender_id="test_sender",
             recipient_id="test_recipient",
             conversation_id="test_conversation",
-            protocol_metadata={"protocol": "mcp", "tool_name": tool_name}
+            protocol_metadata={"protocol": "mcp", "tool_name": tool_name},
         )
-    
+
     def create_resource_request_message(resource_uri: str):
         """Create SIMF message for MCP resource request"""
         return create_invocation_message(
             invocation_type="resource_request",
             target=resource_uri,
             parameters={},
-            sender_id="test_sender", 
+            sender_id="test_sender",
             recipient_id="test_recipient",
             conversation_id="test_conversation",
-            protocol_metadata={"protocol": "mcp", "resource_uri": resource_uri}
+            protocol_metadata={"protocol": "mcp", "resource_uri": resource_uri},
         )
-    
+
     return {
         "tool_call": create_tool_call_message,
-        "resource_request": create_resource_request_message
+        "resource_request": create_resource_request_message,
     }
 
 
@@ -326,14 +251,13 @@ def real_simf_messages():
 def pytest_configure(config):
     """Configure pytest with anti-hallucination markers"""
     config.addinivalue_line(
-        "markers", "anti_hallucination: Tests that validate real behavior without mocking"
+        "markers",
+        "anti_hallucination: Tests that validate real behavior without mocking",
     )
     config.addinivalue_line(
         "markers", "real: Tests using real external services/libraries"
     )
-    config.addinivalue_line(
-        "markers", "mcp: Tests involving MCP protocol"
-    )
+    config.addinivalue_line("markers", "mcp: Tests involving MCP protocol")
     config.addinivalue_line(
         "markers", "timeout: Tests with specific timeout requirements"
     )
@@ -345,8 +269,10 @@ def pytest_runtest_setup(item):
     if item.get_closest_marker("anti_hallucination"):
         if not MCP_AVAILABLE:
             pytest.skip("Anti-hallucination test requires real MCP SDK")
-    
+
     # For real tests, add warnings about external dependencies
     if item.get_closest_marker("real"):
         if os.getenv("CI") and os.getenv("SKIP_REAL_TESTS"):
-            pytest.skip("Skipping real tests in CI (set SKIP_REAL_TESTS=false to enable)") 
+            pytest.skip(
+                "Skipping real tests in CI (set SKIP_REAL_TESTS=false to enable)"
+            )
