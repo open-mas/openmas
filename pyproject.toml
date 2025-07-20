@@ -100,7 +100,7 @@ build-backend = "poetry.core.masonry.api"
 # ============================================================================
 
 [tool.black]
-line-length = 120
+line-length = 88
 target-version = ["py310"]
 exclude = '''
 /(
@@ -119,7 +119,7 @@ exclude = '''
 
 [tool.isort]
 profile = "black"
-line_length = 120
+line_length = 88
 skip_glob = ["*/.tox/*", "0.2.0/*"]
 known_first_party = ["openmas"]
 
@@ -144,7 +144,7 @@ markers = [
     "unit: marks unit tests (fast, no external deps)",
     "integration: marks integration tests (may require external services)",
     "mcp: marks tests that require mcp dependencies",
-    "grpc: marks tests that require grpc dependencies", 
+    "grpc: marks tests that require grpc dependencies",
     "mqtt: marks tests that require mqtt dependencies",
     "http: marks tests that require http dependencies",
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
@@ -179,13 +179,13 @@ exclude_lines = [
     "class .*\\bProtocol\\):",
     "@(abc\\.)?abstractmethod",
 ]
-fail_under = 70
+fail_under = 80
 
 [tool.flake8]
-max-line-length = 120
+max-line-length = 88
 exclude = [
     ".git",
-    "__pycache__", 
+    "__pycache__",
     ".tox",
     ".venv",
     "build",
@@ -195,4 +195,4 @@ exclude = [
 ignore = [
     "E203",  # whitespace before ':'
     "W503",  # line break before binary operator
-] 
+]

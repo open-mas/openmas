@@ -66,4 +66,4 @@ repos:
     rev: v1.4.0
     hooks:
     -   id: python-safety-dependencies-check
-        args: ['--ignore=70612']  # Ignore known false positives 
+        args: ['--ignore=70612']  # Ignore known false positives
