@@ -1,0 +1,106 @@
+site_name: OpenMAS Documentation
+site_description: Open Multi-Agent System Framework Documentation
+site_url: https://docs.openmas.ai
+repo_url: https://github.com/openmas-ai/openmas
+repo_name: openmas-ai/openmas
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: indigo
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.annotate
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.tabbed
+  - pymdownx.critic
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - admonition
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          selection:
+            docstring_style: google
+          rendering:
+            show_source: true
+
+nav:
+  - Home: index.md
+  - Why OpenMAS: why_openmas.md
+  - Getting Started:
+    - Installation: installation.md
+    - Quickstart: quickstart.md
+  - Core Concepts: core_concepts/index.md
+  - Use Cases: use_cases/index.md
+  - Architecture:
+    - Overview: architecture/index.md
+    - Reasoning Agnosticism: architecture/reasoning.md
+    - Protocol Support: architecture/protocols.md
+    - Extension System: architecture/extension.md
+  - Configuration:
+    - Overview: configuration/index.md
+    - Unified Schema: configuration/schema.md
+    - Environments: configuration/environments.md
+    - Validation: configuration/validation.md
+  - Protocols:
+    - Overview: protocols/index.md
+    - A2A Protocol:
+      - Overview: protocols/a2a/index.md
+      - Agent Cards: protocols/a2a/agent_cards.md
+      - Capabilities: protocols/a2a/capabilities.md
+      - Configuration: protocols/a2a/config.md
+    - MCP Protocol:
+      - Overview: protocols/mcp/index.md
+      - Server Mode: protocols/mcp/server_mode.md
+      - Client Mode: protocols/mcp/client_mode.md
+      - Configuration: protocols/mcp/config.md
+    - HTTP Protocol: protocols/http.md
+    - MQTT Protocol: protocols/mqtt.md
+    - gRPC Protocol: protocols/grpc.md
+  - Agents:
+    - Overview: agents/index.md
+    - Capabilities: agents/capabilities.md
+    - Topologies: agents/topologies.md
+    - Lifecycle: agents/lifecycle.md
+  - Assets:
+    - Overview: assets/index.md
+    - Loaders: assets/loaders.md
+    - Resources: assets/resources.md
+  - Security:
+    - Overview: security/index.md
+    - Authentication: security/authentication.md
+    - Authorization: security/authorization.md
+  - Observability:
+    - Overview: observability/index.md
+    - Logging: observability/logging.md
+    - Metrics: observability/metrics.md
+    - Tracing: observability/tracing.md
+  - Guides:
+    - Overview: guides/index.md
+    - Protocol Guides: guides/protocol_guides/index.md
+    - Advanced Guides: guides/advanced/index.md
+  - API Reference: api/index.md
+  - Migration:
+    - 0.2.0 to 0.3.0: migration/0.2.0_to_0.3.0.md
+  - Examples:
+    - Overview: examples/index.md
+    - Simple Agent: examples/simple_agent.md
+    - A2A Agents: examples/a2a_agents.md
+    - MCP Agents: examples/mcp_agents.md
+    - Hybrid Agents: examples/hybrid_agents.md
