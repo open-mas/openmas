@@ -35,7 +35,7 @@ alwaysApply: true
 
 **EVERY AI session MUST start by reading these 4 files in order:**
 
-1. **This file** (`.cursor/rules/openmas-ai-continuity.mdc`) - Core rules & standards
+1. **This file** (`.cursor/rules/openmas_ai_continuity.md`) - Core rules & standards
 2. **Code Quality Standards** (`.cursor/rules/openmas_code_quality_standards.md`) - Proactive quality guidelines
 3. **Current Phase** (`refactoring_work/planning/current_phase.md`) - Active objectives
 4. **Task Tracker** (`refactoring_work/planning/task_tracker.md`) - Status & next actions
@@ -64,7 +64,7 @@ alwaysApply: true
 ### **Planning Documents Lifecycle**
 
 | Document | Purpose | Lifecycle | Location |
-|----------|---------|-----------|----------|
+|----|---|-----|----|
 | `current_phase.md` | Active phase objectives | **LIVING** - Updated throughout phase | `refactoring_work/planning/` |
 | `task_tracker.md` | All task status tracking | **LIVING** - Updated in real-time | `refactoring_work/planning/` |
 | `PHASE_N_MASTER_PLAN.md` | Phase-specific master plan | **IMMUTABLE** - Archive when phase complete | `refactoring_work/01_implementation_plan/` → `refactoring_work/archive/phase_N/` |
@@ -72,7 +72,7 @@ alwaysApply: true
 ### **Task Files Lifecycle**
 
 | Status | Location | Actions Required |
-|--------|----------|------------------|
+|-----|----|---|
 | **NOT_STARTED** | `refactoring_work/planning/TASK_*.md` | Create file, add to tracker |
 | **IN_PROGRESS** | `refactoring_work/planning/TASK_*.md` | Update Progress Notes in real-time |
 | **COMPLETE** | `refactoring_work/archive/phase_N/TASK_*.md` | Move file, update tracker, update current_phase.md |
@@ -80,7 +80,7 @@ alwaysApply: true
 ### **Design Documentation Lifecycle**
 
 | Type | Purpose | Location | Lifecycle |
-|------|---------|----------|-----------|
+|---|---|----|-----|
 | **Completed Specs** | Ready-for-implementation APIs | `refactoring_work/design/completed/` | **IMMUTABLE** - Reference only |
 | **Active Design** | Work-in-progress specs | `refactoring_work/design/[category]/` | **LIVING** - Updated during work |
 | **Archived Specs** | Historical/deprecated | `refactoring_work/archive/phase_N/design/` | **IMMUTABLE** - Historical reference |
@@ -209,6 +209,9 @@ openmas/
 │   └── 01_implementation_plan/    # IMMUTABLE: Master plans & initial thinking
 ├── src/openmas/                   # Implementation code
 ├── tests/                         # Test suites mirroring src structure
+├── docs/                          # Documentation
+│   ├── guides/                    # Best practices & development guides
+│   └── references/                # Centralized specs & environment info
 └── 0.2.0/                        # REFERENCE ONLY: Previous implementation
 ```
 
@@ -243,7 +246,7 @@ openmas/
 **Issue**: `"Invalid request parameters"` and `"Received request before initialization"` errors
 **Root Cause**: Missing explicit `session.initialize()` call before MCP requests
 **Solution**: Added `await asyncio.wait_for(session.initialize(), timeout=10.0)` before all MCP operations
-**Reference**: [GitHub Issue #423](mdc:https:/github.com/modelcontextprotocol/python-sdk/issues/423#issuecomment-2932367495)
+**Reference**: [GitHub Issue #423](https://github.com/modelcontextprotocol/python-sdk/issues/423#issuecomment-2932367495)
 **Status**: ✅ **VERIFIED WORKING** - MCP tools execute successfully in production
 
 #### **✅ PROTOCOL ADAPTER DOCUMENTATION (COMPLETED 2024-12-28)**
