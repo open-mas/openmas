@@ -141,6 +141,11 @@ cython_debug/
 # VS Code
 .vscode/
 
+# Cursor IDE
+.cursor/settings.json
+.cursor/project.json
+# Keep .cursor/rules/ for AI continuity
+
 # macOS
 .DS_Store
 .AppleDouble
