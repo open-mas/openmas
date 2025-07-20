@@ -188,6 +188,6 @@ These translations maintain semantic fidelity through the rich SIMF payload type
 
 - [Standard Internal Message Format](./internal_message_format_standard.md)
 - [Reasoning Agnostic Design](./reasoning_agnostic_design.md)
-- [Protocol Adapters](/refactoring_work/00b_overview/05_extensions/protocol_adapters/README.md)
-- [Configuration Schema](/refactoring_work/00b_overview/03_configuration/unified_configuration_schema.md)
-- [Protocol-to-Pattern Mapping](/refactoring_work/00b_overview/02_protocols/protocol_to_pattern_mapping.md)
+- [IProtocolAdapter Interface](../02_protocols/iprotocol_adapter_interface.md)
+- [Configuration Schema](../03_configuration/unified_configuration_schema.md)
+- [Protocol-to-Pattern Mapping](../02_protocols/protocol_to_pattern_mapping.md)

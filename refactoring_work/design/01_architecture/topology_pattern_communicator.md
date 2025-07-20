@@ -214,19 +214,22 @@ The integration approach is implemented in the OpenMAS framework through:
 
 1. **TopologyManager**: Loads topology configuration and manages agent relationships
 2. **PatternRegistry**: Registers and configures communication patterns
-3. **CommunicatorFactory**: Creates and configures protocol-specific communicators
+3. **Extension System**: Creates and configures protocol-specific communicators through extensions
 
 ```python
 # Example implementation
 from openmas.agent import Agent
 from openmas.topology import TopologyManager
 from openmas.patterns import RequestResponsePattern, EventBasedPattern
-from openmas.communicator import A2ACommunicator
+from openmas.extensions import CommunicatorExtension
 
 class TravelCoordinator(Agent):
     async def setup(self):
         # Set up topology
         self.topology_manager = TopologyManager(self)
+
+        # Protocol interfaces are configured through the extension system
+        # and automatically available based on agent configuration
 
         # Register capabilities with patterns
         self.register_capability(
