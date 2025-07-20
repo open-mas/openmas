@@ -40,7 +40,7 @@ python integration_demo.py
 
 This runs a comprehensive demo showing:
 - Real MCP server tool calls with SIMF integration
-- Resource access → SIMF asset references  
+- Resource access → SIMF asset references
 - Streaming simulation with SIMF stream context
 - Complete semantic preservation validation
 
@@ -76,7 +76,7 @@ simf_message = translator.mcp_tool_call_to_simf(mcp_request, "session_001")
 
 # SIMF message preserves semantic meaning:
 # - message_type: "TOOL_INVOCATION"
-# - payload.capability_name: "analyze_text" 
+# - payload.capability_name: "analyze_text"
 # - payload.parameters: {"text": "Hello world", "analysis_type": "sentiment"}
 # - source_protocol_type: "mcp"
 ```
@@ -122,11 +122,11 @@ adapter = MockMCPProtocolAdapter()
 
 # IProtocolAdapter.to_internal_format() - Protocol → SIMF
 simf_message = await adapter.to_internal_format(
-    mcp_request, 
+    mcp_request,
     context={"session_id": "adapter_session"}
 )
 
-# IProtocolAdapter.from_internal_format() - SIMF → Protocol  
+# IProtocolAdapter.from_internal_format() - SIMF → Protocol
 reconstructed_mcp = await adapter.from_internal_format(simf_message)
 ```
 
@@ -209,7 +209,7 @@ assert reconstructed_mcp.params["name"] == "analyze_text"  # Our format
 ### **3. Comprehensive Test Coverage**
 
 - **Unit Tests**: Individual translation functions
-- **Integration Tests**: Real MCP server interactions  
+- **Integration Tests**: Real MCP server interactions
 - **End-to-End Tests**: Complete workflow validation
 - **Edge Case Tests**: Unicode, special characters, complex data
 
@@ -275,4 +275,4 @@ With these integration examples complete, OpenMAS is ready for:
 
 ---
 
-**The SIMF-MCP integration examples provide a bulletproof foundation for protocol-agnostic agent communication in OpenMAS, validated against real protocol implementations and designed for production use.** 
+**The SIMF-MCP integration examples provide a bulletproof foundation for protocol-agnostic agent communication in OpenMAS, validated against real protocol implementations and designed for production use.**

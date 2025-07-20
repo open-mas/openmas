@@ -5,9 +5,12 @@ This template demonstrates Dependency Injection, graceful shutdown, and best pra
 
 To add more agents, copy this file into a new directory under `agents/` and update `openmas_project.yml`.
 """
+
 import asyncio
 import signal
+
 from openmas.agent import BaseAgent
+
 
 class Agent(BaseAgent):
     """A robust, testable OpenMAS agent with graceful shutdown."""
@@ -39,11 +42,13 @@ class Agent(BaseAgent):
         self.logger.info("Shutting down sample agent")
         self.shutdown_event.set()
 
+
 # Graceful shutdown handler for standalone runs
 def _handle_signals(agent):
     loop = asyncio.get_event_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(sig, lambda: asyncio.create_task(agent.shutdown()))
+
 
 # Example main for running the agent standalone (for testing)
 if __name__ == "__main__":

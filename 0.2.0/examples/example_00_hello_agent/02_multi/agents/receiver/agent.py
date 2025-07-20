@@ -1,6 +1,7 @@
 """Receiver agent implementation for real multi-agent hello world example."""
 
 import asyncio
+
 from openmas.agent import BaseAgent
 
 
@@ -15,17 +16,17 @@ class Agent(BaseAgent):
     async def setup(self) -> None:
         """Initialize the agent."""
         self.logger.info("Setting up the Receiver Agent")
-        
+
         # Register message handlers
         await self.communicator.register_handler("handle_message", self.handle_message)
         await self.communicator.register_handler("ping", self.ping)
 
     async def ping(self, params: dict) -> dict:
         """Simple ping handler to check if the agent is online.
-        
+
         Args:
             params: Empty dictionary
-            
+
         Returns:
             A response indicating the agent is online
         """
@@ -34,24 +35,24 @@ class Agent(BaseAgent):
 
     async def handle_message(self, payload: dict) -> dict:
         """Handle incoming messages from the sender agent.
-        
+
         Args:
             payload: The message payload, expected to contain a greeting
-            
+
         Returns:
             A response message acknowledging receipt
         """
         self.logger.info(f"📨 Received message: {payload}")
-        
+
         # Extract greeting if present
         greeting = payload.get("greeting", "no greeting provided")
-        
+
         # Set flag to indicate we received a message (useful for testing)
         self.message_received = True
-        
+
         # Log the receipt
         self.logger.info(f"Successfully received greeting: '{greeting}'")
-        
+
         # Return a response
         return {"status": "received", "message": "Hello received and acknowledged!"}
 
@@ -63,7 +64,7 @@ class Agent(BaseAgent):
             # so we'll just keep it alive until shutdown is requested
             while not self.shutdown_event.is_set():
                 await asyncio.sleep(1)
-                
+
                 # Display periodic heartbeat messages to show the agent is still alive
                 if not self.message_received:
                     self.logger.debug("Waiting for messages...")

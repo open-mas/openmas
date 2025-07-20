@@ -21,7 +21,7 @@ mcp_server = FastMCP("OpenMAS Validation Server")
 def analyze_text(text: str, analysis_type: str = "sentiment") -> Dict[str, Any]:
     """
     Analyze text using various analysis types.
-    
+
     Args:
         text: The text to analyze
         analysis_type: Type of analysis (sentiment, length, words)
@@ -34,14 +34,14 @@ def analyze_text(text: str, analysis_type: str = "sentiment") -> Dict[str, Any]:
             "score": score,
             "sentiment": "positive" if score > 0.5 else "negative",
             "confidence": 0.95,
-            "text": text
+            "text": text,
         }
     elif analysis_type == "length":
         return {
             "analysis_type": "length",
             "character_count": len(text),
             "word_count": len(text.split()),
-            "text": text
+            "text": text,
         }
     elif analysis_type == "words":
         words = text.split()
@@ -50,17 +50,19 @@ def analyze_text(text: str, analysis_type: str = "sentiment") -> Dict[str, Any]:
             "words": words,
             "unique_words": list(set(words)),
             "most_common": max(set(words), key=words.count) if words else "",
-            "text": text
+            "text": text,
         }
     else:
         raise ValueError(f"Unknown analysis type: {analysis_type}")
 
 
 @mcp_server.tool()
-async def create_document(title: str, content: str, format: str = "txt") -> Dict[str, str]:
+async def create_document(
+    title: str, content: str, format: str = "txt"
+) -> Dict[str, str]:
     """
     Create a temporary document with given content.
-    
+
     Args:
         title: Document title
         content: Document content
@@ -69,31 +71,34 @@ async def create_document(title: str, content: str, format: str = "txt") -> Dict
     # Create temporary directory for documents
     temp_dir = Path(tempfile.gettempdir()) / "openmas_validation"
     temp_dir.mkdir(exist_ok=True)
-    
+
     # Generate filename with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{title}_{timestamp}.{format}"
     file_path = temp_dir / filename
-    
+
     # Write content based on format
     if format == "json":
         import json
+
         content_data = {"title": title, "content": content, "created": timestamp}
         file_path.write_text(json.dumps(content_data, indent=2))
     elif format == "md":
         md_content = f"# {title}\n\n{content}\n\n*Created: {timestamp}*"
         file_path.write_text(md_content)
     else:  # txt
-        txt_content = f"{title}\n{'=' * len(title)}\n\n{content}\n\nCreated: {timestamp}"
+        txt_content = (
+            f"{title}\n{'=' * len(title)}\n\n{content}\n\nCreated: {timestamp}"
+        )
         file_path.write_text(txt_content)
-    
+
     return {
         "status": "success",
         "file_path": str(file_path),
         "title": title,
         "format": format,
         "size_bytes": file_path.stat().st_size,
-        "created": timestamp
+        "created": timestamp,
     }
 
 
@@ -107,12 +112,13 @@ def get_server_info() -> str:
         "capabilities": {
             "tools": ["analyze_text", "create_document"],
             "resources": ["config://server/info", "docs://list"],
-            "prompts": ["analyze_prompt", "document_prompt"]
+            "prompts": ["analyze_prompt", "document_prompt"],
         },
         "supported_formats": ["txt", "md", "json"],
-        "created": datetime.now().isoformat()
+        "created": datetime.now().isoformat(),
     }
     import json
+
     return json.dumps(info, indent=2)
 
 
@@ -120,27 +126,30 @@ def get_server_info() -> str:
 def list_documents() -> str:
     """List all created documents."""
     temp_dir = Path(tempfile.gettempdir()) / "openmas_validation"
-    
+
     if not temp_dir.exists():
         return json.dumps({"documents": [], "count": 0})
-    
+
     documents = []
     for file_path in temp_dir.glob("*"):
         if file_path.is_file():
-            documents.append({
-                "name": file_path.name,
-                "size": file_path.stat().st_size,
-                "modified": file_path.stat().st_mtime,
-                "path": str(file_path)
-            })
-    
+            documents.append(
+                {
+                    "name": file_path.name,
+                    "size": file_path.stat().st_size,
+                    "modified": file_path.stat().st_mtime,
+                    "path": str(file_path),
+                }
+            )
+
     result = {
         "documents": sorted(documents, key=lambda x: x["modified"], reverse=True),
         "count": len(documents),
-        "directory": str(temp_dir)
+        "directory": str(temp_dir),
     }
-    
+
     import json
+
     return json.dumps(result, indent=2)
 
 
@@ -148,7 +157,7 @@ def list_documents() -> str:
 def analyze_prompt(text: str, focus: str = "general") -> str:
     """
     Generate a prompt for text analysis.
-    
+
     Args:
         text: Text to analyze
         focus: Analysis focus (general, sentiment, style, content)
@@ -203,7 +212,7 @@ Include analysis of:
 def document_prompt(title: str, purpose: str = "general") -> str:
     """
     Generate a prompt for document creation.
-    
+
     Args:
         title: Document title
         purpose: Document purpose (report, summary, analysis, creative)
@@ -281,6 +290,6 @@ if __name__ == "__main__":
     print("Available tools: analyze_text, create_document")
     print("Available resources: config://server/info, docs://list")
     print("Available prompts: analyze_prompt, document_prompt")
-    
+
     # Run the server
-    mcp_server.run() 
+    mcp_server.run()

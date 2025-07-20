@@ -144,11 +144,11 @@ jobs:
   security_scan:
     name: Security Scan
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
+
     - name: Run Bandit Security Lint
       uses: securecodewarrior/github-action-bandit@v1
       with:
@@ -162,7 +162,7 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11", "3.12"]
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -232,7 +232,7 @@ jobs:
         generate_release_notes: true
         body: |
           ## OpenMAS 0.3.0 Release
-          
+
           This release includes:
           - 🚀 Reasoning-agnostic multi-agent framework
           - 🔄 Standard Internal Message Format (SIMF)
@@ -240,7 +240,7 @@ jobs:
           - 🧪 Comprehensive test framework templates
           - 🔧 Protocol adapters for MCP, gRPC, MQTT, HTTP
           - 📊 Anti-hallucination validation system
-          
+
           See the changelog for full details.
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Provided by Actions 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Provided by Actions

@@ -1,6 +1,7 @@
 """Sender agent implementation for real multi-agent hello world example."""
 
 import asyncio
+
 from openmas.agent import BaseAgent
 
 
@@ -23,19 +24,14 @@ class Agent(BaseAgent):
         """Wait for the receiver agent to come online."""
         self.logger.info("Waiting for receiver agent to be available...")
         retries = 0
-        
+
         while not self.receiver_available and not self.shutdown_event.is_set():
             try:
                 # Simple ping to check if receiver is available
-                await self.communicator.send_request(
-                    target_service="receiver", 
-                    method="ping", 
-                    params={}, 
-                    timeout=1.0
-                )
+                await self.communicator.send_request(target_service="receiver", method="ping", params={}, timeout=1.0)
                 self.receiver_available = True
                 self.logger.info("✅ Receiver agent is now available!")
-                
+
                 # Once receiver is available, send the message
                 await self._send_greeting()
             except Exception:
@@ -46,37 +42,35 @@ class Agent(BaseAgent):
     async def _send_greeting(self) -> None:
         """Send a greeting message to the receiver agent."""
         self.logger.info("Sending greeting to receiver agent")
-        
+
         # Send message to receiver
         message = {"greeting": "Hello from a real agent!"}
         try:
             result = await self.communicator.send_request(
-                target_service="receiver", 
-                method="handle_message", 
-                params=message
+                target_service="receiver", method="handle_message", params=message
             )
             self.message_sent = True
             self.logger.info(f"Received response from receiver: {result}")
-            
+
             # Start countdown and finish
             await self._run_countdown()
-            
+
             # Auto-terminate for demonstration purposes
             self.logger.info("Example complete - agent terminating")
             await self.stop()
-            
+
         except Exception as e:
             self.logger.error(f"Error sending message to receiver: {e}")
 
     async def _run_countdown(self) -> None:
         """Run a countdown after successful message exchange."""
         self.logger.info("Starting countdown (message exchange successful)...")
-        
+
         # Countdown from 5 to 1
         for count in range(5, 0, -1):
             self.logger.info(f"Countdown: {count}...")
             await asyncio.sleep(1)
-            
+
         # Finish with KABOOM!
         self.logger.info("🔥 KABOOM! 💥")
         await asyncio.sleep(0.5)

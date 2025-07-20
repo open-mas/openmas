@@ -44,7 +44,9 @@ class ProjectInitializer:
                 actions[init_file] = f'"""OpenMAS {subdir} package."""\n'
 
         # Create README.md
-        actions[self.project_path / "README.md"] = f"""
+        actions[
+            self.project_path / "README.md"
+        ] = f"""
 # {self.project_display_name}
 
 Welcome to your OpenMAS project!
@@ -74,7 +76,6 @@ If you use these communicators, add the relevant line to your `requirements.txt`
 ## Further Documentation
 - See [docs/](../docs/) for API reference, guides, and advanced configuration.
 """
-
 
         # Create dependency files based on the chosen option
         if self.poetry:
@@ -117,7 +118,6 @@ build-backend = "poetry.core.masonry.api"
                 "# openmas[mqtt]\n"
                 "# openmas[grpc]\n"
             )
-
 
         # Create .gitignore
         gitignore_content = "__pycache__/\n*.py[cod]\n*$py.class\n.env\n.venv\nenv/\nvenv/\nENV/\nenv.bak/\nvenv.bak/\n"
