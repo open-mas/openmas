@@ -21,6 +21,27 @@ OpenMAS agents follow key principles:
 4. **State Management**: Layered state handling across different scopes
 5. **Session Awareness**: Proper session management and context handling
 
+## 🔗 **Foundation: Building Effective Agents**
+
+OpenMAS agent implementation builds on **[Anthropic's "Building Effective Agents"](https://www.anthropic.com/engineering/building-effective-agents)** best practices, extending them with:
+
+- **Protocol Independence**: Work across A2A, MCP, HTTP, MQTT, gRPC without modification
+- **Reasoning Agnosticism**: Support for rule-based, BDI, LLM, and hybrid reasoning approaches
+- **Multi-Agent Coordination**: Built-in patterns for orchestrator-worker, peer-to-peer, and hierarchical topologies
+- **State Management**: Layered state persistence across conversation, session, and permanent scopes
+- **Configuration-Driven**: Unified configuration schema for all agent aspects
+
+### **Anthropic Patterns in OpenMAS Context:**
+
+| Anthropic Best Practice | OpenMAS Implementation |
+|-------------------------|----------------------|
+| **Planning and Reasoning** | Reasoning-agnostic design supports any approach |
+| **Tool Use** | Protocol-agnostic tool invocation via SIMF |
+| **Multimodal Capabilities** | Asset management system for multimedia content |
+| **Long-running Conversations** | Session management with layered state persistence |
+| **Agent Handoffs** | Multi-agent coordination patterns and capability discovery |
+| **Human-in-the-loop** | Configurable interaction patterns and approval workflows |
+
 ## Documentation Structure
 
 This directory contains:
@@ -93,26 +114,46 @@ class MyAgent(BaseAgent):
 
 ## Agent Types and Patterns
 
-### 1. Protocol-Specific Agent Templates
+OpenMAS provides proven agent patterns documented in [Agent Patterns](../agent_patterns.md) and [Agent Topologies](../agent_topologies.md). This implementation guide shows how to implement these patterns in practice.
 
-- **A2A Agent**: Agent optimized for Agent-to-Agent communication
-- **MCP Agent**: Agent with MCP tool integration capabilities
-- **HTTP Agent**: Agent for REST API interactions
+### 1. **Established OpenMAS Patterns (0.2.0 → 0.3.0)**
+
+#### **Orchestrator-Worker Pattern**
+*Built into OpenMAS since 0.2.0, enhanced in 0.3.0*
+
+- **Orchestrator Agent**: Central coordination with task delegation capabilities
+- **Worker Agent**: Specialized task handling with capability registration
+- **0.3.0 Enhancements**: Protocol independence, improved session management, topology integration
+
+#### **Multi-Agent Coordination Patterns**
+*New in 0.3.0, building on Anthropic's agent handoff patterns*
+
+- **Peer-to-Peer Agents**: Collaborative agents with capability discovery
+- **Hierarchical Agents**: Parent-child relationships with delegation
+- **Hub-and-Spoke Agents**: Central hub with specialized spoke agents
+
+### 2. **Protocol-Specific Agent Templates**
+
+- **A2A Agent**: Agent optimized for Agent-to-Agent communication and capability discovery
+- **MCP Agent**: Agent with MCP tool integration capabilities and resource management
+- **HTTP Agent**: Agent for REST API interactions and web service integration
 - **Multi-Protocol Agent**: Agent supporting multiple protocols simultaneously
 
-### 2. Reasoning Pattern Templates
+### 3. **Reasoning Pattern Templates**
+*Implementing Anthropic's reasoning best practices*
 
-- **Rule-Based Agent**: Traditional rule-based reasoning
-- **LLM Agent**: Large Language Model integration
-- **Hybrid Agent**: Combining multiple reasoning approaches
+- **Rule-Based Agent**: Traditional rule-based reasoning with OpenMAS state management
+- **LLM Agent**: Large Language Model integration following Anthropic guidelines
+- **Hybrid Agent**: Combining multiple reasoning approaches with reasoning agnosticism
 - **BDI Agent**: Belief-Desire-Intention framework integration
 
-### 3. Functional Pattern Templates
+### 4. **Functional Pattern Templates**
+*Based on established OpenMAS component patterns*
 
-- **Data Processing Agent**: Specialized for data transformation
-- **Coordination Agent**: Multi-agent orchestration
-- **Interface Agent**: Human-computer interaction
-- **Service Agent**: External service integration
+- **Data Processing Agent**: Specialized for data transformation using asset management
+- **Coordination Agent**: Multi-agent orchestration using topology patterns
+- **Interface Agent**: Human-computer interaction with session management
+- **Service Agent**: External service integration using protocol adapters
 
 ## Configuration Integration
 
@@ -310,10 +351,23 @@ For detailed implementation guidance, refer to:
 
 ## References
 
-- [Agent Framework Overview](../agent_framework_overview.md)
-- [Agent Capabilities](../agent_capabilities.md)
-- [Session Management](../sessions/)
-- [State Management](../state/)
-- [Unified Configuration Schema](../../03_configuration/unified_configuration_schema.md)
-- [Testing Framework](../../16_testing/)
-- [Observability](../../12_observability/)
+### **Foundation & Best Practices**
+- **[Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents)** - Anthropic's foundational guide for agent development
+- [Agent Framework Overview](../agent_framework_overview.md) - OpenMAS agent architecture
+- [Agent Patterns](../agent_patterns.md) - Established OpenMAS design patterns
+- [Agent Topologies](../agent_topologies.md) - Multi-agent organization patterns
+
+### **OpenMAS Framework Integration**
+- [Agent Capabilities](../agent_capabilities.md) - Capability system implementation
+- [Session Management](../sessions/) - Session-aware agent development
+- [State Management](../state/) - Layered state management
+- [Unified Configuration Schema](../../03_configuration/unified_configuration_schema.md) - Agent configuration
+
+### **Implementation Support**
+- [Testing Framework](../../16_testing/) - Agent testing strategies
+- [Observability](../../12_observability/) - Monitoring and debugging
+- [Protocol Documentation](../../02_protocols/) - Protocol-specific implementation details
+
+### **Legacy Reference (0.2.0)**
+- **[0.2.0 Agent Patterns](../../../0.2.0/docs/guides/patterns.md)** - Original orchestrator-worker implementation
+- **[0.2.0 README](../../../0.2.0/README.md)** - Original framework documentation referencing Anthropic best practices
