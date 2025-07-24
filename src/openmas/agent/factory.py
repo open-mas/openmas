@@ -12,7 +12,7 @@ Based on specifications in:
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any
 
 import yaml
 
@@ -28,7 +28,7 @@ class ConfigLoader:
     """Handles loading and validation of agent configurations."""
 
     @staticmethod
-    def load_from_file(config_path: Union[str, Path]) -> Dict[str, Any]:
+    def load_from_file(config_path: str | Path) -> dict[str, Any]:
         """
         Load configuration from a file.
 
@@ -44,28 +44,22 @@ class ConfigLoader:
         config_path = Path(config_path)
 
         if not config_path.exists():
-            raise AgentConfigurationError(
-                f"Configuration file not found: {config_path}"
-            )
+            raise AgentConfigurationError(f"Configuration file not found: {config_path}")
 
         try:
-            with open(config_path, "r") as f:
+            with open(config_path) as f:
                 if config_path.suffix.lower() in [".yaml", ".yml"]:
                     return yaml.safe_load(f)
                 elif config_path.suffix.lower() == ".json":
                     return json.load(f)
                 else:
-                    raise AgentConfigurationError(
-                        f"Unsupported config file format: {config_path.suffix}"
-                    )
+                    raise AgentConfigurationError(f"Unsupported config file format: {config_path.suffix}")
 
         except Exception as e:
-            raise AgentConfigurationError(
-                f"Failed to load configuration from {config_path}: {e}"
-            )
+            raise AgentConfigurationError(f"Failed to load configuration from {config_path}: {e}") from e
 
     @staticmethod
-    def validate_config(config: Dict[str, Any]) -> None:
+    def validate_config(config: dict[str, Any]) -> None:
         """
         Validate agent configuration.
 
@@ -92,13 +86,11 @@ class ConfigLoader:
             raise AgentConfigurationError("name must be a non-empty string")
 
         # Validate optional fields
-        if "capabilities" in config:
-            if not isinstance(config["capabilities"], list):
-                raise AgentConfigurationError("capabilities must be a list")
+        if "capabilities" in config and not isinstance(config["capabilities"], list):
+            raise AgentConfigurationError("capabilities must be a list")
 
-        if "protocol_configs" in config:
-            if not isinstance(config["protocol_configs"], dict):
-                raise AgentConfigurationError("protocol_configs must be a dictionary")
+        if "protocol_configs" in config and not isinstance(config["protocol_configs"], dict):
+            raise AgentConfigurationError("protocol_configs must be a dictionary")
 
 
 # ============================================================================
@@ -116,14 +108,14 @@ class AgentFactory:
     def __init__(self):
         """Initialize the agent factory."""
         self.logger = logging.getLogger(f"{__name__}.AgentFactory")
-        self._agent_types: Dict[str, Type[Agent]] = {}
-        self._default_state_manager: Optional[IAgentStateManager] = None
-        self._protocol_adapters: Dict[str, IProtocolAdapter] = {}
+        self._agent_types: dict[str, type[Agent]] = {}
+        self._default_state_manager: IAgentStateManager | None = None
+        self._protocol_adapters: dict[str, IProtocolAdapter] = {}
 
         # Register default agent type
         self.register_agent_type("base", Agent)
 
-    def register_agent_type(self, type_name: str, agent_class: Type[Agent]) -> None:
+    def register_agent_type(self, type_name: str, agent_class: type[Agent]) -> None:
         """
         Register a new agent type.
 
@@ -134,9 +126,7 @@ class AgentFactory:
         self._agent_types[type_name] = agent_class
         self.logger.info(f"Registered agent type: {type_name}")
 
-    def register_protocol_adapter(
-        self, protocol_name: str, adapter: IProtocolAdapter
-    ) -> None:
+    def register_protocol_adapter(self, protocol_name: str, adapter: IProtocolAdapter) -> None:
         """
         Register a protocol adapter.
 
@@ -159,10 +149,10 @@ class AgentFactory:
 
     def create_agent_from_config(
         self,
-        config: Dict[str, Any],
-        agent_type: Optional[str] = None,
-        state_manager: Optional[IAgentStateManager] = None,
-        protocol_adapters: Optional[Dict[str, IProtocolAdapter]] = None,
+        config: dict[str, Any],
+        agent_type: str | None = None,
+        state_manager: IAgentStateManager | None = None,
+        protocol_adapters: dict[str, IProtocolAdapter] | None = None,
     ) -> Agent:
         """
         Create an agent from configuration.
@@ -204,14 +194,9 @@ class AgentFactory:
             final_protocol_adapters = protocol_adapters or {}
 
             # Add registered adapters if agent config specifies them
-            for protocol_name in agent_config.protocol_configs.keys():
-                if (
-                    protocol_name in self._protocol_adapters
-                    and protocol_name not in final_protocol_adapters
-                ):
-                    final_protocol_adapters[protocol_name] = self._protocol_adapters[
-                        protocol_name
-                    ]
+            for protocol_name in agent_config.protocol_configs:
+                if protocol_name in self._protocol_adapters and protocol_name not in final_protocol_adapters:
+                    final_protocol_adapters[protocol_name] = self._protocol_adapters[protocol_name]
 
             # Create agent instance
             agent_class = self._agent_types[agent_type]
@@ -221,21 +206,19 @@ class AgentFactory:
                 protocol_adapters=final_protocol_adapters,
             )
 
-            self.logger.info(
-                f"Created agent {agent_config.agent_id} of type {agent_type}"
-            )
+            self.logger.info(f"Created agent {agent_config.agent_id} of type {agent_type}")
             return agent
 
         except Exception as e:
             self.logger.error(f"Failed to create agent: {e}")
-            raise AgentCreationError(f"Agent creation failed: {e}")
+            raise AgentCreationError(f"Agent creation failed: {e}") from e
 
     def create_agent_from_file(
         self,
-        config_path: Union[str, Path],
-        agent_type: Optional[str] = None,
-        state_manager: Optional[IAgentStateManager] = None,
-        protocol_adapters: Optional[Dict[str, IProtocolAdapter]] = None,
+        config_path: str | Path,
+        agent_type: str | None = None,
+        state_manager: IAgentStateManager | None = None,
+        protocol_adapters: dict[str, IProtocolAdapter] | None = None,
     ) -> Agent:
         """
         Create an agent from a configuration file.
@@ -261,8 +244,8 @@ class AgentFactory:
         self,
         agent_id: str,
         name: str,
-        capabilities: Optional[List[str]] = None,
-        protocol_configs: Optional[Dict[str, Dict[str, Any]]] = None,
+        capabilities: list[str] | None = None,
+        protocol_configs: dict[str, dict[str, Any]] | None = None,
         agent_type: str = "base",
     ) -> Agent:
         """
@@ -287,11 +270,11 @@ class AgentFactory:
 
         return self.create_agent_from_config(config, agent_type=agent_type)
 
-    def get_registered_agent_types(self) -> List[str]:
+    def get_registered_agent_types(self) -> list[str]:
         """Get list of registered agent types."""
         return list(self._agent_types.keys())
 
-    def get_registered_protocol_adapters(self) -> List[str]:
+    def get_registered_protocol_adapters(self) -> list[str]:
         """Get list of registered protocol adapters."""
         return list(self._protocol_adapters.keys())
 
@@ -309,7 +292,7 @@ default_factory = AgentFactory()
 # ============================================================================
 
 
-def create_agent_from_config(config: Dict[str, Any], **kwargs) -> Agent:
+def create_agent_from_config(config: dict[str, Any], **kwargs) -> Agent:
     """
     Create an agent from configuration using the default factory.
 
@@ -323,7 +306,7 @@ def create_agent_from_config(config: Dict[str, Any], **kwargs) -> Agent:
     return default_factory.create_agent_from_config(config, **kwargs)
 
 
-def create_agent_from_file(config_path: Union[str, Path], **kwargs) -> Agent:
+def create_agent_from_file(config_path: str | Path, **kwargs) -> Agent:
     """
     Create an agent from a configuration file using the default factory.
 
@@ -352,7 +335,7 @@ def create_simple_agent(agent_id: str, name: str, **kwargs) -> Agent:
     return default_factory.create_simple_agent(agent_id, name, **kwargs)
 
 
-def register_agent_type(type_name: str, agent_class: Type[Agent]) -> None:
+def register_agent_type(type_name: str, agent_class: type[Agent]) -> None:
     """Register an agent type with the default factory."""
     default_factory.register_agent_type(type_name, agent_class)
 

@@ -10,7 +10,7 @@ import asyncio
 import json
 import tempfile
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Optional
 
 import pytest
 
@@ -30,12 +30,7 @@ class TestMCPAgentRealIntegration:
     async def test_mcp_server_command(self):
         """Provide command to start the test MCP server."""
         # Use the real MCP server from examples
-        server_path = (
-            Path(__file__).parent.parent.parent.parent
-            / "examples"
-            / "mcp_validation"
-            / "real_mcp_server.py"
-        )
+        server_path = Path(__file__).parent.parent.parent.parent / "examples" / "mcp_validation" / "real_mcp_server.py"
         return ["python", str(server_path)]
 
     @pytest.fixture
@@ -310,12 +305,7 @@ class TestMCPAgentEndToEnd:
     async def test_text_analysis_workflow(self):
         """Test a complete text analysis workflow using MCP agent."""
         # Setup
-        server_path = (
-            Path(__file__).parent.parent.parent.parent
-            / "examples"
-            / "mcp_validation"
-            / "real_mcp_server.py"
-        )
+        server_path = Path(__file__).parent.parent.parent.parent / "examples" / "mcp_validation" / "real_mcp_server.py"
 
         agent = MCPAgent(
             agent_id="text_analyzer_001",
@@ -337,7 +327,7 @@ class TestMCPAgentEndToEnd:
 
             workflow_results = []
 
-            for i, text in enumerate(text_samples):
+            for _, text in enumerate(text_samples):
                 # Analyze sentiment
                 sentiment_msg = create_invocation_message(
                     target_agent_id=agent.agent_id,
@@ -391,12 +381,7 @@ async def test_mcp_agent_simf_semantic_preservation():
 
     This validates the core integration between MCPAgent and the MCP-SIMF translator.
     """
-    server_path = (
-        Path(__file__).parent.parent.parent.parent
-        / "examples"
-        / "mcp_validation"
-        / "real_mcp_server.py"
-    )
+    server_path = Path(__file__).parent.parent.parent.parent / "examples" / "mcp_validation" / "real_mcp_server.py"
 
     agent = MCPAgent(
         agent_id="semantic_test_001",
@@ -446,12 +431,7 @@ if __name__ == "__main__":
         print("🧪 Running MCPAgent Integration Tests...")
 
         # Basic connection test
-        server_path = (
-            Path(__file__).parent.parent.parent.parent
-            / "examples"
-            / "mcp_validation"
-            / "real_mcp_server.py"
-        )
+        server_path = Path(__file__).parent.parent.parent.parent / "examples" / "mcp_validation" / "real_mcp_server.py"
 
         agent = MCPAgent(
             agent_id="manual_test_001",

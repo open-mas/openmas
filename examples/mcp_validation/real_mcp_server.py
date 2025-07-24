@@ -5,11 +5,11 @@ This demonstrates a working MCP server using the official SDK to validate
 actual MCP protocol behavior and message formats.
 """
 
-import asyncio
+import json
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
@@ -18,7 +18,7 @@ mcp_server = FastMCP("OpenMAS Validation Server")
 
 
 @mcp_server.tool()
-def analyze_text(text: str, analysis_type: str = "sentiment") -> Dict[str, Any]:
+def analyze_text(text: str, analysis_type: str = "sentiment") -> dict[str, Any]:
     """
     Analyze text using various analysis types.
 
@@ -57,9 +57,7 @@ def analyze_text(text: str, analysis_type: str = "sentiment") -> Dict[str, Any]:
 
 
 @mcp_server.tool()
-async def create_document(
-    title: str, content: str, format: str = "txt"
-) -> Dict[str, str]:
+async def create_document(title: str, content: str, format: str = "txt") -> dict[str, str]:
     """
     Create a temporary document with given content.
 
@@ -79,17 +77,13 @@ async def create_document(
 
     # Write content based on format
     if format == "json":
-        import json
-
         content_data = {"title": title, "content": content, "created": timestamp}
         file_path.write_text(json.dumps(content_data, indent=2))
     elif format == "md":
         md_content = f"# {title}\n\n{content}\n\n*Created: {timestamp}*"
         file_path.write_text(md_content)
     else:  # txt
-        txt_content = (
-            f"{title}\n{'=' * len(title)}\n\n{content}\n\nCreated: {timestamp}"
-        )
+        txt_content = f"{title}\n{'=' * len(title)}\n\n{content}\n\nCreated: {timestamp}"
         file_path.write_text(txt_content)
 
     return {
@@ -117,8 +111,6 @@ def get_server_info() -> str:
         "supported_formats": ["txt", "md", "json"],
         "created": datetime.now().isoformat(),
     }
-    import json
-
     return json.dumps(info, indent=2)
 
 
@@ -148,8 +140,6 @@ def list_documents() -> str:
         "directory": str(temp_dir),
     }
 
-    import json
-
     return json.dumps(result, indent=2)
 
 
@@ -162,8 +152,8 @@ def analyze_prompt(text: str, focus: str = "general") -> str:
         text: Text to analyze
         focus: Analysis focus (general, sentiment, style, content)
     """
-    if focus == "sentiment":
-        return f"""Please analyze the sentiment of the following text:
+    analysis_templates = {
+        "sentiment": f"""Please analyze the sentiment of the following text:
 
 Text: "{text}"
 
@@ -172,9 +162,8 @@ Provide:
 2. Confidence score (0-1)
 3. Key emotional indicators
 4. Tone assessment
-"""
-    elif focus == "style":
-        return f"""Please analyze the writing style of the following text:
+""",
+        "style": f"""Please analyze the writing style of the following text:
 
 Text: "{text}"
 
@@ -183,9 +172,8 @@ Analyze:
 2. Target audience
 3. Formality level
 4. Key stylistic features
-"""
-    elif focus == "content":
-        return f"""Please analyze the content and themes of the following text:
+""",
+        "content": f"""Please analyze the content and themes of the following text:
 
 Text: "{text}"
 
@@ -194,9 +182,8 @@ Identify:
 2. Key concepts mentioned
 3. Subject matter expertise level
 4. Content structure and organization
-"""
-    else:  # general
-        return f"""Please provide a comprehensive analysis of the following text:
+""",
+        "general": f"""Please provide a comprehensive analysis of the following text:
 
 Text: "{text}"
 
@@ -205,7 +192,10 @@ Include analysis of:
 2. Sentiment and tone
 3. Writing style
 4. Key insights or takeaways
-"""
+""",
+    }
+
+    return analysis_templates.get(focus, analysis_templates["general"])
 
 
 @mcp_server.prompt()
@@ -217,8 +207,8 @@ def document_prompt(title: str, purpose: str = "general") -> str:
         title: Document title
         purpose: Document purpose (report, summary, analysis, creative)
     """
-    if purpose == "report":
-        return f"""Create a structured report titled "{title}":
+    purpose_templates = {
+        "report": f"""Create a structured report titled "{title}":
 
 Structure:
 1. Executive Summary
@@ -232,9 +222,8 @@ Requirements:
 - Clear headings and organization
 - Factual and objective content
 - Actionable insights
-"""
-    elif purpose == "summary":
-        return f"""Create a concise summary document titled "{title}":
+""",
+        "summary": f"""Create a concise summary document titled "{title}":
 
 Include:
 1. Key points overview
@@ -246,9 +235,8 @@ Keep it:
 - Brief but comprehensive
 - Easy to scan and read
 - Focused on essentials
-"""
-    elif purpose == "analysis":
-        return f"""Create an analytical document titled "{title}":
+""",
+        "analysis": f"""Create an analytical document titled "{title}":
 
 Structure:
 1. Analysis framework
@@ -261,9 +249,8 @@ Approach:
 - Systematic and thorough
 - Evidence-based conclusions
 - Clear reasoning process
-"""
-    else:  # creative
-        return f"""Create a creative document titled "{title}":
+""",
+        "creative": f"""Create a creative document titled "{title}":
 
 Elements to include:
 1. Engaging introduction
@@ -276,7 +263,10 @@ Style:
 - Original perspective
 - Accessible language
 - Memorable content
-"""
+""",
+    }
+
+    return purpose_templates.get(purpose, purpose_templates["creative"])
 
 
 # Export for use in integration examples

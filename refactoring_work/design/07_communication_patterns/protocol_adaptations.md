@@ -39,29 +39,60 @@ Protocol adaptation follows this architectural approach:
 
 Protocol adaptation relies on these key components:
 
-### 1. Protocol Adapter Interface
+### 1. Formal Protocol Adapter Interface (`IProtocolAdapter`)
 
-All protocol adapters implement a common interface:
+The connection between a protocol-agnostic communication pattern and a specific transport protocol is handled by a series of adapters, each implementing the `IProtocolAdapter` interface. This interface defines a formal contract for translating Standard Internal Message Format (SIMF) messages into the native format of a given protocol, and vice-versa.
 
 ```python
-class ProtocolAdapter:
-    """Base class for protocol adapters."""
+from abc import ABC, abstractmethod
+from typing import Any, Dict
 
-    def __init__(self, config):
-        """Initialize with configuration."""
-        self.config = config
+# Assume SIMF is defined and available
+# from ...internal_message_format_standard import StandardInternalMessageFormat as SIMF
 
-    async def process_incoming(self, message, pattern):
-        """Process an incoming message."""
-        raise NotImplementedError("Subclasses must implement")
+class IProtocolAdapter(ABC):
+    """Interface for adapting communication patterns to a specific protocol."""
 
-    async def prepare_outgoing(self, message, pattern):
-        """Prepare an outgoing message."""
-        raise NotImplementedError("Subclasses must implement")
+    @abstractmethod
+    async def to_protocol_format(self, message: SIMF) -> Any:
+        """Translates a SIMF message into the native protocol's format.
 
-    async def handle_error(self, error, message, pattern):
-        """Handle an error."""
-        raise NotImplementedError("Subclasses must implement")
+        This method inspects the message's type and payload to determine the correct
+        transformation logic based on the communication pattern being used.
+
+        Args:
+            message: The protocol-agnostic SIMF message.
+
+        Returns:
+            A message formatted for the specific protocol (e.g., an HTTP request object,
+            an A2A task dictionary).
+        """
+        pass
+
+    @abstractmethod
+    async def from_protocol_format(self, protocol_message: Any) -> SIMF:
+        """Translates a native protocol message back into a SIMF message.
+
+        Args:
+            protocol_message: The message received from the transport layer.
+
+        Returns:
+            A SIMF message that can be processed by the agent framework.
+        """
+        pass
+
+    @abstractmethod
+    async def handle_error(self, error: Exception, context: Dict[str, Any]) -> SIMF:
+        """Handles a protocol-specific error, translating it into a SIMF error message.
+
+        Args:
+            error: The exception raised by the protocol communicator.
+            context: Additional context about the failed operation.
+
+        Returns:
+            A SIMF message with an ERROR_MESSAGE type.
+        """
+        pass
 ```
 
 ### 2. Protocol-Specific Adapters
@@ -100,13 +131,33 @@ class MCPProtocolAdapter(ProtocolAdapter):
         return mcp_message
 ```
 
-### 3. Adapter Factory
+### 3. Protocol Adapter Factory (`IProtocolAdapterFactory`)
 
-The Adapter Factory creates appropriate adapters:
+The `Pattern Engine` uses a factory to retrieve the correct adapter for a given protocol. This factory implements the `IProtocolAdapterFactory` interface.
 
 ```python
-class ProtocolAdapterFactory:
-    """Factory for creating protocol adapters."""
+class IProtocolAdapterFactory(ABC):
+    """Interface for a factory that creates protocol-specific adapters."""
+
+    @abstractmethod
+    def get_adapter(self, protocol_name: str, config: Dict[str, Any]) -> IProtocolAdapter:
+        """Retrieves a configured instance of a protocol adapter.
+
+        Args:
+            protocol_name: The name of the protocol (e.g., 'http', 'a2a').
+            config: Configuration for the adapter.
+
+        Returns:
+            An instance of a class that implements IProtocolAdapter.
+
+        Raises:
+            ValueError: If the protocol_name is not supported.
+        """
+        pass
+
+# Example Implementation
+class ProtocolAdapterFactory(IProtocolAdapterFactory):
+    """Concrete factory for creating protocol adapters."""
 
     def __init__(self):
         """Initialize the factory."""

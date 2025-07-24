@@ -6,10 +6,12 @@ providing support for stdio transport with full SIMF integration.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
+from collections.abc import Awaitable, Callable
 from datetime import datetime
-from typing import Any, Awaitable, Callable, Dict, Optional
+from typing import Any
 
 from openmas.core.simf import SIMFMessage
 
@@ -49,24 +51,24 @@ class MCPProtocolAdapter:
             raise ImportError("MCP SDK not available. Install with: pip install mcp")
 
         self.agent_id = agent_id
-        self.config: Optional[MCPConfig] = None
+        self.config: MCPConfig | None = None
         self.translator = MCPMessageTranslator(agent_id)
 
         # Connection state
         self.connected = False
-        self.connection_error: Optional[str] = None
-        self.connected_at: Optional[datetime] = None
-        self.last_activity: Optional[datetime] = None
+        self.connection_error: str | None = None
+        self.connected_at: datetime | None = None
+        self.last_activity: datetime | None = None
         self.message_count = 0
         self.error_count = 0
 
         # Transport-specific components
-        self.client_session: Optional[ClientSession] = None
-        self.server: Optional[FastMCP] = None
-        self.message_callback: Optional[Callable[[SIMFMessage], Awaitable[None]]] = None
+        self.client_session: ClientSession | None = None
+        self.server: FastMCP | None = None
+        self.message_callback: Callable[[SIMFMessage], Awaitable[None]] | None = None
 
         # Background tasks
-        self._connection_task: Optional[asyncio.Task] = None
+        self._connection_task: asyncio.Task | None = None
 
     async def connect(self, config: MCPConfig) -> None:
         """
@@ -84,10 +86,7 @@ class MCPProtocolAdapter:
             config.validate_transport_config()
             self.config = config
 
-            logger.info(
-                f"Connecting MCP adapter for agent {self.agent_id} "
-                f"with transport {config.transport}"
-            )
+            logger.info(f"Connecting MCP adapter for agent {self.agent_id} " f"with transport {config.transport}")
 
             if config.server_mode:
                 await self._connect_server()
@@ -114,10 +113,8 @@ class MCPProtocolAdapter:
             # Cancel background tasks
             if self._connection_task and not self._connection_task.done():
                 self._connection_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await self._connection_task
-                except asyncio.CancelledError:
-                    pass
 
             # Close client session
             if self.client_session:
@@ -172,9 +169,7 @@ class MCPProtocolAdapter:
             logger.error(f"Failed to send MCP message: {e}")
             raise MCPMessageError(f"Failed to send MCP message: {e}") from e
 
-    async def register_message_callback(
-        self, callback: Callable[[SIMFMessage], Awaitable[None]]
-    ) -> None:
+    async def register_message_callback(self, callback: Callable[[SIMFMessage], Awaitable[None]]) -> None:
         """
         Register callback for incoming messages.
 
@@ -184,7 +179,7 @@ class MCPProtocolAdapter:
         self.message_callback = callback
         logger.debug(f"Registered message callback for agent {self.agent_id}")
 
-    def to_internal_format(self, mcp_message: Dict[str, Any]) -> SIMFMessage:
+    def to_internal_format(self, mcp_message: dict[str, Any]) -> SIMFMessage:
         """
         Convert MCP message to SIMF format.
 
@@ -196,7 +191,7 @@ class MCPProtocolAdapter:
         """
         return self.translator.to_internal_format(mcp_message)
 
-    def from_internal_format(self, simf_message: SIMFMessage) -> Dict[str, Any]:
+    def from_internal_format(self, simf_message: SIMFMessage) -> dict[str, Any]:
         """
         Convert SIMF message to MCP format.
 
@@ -216,9 +211,7 @@ class MCPProtocolAdapter:
             raise MCPConnectionError("No configuration provided")
 
         # Create FastMCP server
-        self.server = FastMCP(
-            name=self.config.server_name, version=self.config.server_version
-        )
+        self.server = FastMCP(name=self.config.server_name, version=self.config.server_version)
 
         # Register default tools/resources/prompts
         await self._register_default_mcp_capabilities()
@@ -250,9 +243,7 @@ class MCPProtocolAdapter:
 
         try:
             # Start background task for client connection
-            self._connection_task = asyncio.create_task(
-                self._run_stdio_client(server_params)
-            )
+            self._connection_task = asyncio.create_task(self._run_stdio_client(server_params))
 
             # Wait a moment for connection to establish
             await asyncio.sleep(0.1)
@@ -266,17 +257,16 @@ class MCPProtocolAdapter:
     async def _run_stdio_client(self, server_params: StdioServerParameters) -> None:
         """Run stdio client in background task."""
         try:
-            async with stdio_client(server_params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    self.client_session = session
+            async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
+                self.client_session = session
 
-                    # Initialize session
-                    await session.initialize()
-                    logger.info("MCP stdio client session initialized")
+                # Initialize session
+                await session.initialize()
+                logger.info("MCP stdio client session initialized")
 
-                    # Keep connection alive and handle messages
-                    while self.connected:
-                        await asyncio.sleep(1.0)
+                # Keep connection alive and handle messages
+                while self.connected:
+                    await asyncio.sleep(1.0)
 
         except Exception as e:
             logger.error(f"MCP stdio client error: {e}")
@@ -285,13 +275,13 @@ class MCPProtocolAdapter:
 
     # Message sending methods
 
-    async def _send_server_message(self, mcp_message: Dict[str, Any]) -> None:
+    async def _send_server_message(self, mcp_message: dict[str, Any]) -> None:
         """Send message from server side."""
         # Server-side message sending would depend on how we expose the server
         # For now, log the message
         logger.info(f"MCP server would send: {mcp_message}")
 
-    async def _send_client_message(self, mcp_message: Dict[str, Any]) -> None:
+    async def _send_client_message(self, mcp_message: dict[str, Any]) -> None:
         """Send message from client side."""
         if not self.client_session:
             raise MCPConnectionError("No active client session")
@@ -314,9 +304,7 @@ class MCPProtocolAdapter:
             elif method == "resources/read":
                 from pydantic import AnyUrl
 
-                result = await self.client_session.read_resource(
-                    AnyUrl(params.get("uri", ""))
-                )
+                result = await self.client_session.read_resource(AnyUrl(params.get("uri", "")))
                 await self._handle_mcp_result(result, mcp_message.get("id"))
 
             elif method == "resources/list":
@@ -339,7 +327,7 @@ class MCPProtocolAdapter:
         except Exception as e:
             raise MCPMessageError(f"Failed to send client message: {e}") from e
 
-    async def _handle_mcp_result(self, result: Any, request_id: Optional[str]) -> None:
+    async def _handle_mcp_result(self, result: Any, request_id: str | None) -> None:
         """Handle MCP result and convert to SIMF for callback."""
         if not self.message_callback:
             return
@@ -377,9 +365,7 @@ class MCPProtocolAdapter:
                     "agent_id": self.agent_id,
                     "protocol": "mcp",
                     "status": "connected",
-                    "connected_at": (
-                        self.connected_at.isoformat() if self.connected_at else None
-                    ),
+                    "connected_at": (self.connected_at.isoformat() if self.connected_at else None),
                 }
             )
 

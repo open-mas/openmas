@@ -6,7 +6,6 @@ with MCP transport options and settings.
 """
 
 from enum import Enum
-from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -23,13 +22,9 @@ class MCPStdioConfig(BaseModel):
     """Configuration for MCP stdio transport."""
 
     command: str = Field(..., description="Command to execute MCP server")
-    args: List[str] = Field(
-        default_factory=list, description="Arguments for the command"
-    )
-    env: Dict[str, str] = Field(
-        default_factory=dict, description="Environment variables"
-    )
-    cwd: Optional[str] = Field(default=None, description="Working directory")
+    args: list[str] = Field(default_factory=list, description="Arguments for the command")
+    env: dict[str, str] = Field(default_factory=dict, description="Environment variables")
+    cwd: str | None = Field(default=None, description="Working directory")
 
 
 # Note: MCPSSEConfig removed - SSE transport deprecated in MCP SDK 1.8+ and not
@@ -44,29 +39,19 @@ class MCPConfig(BaseModel):
     transport: MCPTransportType = Field(..., description="MCP transport type")
 
     # Transport-specific configurations
-    stdio_config: Optional[MCPStdioConfig] = Field(
-        default=None, description="Stdio transport configuration"
-    )
+    stdio_config: MCPStdioConfig | None = Field(default=None, description="Stdio transport configuration")
     # Note: sse_config removed - SSE transport deprecated in MCP SDK 1.8+
 
     # MCP-specific options
-    server_mode: bool = Field(
-        default=False, description="Whether to run in server mode"
-    )
+    server_mode: bool = Field(default=False, description="Whether to run in server mode")
     server_name: str = Field(default="OpenMAS Agent", description="MCP server name")
     server_version: str = Field(default="1.0.0", description="MCP server version")
 
     # General options
-    timeout_seconds: float = Field(
-        default=30.0, description="Operation timeout in seconds"
-    )
-    enable_structured_output: bool = Field(
-        default=True, description="Enable structured output support"
-    )
+    timeout_seconds: float = Field(default=30.0, description="Operation timeout in seconds")
+    enable_structured_output: bool = Field(default=True, description="Enable structured output support")
     enable_oauth: bool = Field(default=False, description="Enable OAuth support")
-    enable_elicitation: bool = Field(
-        default=False, description="Enable elicitation support"
-    )
+    enable_elicitation: bool = Field(default=False, description="Enable elicitation support")
 
     def validate_transport_config(self) -> None:
         """Validate that the appropriate transport config is provided."""

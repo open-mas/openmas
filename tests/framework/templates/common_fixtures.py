@@ -7,7 +7,7 @@ specifications and real message formats.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from uuid import uuid4
 
 import pytest
@@ -30,7 +30,7 @@ from openmas.core.simf import (
 
 
 @pytest.fixture
-def real_mcp_messages() -> Dict[str, Dict[str, Any]]:
+def real_mcp_messages() -> dict[str, dict[str, Any]]:
     """
     Real MCP protocol messages based on the official 2025-06-18 specification.
     These prevent hallucination by using actual MCP JSON-RPC 2.0 formats.
@@ -64,7 +64,7 @@ def real_mcp_messages() -> Dict[str, Dict[str, Any]]:
                     "sampling": {},
                 },
                 "serverInfo": {"name": "OpenMAS-Test-Server", "version": "1.0.0"},
-                "instructions": "This is a test MCP server for OpenMAS protocol adapter validation.",
+                "instructions": ("This is a test MCP server for OpenMAS protocol adapter " "validation."),
             },
         },
         "tools_list_request": {
@@ -104,7 +104,7 @@ def real_mcp_messages() -> Dict[str, Dict[str, Any]]:
                             "properties": {
                                 "expression": {
                                     "type": "string",
-                                    "description": "Mathematical expression to evaluate",
+                                    "description": ("Mathematical expression to evaluate"),
                                 }
                             },
                             "required": ["expression"],
@@ -173,7 +173,7 @@ def real_mcp_messages() -> Dict[str, Dict[str, Any]]:
 
 
 @pytest.fixture
-def real_a2a_messages() -> Dict[str, Dict[str, Any]]:
+def real_a2a_messages() -> dict[str, dict[str, Any]]:
     """
     Real A2A protocol messages based on the specification.
     These use actual A2A multi-part message formats.
@@ -191,7 +191,7 @@ def real_a2a_messages() -> Dict[str, Dict[str, Any]]:
                     "content": {
                         "capability": "text_analysis",
                         "parameters": {
-                            "text": "Please analyze the sentiment of this customer review",
+                            "text": ("Please analyze the sentiment of this customer " "review"),
                             "analysis_type": "sentiment",
                         },
                     },
@@ -249,7 +249,7 @@ def real_a2a_messages() -> Dict[str, Dict[str, Any]]:
 
 
 @pytest.fixture
-def real_http_messages() -> Dict[str, Dict[str, Any]]:
+def real_http_messages() -> dict[str, dict[str, Any]]:
     """
     Real HTTP protocol messages with proper headers and status codes.
     """
@@ -326,7 +326,7 @@ def real_http_messages() -> Dict[str, Dict[str, Any]]:
 
 
 @pytest.fixture
-def simf_message_fixtures() -> Dict[str, SIMFMessage]:
+def simf_message_fixtures() -> dict[str, SIMFMessage]:
     """
     Collection of valid SIMF messages for testing protocol adapters.
     """
@@ -383,7 +383,7 @@ def simf_message_fixtures() -> Dict[str, SIMFMessage]:
 def create_test_protocol_config():
     """Factory for creating test protocol configurations."""
 
-    def _create_config(protocol_type: str, **options) -> Dict[str, Any]:
+    def _create_config(protocol_type: str, **options) -> dict[str, Any]:
         return {
             "protocol_type": protocol_type,
             "enabled": True,
@@ -398,7 +398,7 @@ def create_test_protocol_config():
 def create_test_agent_config():
     """Factory for creating test agent configurations."""
 
-    def _create_config(agent_id: str, **options) -> Dict[str, Any]:
+    def _create_config(agent_id: str, **options) -> dict[str, Any]:
         return {
             "agent_id": agent_id,
             "name": f"Test Agent {agent_id}",
@@ -415,7 +415,7 @@ def create_test_agent_config():
 # ============================================================================
 
 
-def validate_real_mcp_message(message: Dict[str, Any]) -> bool:
+def validate_real_mcp_message(message: dict[str, Any]) -> bool:
     """
     Validate that a message conforms to real MCP JSON-RPC 2.0 format.
     This prevents tests from using hallucinated message formats.
@@ -436,7 +436,7 @@ def validate_real_mcp_message(message: Dict[str, Any]) -> bool:
     return is_request or is_response
 
 
-def validate_real_a2a_message(message: Dict[str, Any]) -> bool:
+def validate_real_a2a_message(message: dict[str, Any]) -> bool:
     """
     Validate that a message conforms to real A2A multi-part format.
     """
@@ -449,14 +449,10 @@ def validate_real_a2a_message(message: Dict[str, Any]) -> bool:
     if not isinstance(message["parts"], list) or len(message["parts"]) == 0:
         return False
 
-    for part in message["parts"]:
-        if not isinstance(part, dict) or "content_type" not in part:
-            return False
-
-    return True
+    return all(not (not isinstance(part, dict) or "content_type" not in part) for part in message["parts"])
 
 
-def validate_real_http_message(message: Dict[str, Any]) -> bool:
+def validate_real_http_message(message: dict[str, Any]) -> bool:
     """
     Validate that a message conforms to real HTTP format.
     """
@@ -466,9 +462,6 @@ def validate_real_http_message(message: Dict[str, Any]) -> bool:
         return all(field in message for field in required_fields)
     elif "status_code" in message:
         # HTTP response
-        return (
-            isinstance(message["status_code"], int)
-            and 100 <= message["status_code"] < 600
-        )
+        return isinstance(message["status_code"], int) and 100 <= message["status_code"] < 600
 
     return False

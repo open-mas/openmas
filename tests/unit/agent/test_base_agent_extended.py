@@ -6,6 +6,7 @@ and edge cases in the base agent implementation.
 """
 
 import asyncio
+import contextlib
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -82,13 +83,13 @@ class TestAgentErrorHandling:
         message = create_text_message(text="Test message", target_agent_id=agent.agent_id)
 
         # Mock _handle_message to raise an exception - but catch it properly
-        with patch.object(agent, "_handle_message", side_effect=Exception("Processing error")):
-            with patch.object(agent.logger, "error"):
-                try:
-                    await agent._handle_message(message)
-                except Exception:
-                    pass  # Expected to raise
-                # The error should have been logged in the actual implementation
+        with (
+            patch.object(agent, "_handle_message", side_effect=Exception("Processing error")),
+            patch.object(agent.logger, "error"),
+            contextlib.suppress(Exception),
+        ):
+            await agent._handle_message(message)
+            # The error should have been logged in the actual implementation
 
     @pytest.mark.asyncio
     async def test_prepare_outgoing_message_error(self, agent):

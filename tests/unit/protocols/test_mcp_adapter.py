@@ -5,6 +5,7 @@ Tests the MCPProtocolAdapter implementation including SIMF message translation,
 configuration handling, and basic protocol operations.
 """
 
+import asyncio
 from unittest.mock import Mock, patch
 
 import pytest
@@ -122,9 +123,7 @@ class TestMCPConfig:
         """Test creating stdio configuration."""
         config = MCPConfig(
             transport=MCPTransportType.STDIO,
-            stdio_config=MCPStdioConfig(
-                command="python", args=["-m", "test_server"], env={"TEST": "true"}
-            ),
+            stdio_config=MCPStdioConfig(command="python", args=["-m", "test_server"], env={"TEST": "true"}),
         )
 
         assert config.transport == MCPTransportType.STDIO
@@ -187,9 +186,7 @@ class TestMCPProtocolAdapter:
         assert isinstance(simf_message, SIMFMessage)
 
         # Test SIMF to MCP
-        simf_test = create_text_message(
-            text="test message", target_agent_id="test-agent"
-        )
+        simf_test = create_text_message(text="test message", target_agent_id="test-agent")
 
         mcp_result = adapter.from_internal_format(simf_test)
         assert "jsonrpc" in mcp_result
@@ -203,5 +200,4 @@ class TestMCPProtocolAdapter:
             asyncio.run(adapter.connect(None))
 
 
-# Import asyncio at the end to avoid issues
-import asyncio
+# asyncio import moved to top of file

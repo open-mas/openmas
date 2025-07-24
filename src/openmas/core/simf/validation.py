@@ -9,7 +9,7 @@ reasoning engines.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 
 from pydantic import ValidationError as PydanticValidationError
 
@@ -40,16 +40,16 @@ class ValidationResult:
     """Result of SIMF validation."""
 
     is_valid: bool
-    issues: List[ValidationIssue]
-    message: Optional[SIMFMessage] = None
+    issues: list[ValidationIssue]
+    message: SIMFMessage | None = None
 
     @property
-    def errors(self) -> List[ValidationIssue]:
+    def errors(self) -> list[ValidationIssue]:
         """Get only error-level issues."""
         return [issue for issue in self.issues if issue.severity == "error"]
 
     @property
-    def warnings(self) -> List[ValidationIssue]:
+    def warnings(self) -> list[ValidationIssue]:
         """Get only warning-level issues."""
         return [issue for issue in self.issues if issue.severity == "warning"]
 
@@ -83,9 +83,7 @@ class SIMFValidator:
         self.strict = strict
         self.security_checks = security_checks
 
-    def validate(
-        self, message_data: Union[Dict[str, Any], SIMFMessage]
-    ) -> ValidationResult:
+    def validate(self, message_data: dict[str, Any] | SIMFMessage) -> ValidationResult:
         """
         Validate a SIMF message.
 
@@ -146,9 +144,7 @@ class SIMFValidator:
 
         return ValidationResult(is_valid=is_valid, issues=issues, message=message)
 
-    def validate_and_raise(
-        self, message_data: Union[Dict[str, Any], SIMFMessage]
-    ) -> SIMFMessage:
+    def validate_and_raise(self, message_data: dict[str, Any] | SIMFMessage) -> SIMFMessage:
         """
         Validate a SIMF message and raise ValidationError if invalid.
 
@@ -166,7 +162,7 @@ class SIMFValidator:
             raise ValidationError(result)
         return result.message
 
-    def _validate_semantics(self, message: SIMFMessage) -> List[ValidationIssue]:
+    def _validate_semantics(self, message: SIMFMessage) -> list[ValidationIssue]:
         """Validate semantic consistency of the message."""
         issues = []
 
@@ -261,7 +257,7 @@ class SIMFValidator:
 
         return issues
 
-    def _validate_security(self, message: SIMFMessage) -> List[ValidationIssue]:
+    def _validate_security(self, message: SIMFMessage) -> list[ValidationIssue]:
         """Validate security aspects of the message."""
         issues = []
 
@@ -286,9 +282,7 @@ class SIMFValidator:
                         ValidationIssue(
                             error_type=ValidationErrorType.SECURITY_ERROR,
                             field_path="payload.text",
-                            message=(
-                                f"Potentially dangerous pattern detected: {pattern}"
-                            ),
+                            message=(f"Potentially dangerous pattern detected: {pattern}"),
                             severity="warning",
                         )
                     )
@@ -314,19 +308,14 @@ class SIMFValidator:
                 ValidationIssue(
                     error_type=ValidationErrorType.SECURITY_ERROR,
                     field_path="root",
-                    message=(
-                        f"Message size ({len(message_str)} bytes) exceeds "
-                        f"recommended limit"
-                    ),
+                    message=(f"Message size ({len(message_str)} bytes) exceeds " f"recommended limit"),
                     severity="warning",
                 )
             )
 
         return issues
 
-    def _validate_protocol_compliance(
-        self, message: SIMFMessage
-    ) -> List[ValidationIssue]:
+    def _validate_protocol_compliance(self, message: SIMFMessage) -> list[ValidationIssue]:
         """Validate compliance with SIMF protocol requirements."""
         issues = []
 
@@ -410,17 +399,13 @@ class SIMFValidator:
 
 
 # Convenience functions for common validation patterns
-def validate_simf_message(
-    message_data: Union[Dict[str, Any], SIMFMessage], strict: bool = True
-) -> ValidationResult:
+def validate_simf_message(message_data: dict[str, Any] | SIMFMessage, strict: bool = True) -> ValidationResult:
     """Quick validation of a SIMF message."""
     validator = SIMFValidator(strict=strict)
     return validator.validate(message_data)
 
 
-def ensure_valid_simf_message(
-    message_data: Union[Dict[str, Any], SIMFMessage], strict: bool = True
-) -> SIMFMessage:
+def ensure_valid_simf_message(message_data: dict[str, Any] | SIMFMessage, strict: bool = True) -> SIMFMessage:
     """Validate and return a SIMF message, raising ValidationError if invalid."""
     validator = SIMFValidator(strict=strict)
     return validator.validate_and_raise(message_data)

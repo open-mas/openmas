@@ -7,11 +7,12 @@ Complete AI assistant guidelines for seamless continuity across sessions
 
 ## 🚨 **CRITICAL: Session Start Protocol**
 
-**EVERY AI session MUST start by reading these 3 files in order:**
+**EVERY AI session MUST start by reading these 4 files in order:**
 
 1. **This file** (`.cursor/rules/openmas_ai_continuity.md`) - Core rules & standards
 2. **Current Phase** (`refactoring_work/planning/current_phase.md`) - Active objectives
 3. **Task Tracker** (`refactoring_work/planning/task_tracker.md`) - Status & next actions
+4. **Task Creation Protocol** (`refactoring_work/planning/TASK_CREATION_PROTOCOL.md`) - **MANDATORY** for creating new tasks
 
 ## 🎯 **Project Context & Architecture**
 
@@ -90,14 +91,45 @@ Examples:
 - T003_MEDIUM_housekeeping.md
 ```
 
+## 🛡️ **V2 TASK CREATION INTEGRATION**
+
+### **Critical Anti-Hallucination Enhancement**
+
+The V2 system now includes **mandatory task creation safeguards** to prevent the AI hallucination disasters that plagued OpenMAS 0.2.0 (over 1000 passing tests that tested nothing).
+
+**TASK CREATION PROTOCOL INTEGRATION:**
+- **File**: `refactoring_work/planning/TASK_CREATION_PROTOCOL.md`
+- **Purpose**: Enforce strict design alignment when creating new tasks
+- **Mandatory**: ALL AIs creating tasks MUST follow this protocol
+- **Integration**: Seamlessly extends V2 session management
+
+### **Task Creation vs. Task Execution**
+
+| Activity | Protocol | Purpose |
+|----------|----------|----------|
+| **Creating New Tasks** | TASK_CREATION_PROTOCOL.md | Design alignment, anti-hallucination safeguards |
+| **Executing Existing Tasks** | AI_CONTINUITY_SYSTEM.md | Session continuity, progress tracking |
+
+### **Mandatory Task Creation Process**
+
+**BEFORE** creating any new task, AI MUST:
+1. **Read design documents** relevant to the task scope
+2. **Verify architecture alignment** with OpenMAS constraints
+3. **Follow mandatory task format** with explicit design references
+4. **Complete anti-hallucination checklist** to prevent assumption-based requirements
+
+**This integration ensures every new task is perfectly aligned with OpenMAS design.**
+
 ## 🔄 **AI Session Management Protocol**
 
 ### **Session Start Checklist (MANDATORY)**
 - [ ] Read this AI continuity system file
 - [ ] Read `refactoring_work/planning/core_documents/current_phase.md`
 - [ ] Read `refactoring_work/planning/core_documents/task_tracker.md`
+- [ ] Read `refactoring_work/planning/TASK_CREATION_PROTOCOL.md` (if creating new tasks)
 - [ ] Identify highest priority task or next action
 - [ ] Update task status to "ACTIVE" if starting new work
+- [ ] **BEFORE creating ANY new task**: Follow TASK_CREATION_PROTOCOL.md mandatory process
 
 ### **During Work (REAL-TIME UPDATES)**
 - **Update Progress Notes** in active TASK file after each sub-task completion

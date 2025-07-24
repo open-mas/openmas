@@ -11,7 +11,6 @@ import json
 import pickle
 from datetime import datetime
 from enum import Enum
-from typing import Optional, Union
 
 from .models import SIMFMessage
 
@@ -49,9 +48,7 @@ class SIMFSerializer:
         """
         self.default_format = default_format
 
-    def serialize(
-        self, message: SIMFMessage, format: Optional[SerializationFormat] = None
-    ) -> Union[str, bytes]:
+    def serialize(self, message: SIMFMessage, format: SerializationFormat | None = None) -> str | bytes:
         """
         Serialize a SIMF message to the specified format.
 
@@ -84,9 +81,7 @@ class SIMFSerializer:
         except Exception as e:
             raise SerializationError(f"Failed to serialize message: {str(e)}") from e
 
-    def deserialize(
-        self, data: Union[str, bytes], format: Optional[SerializationFormat] = None
-    ) -> SIMFMessage:
+    def deserialize(self, data: str | bytes, format: SerializationFormat | None = None) -> SIMFMessage:
         """
         Deserialize data to a SIMF message.
 
@@ -116,16 +111,12 @@ class SIMFSerializer:
             ]:
                 return self._deserialize_binary(data)
             else:
-                raise SerializationError(
-                    f"Unsupported deserialization format: {format}"
-                )
+                raise SerializationError(f"Unsupported deserialization format: {format}")
 
         except Exception as e:
             raise SerializationError(f"Failed to deserialize message: {str(e)}") from e
 
-    def _serialize_json(
-        self, message: SIMFMessage, compact: bool = False, pretty: bool = False
-    ) -> str:
+    def _serialize_json(self, message: SIMFMessage, compact: bool = False, pretty: bool = False) -> str:
         """Serialize message to JSON format."""
         # Convert to dictionary using Pydantic's dict method
         message_dict = message.dict()
@@ -137,9 +128,7 @@ class SIMFSerializer:
             raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
         if pretty:
-            return json.dumps(
-                message_dict, indent=2, default=datetime_serializer, ensure_ascii=False
-            )
+            return json.dumps(message_dict, indent=2, default=datetime_serializer, ensure_ascii=False)
         elif compact:
             return json.dumps(
                 message_dict,
@@ -148,11 +137,9 @@ class SIMFSerializer:
                 ensure_ascii=False,
             )
         else:
-            return json.dumps(
-                message_dict, default=datetime_serializer, ensure_ascii=False
-            )
+            return json.dumps(message_dict, default=datetime_serializer, ensure_ascii=False)
 
-    def _deserialize_json(self, data: Union[str, bytes]) -> SIMFMessage:
+    def _deserialize_json(self, data: str | bytes) -> SIMFMessage:
         """Deserialize JSON data to SIMF message."""
         if isinstance(data, bytes):
             data = data.decode("utf-8")
@@ -162,9 +149,7 @@ class SIMFSerializer:
         # Parse datetime fields
         if "timestamp" in message_dict and isinstance(message_dict["timestamp"], str):
             try:
-                message_dict["timestamp"] = datetime.fromisoformat(
-                    message_dict["timestamp"].replace("Z", "+00:00")
-                )
+                message_dict["timestamp"] = datetime.fromisoformat(message_dict["timestamp"].replace("Z", "+00:00"))
             except ValueError:
                 # Fallback to current time if parsing fails
                 message_dict["timestamp"] = datetime.utcnow()
@@ -184,9 +169,7 @@ class SIMFSerializer:
 
         return SIMFMessage(**message_dict)
 
-    def _serialize_binary(
-        self, message: SIMFMessage, compressed: bool = False
-    ) -> bytes:
+    def _serialize_binary(self, message: SIMFMessage, compressed: bool = False) -> bytes:
         """Serialize message to binary format."""
         # Convert to dictionary first
         message_dict = message.dict()
@@ -215,7 +198,7 @@ class SIMFSerializer:
 
         return SIMFMessage(**message_dict)
 
-    def _detect_format(self, data: Union[str, bytes]) -> SerializationFormat:
+    def _detect_format(self, data: str | bytes) -> SerializationFormat:
         """Auto-detect the format of serialized data."""
         if isinstance(data, str):
             # Try to parse as JSON
@@ -241,9 +224,7 @@ class SIMFSerializer:
 
         raise SerializationError("Unable to detect serialization format")
 
-    def get_message_size(
-        self, message: SIMFMessage, format: Optional[SerializationFormat] = None
-    ) -> int:
+    def get_message_size(self, message: SIMFMessage, format: SerializationFormat | None = None) -> int:
         """
         Get the size of a message when serialized.
 
@@ -259,7 +240,7 @@ class SIMFSerializer:
             return len(serialized.encode("utf-8"))
         return len(serialized)
 
-    def is_compatible(self, data: Union[str, bytes]) -> bool:
+    def is_compatible(self, data: str | bytes) -> bool:
         """
         Check if data can be deserialized as a SIMF message.
 
@@ -280,14 +261,12 @@ class SIMFSerializer:
 _default_serializer = SIMFSerializer()
 
 
-def serialize_simf_message(
-    message: SIMFMessage, format: SerializationFormat = SerializationFormat.JSON
-) -> Union[str, bytes]:
+def serialize_simf_message(message: SIMFMessage, format: SerializationFormat = SerializationFormat.JSON) -> str | bytes:
     """Serialize a SIMF message using the default serializer."""
     return _default_serializer.serialize(message, format)
 
 
-def deserialize_simf_message(data: Union[str, bytes]) -> SIMFMessage:
+def deserialize_simf_message(data: str | bytes) -> SIMFMessage:
     """Deserialize data to a SIMF message using the default serializer."""
     return _default_serializer.deserialize(data)
 
@@ -305,11 +284,7 @@ def message_from_json(json_str: str) -> SIMFMessage:
 
 def message_to_binary(message: SIMFMessage, compressed: bool = True) -> bytes:
     """Convert a SIMF message to binary format."""
-    format = (
-        SerializationFormat.BINARY_COMPRESSED
-        if compressed
-        else SerializationFormat.BINARY
-    )
+    format = SerializationFormat.BINARY_COMPRESSED if compressed else SerializationFormat.BINARY
     return _default_serializer.serialize(message, format)
 
 
@@ -323,6 +298,6 @@ def get_message_json_size(message: SIMFMessage) -> int:
     return _default_serializer.get_message_size(message, SerializationFormat.JSON)
 
 
-def is_simf_message(data: Union[str, bytes]) -> bool:
+def is_simf_message(data: str | bytes) -> bool:
     """Check if data represents a valid SIMF message."""
     return _default_serializer.is_compatible(data)

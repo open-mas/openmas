@@ -7,22 +7,13 @@ meaning while enabling protocol-agnostic message handling.
 """
 
 import json
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
 from uuid import uuid4
 
 from mcp.types import (
     CallToolRequest,
     CallToolResult,
-    ImageContent,
-    JSONRPCMessage,
-    ListResourcesRequest,
-    ListResourcesResult,
-    ReadResourceRequest,
-    ReadResourceResult,
     Resource,
     TextContent,
-    Tool,
 )
 
 # Import SIMF models (fallback to mock for demo)
@@ -37,12 +28,7 @@ try:
         MessageType,
         PayloadType,
         SIMFMessage,
-        StructuredDataContentPayload,
         TextContentPayload,
-        create_asset_reference_message,
-        create_text_message,
-        create_tool_invocation_message,
-        create_tool_result_message,
     )
 
     SIMF_AVAILABLE = True
@@ -105,18 +91,17 @@ except ImportError:
         PENDING = "pending"
 
     # Mock payload classes
-    InvocationContentPayload = lambda **kwargs: MockPayload(
-        payload_type="invocation_content", **kwargs
-    )
-    InvocationResultContentPayload = lambda **kwargs: MockPayload(
-        payload_type="invocation_result_content", **kwargs
-    )
-    AssetReferenceContentPayload = lambda **kwargs: MockPayload(
-        payload_type="asset_reference_content", **kwargs
-    )
-    TextContentPayload = lambda **kwargs: MockPayload(
-        payload_type="text_content", **kwargs
-    )
+    def invocation_content_payload(**kwargs):
+        return MockPayload(payload_type="invocation_content", **kwargs)
+
+    def invocation_result_content_payload(**kwargs):
+        return MockPayload(payload_type="invocation_result_content", **kwargs)
+
+    def asset_reference_content_payload(**kwargs):
+        return MockPayload(payload_type="asset_reference_content", **kwargs)
+
+    def text_content_payload(**kwargs):
+        return MockPayload(payload_type="text_content", **kwargs)
 
 
 class MCPToSIMFTranslator:
@@ -140,9 +125,7 @@ class MCPToSIMFTranslator:
     # MCP Tool Calls → SIMF Translation
     # ========================================================================
 
-    def mcp_tool_call_to_simf(
-        self, mcp_request: CallToolRequest, session_id: Optional[str] = None
-    ) -> SIMFMessage:
+    def mcp_tool_call_to_simf(self, mcp_request: CallToolRequest, session_id: str | None = None) -> SIMFMessage:
         """
         Convert MCP tool call request to SIMF invocation message.
 
@@ -193,13 +176,8 @@ class MCPToSIMFTranslator:
             MCP tool call request
         """
         # Check payload type (compatible with both real and mock SIMF)
-        if (
-            SIMF_AVAILABLE
-            and not isinstance(simf_message.payload, InvocationContentPayload)
-        ) or (
-            not SIMF_AVAILABLE
-            and getattr(simf_message.payload, "payload_type", None)
-            != "invocation_content"
+        if (SIMF_AVAILABLE and not isinstance(simf_message.payload, InvocationContentPayload)) or (
+            not SIMF_AVAILABLE and getattr(simf_message.payload, "payload_type", None) != "invocation_content"
         ):
             raise ValueError("SIMF message must have invocation content payload")
 
@@ -216,9 +194,7 @@ class MCPToSIMFTranslator:
         mcp_request = CallToolRequest(
             id=request_id,
             method="tools/call",
-            params=CallToolRequestParams(
-                name=payload.capability_name, arguments=payload.parameters
-            ),
+            params=CallToolRequestParams(name=payload.capability_name, arguments=payload.parameters),
         )
 
         return mcp_request
@@ -231,7 +207,7 @@ class MCPToSIMFTranslator:
         self,
         mcp_result: CallToolResult,
         original_request_id: str,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
     ) -> SIMFMessage:
         """
         Convert MCP tool call result to SIMF invocation result message.
@@ -262,12 +238,8 @@ class MCPToSIMFTranslator:
         result_payload = InvocationResultContentPayload(
             invocation_id=original_request_id,
             status=status,
-            result_data=(
-                result_data if result_data else {"text": " ".join(text_content)}
-            ),
-            error_message=(
-                mcp_result.content[0].text if is_error and mcp_result.content else None
-            ),
+            result_data=(result_data if result_data else {"text": " ".join(text_content)}),
+            error_message=(mcp_result.content[0].text if is_error and mcp_result.content else None),
         )
 
         # Create SIMF message
@@ -297,13 +269,8 @@ class MCPToSIMFTranslator:
             MCP tool call result
         """
         # Check payload type (compatible with both real and mock SIMF)
-        if (
-            SIMF_AVAILABLE
-            and not isinstance(simf_message.payload, InvocationResultContentPayload)
-        ) or (
-            not SIMF_AVAILABLE
-            and getattr(simf_message.payload, "payload_type", None)
-            != "invocation_result_content"
+        if (SIMF_AVAILABLE and not isinstance(simf_message.payload, InvocationResultContentPayload)) or (
+            not SIMF_AVAILABLE and getattr(simf_message.payload, "payload_type", None) != "invocation_result_content"
         ):
             raise ValueError("SIMF message must have invocation result content payload")
 
@@ -320,24 +287,16 @@ class MCPToSIMFTranslator:
             if isinstance(payload.result_data, dict):
                 # Try to create structured content, fall back to text
                 if "text" in payload.result_data:
-                    content.append(
-                        TextContent(type="text", text=payload.result_data["text"])
-                    )
+                    content.append(TextContent(type="text", text=payload.result_data["text"]))
                 else:
                     # Convert dict to JSON text
-                    content.append(
-                        TextContent(
-                            type="text", text=json.dumps(payload.result_data, indent=2)
-                        )
-                    )
+                    content.append(TextContent(type="text", text=json.dumps(payload.result_data, indent=2)))
             else:
                 # Convert any other type to string
                 content.append(TextContent(type="text", text=str(payload.result_data)))
 
         # Create MCP result
-        mcp_result = CallToolResult(
-            content=content, isError=(payload.status == InvocationStatus.FAILURE)
-        )
+        mcp_result = CallToolResult(content=content, isError=(payload.status == InvocationStatus.FAILURE))
 
         return mcp_result
 
@@ -349,7 +308,7 @@ class MCPToSIMFTranslator:
         self,
         mcp_resource: Resource,
         resource_content: str,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
     ) -> SIMFMessage:
         """
         Convert MCP resource to SIMF asset reference message.
@@ -379,11 +338,7 @@ class MCPToSIMFTranslator:
             asset_id=mcp_resource.uri,
             asset_type=asset_type,
             asset_url=mcp_resource.uri,
-            content_preview=(
-                resource_content[:200] + "..."
-                if len(resource_content) > 200
-                else resource_content
-            ),
+            content_preview=(resource_content[:200] + "..." if len(resource_content) > 200 else resource_content),
             mime_type=mcp_resource.mimeType,
             metadata={
                 "mcp_resource_name": mcp_resource.name,
@@ -396,7 +351,7 @@ class MCPToSIMFTranslator:
         simf_message = SIMFMessage(
             target_agent_id=self.agent_id,
             message_flow_direction=MessageFlowDirection.INBOUND,
-            message_type=MessageType.PLAIN_TEXT_MESSAGE,  # Resource access is informational
+            message_type=MessageType.PLAIN_TEXT_MESSAGE,  # Resource access
             payload=asset_payload,
             session_id=session_id,
             source_protocol_type="mcp",
@@ -417,7 +372,7 @@ class MCPToSIMFTranslator:
         stream_id: str,
         position: str,
         partial_content: str,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
     ) -> SIMFMessage:
         """
         Create SIMF stream context message for MCP streaming scenarios.
@@ -437,9 +392,7 @@ class MCPToSIMFTranslator:
         stream_payload = StreamContextContentPayload(
             stream_id=stream_id,
             position=StreamPosition(position),
-            partial_content=TextContentPayload(
-                text=partial_content, language="en", encoding="utf-8"
-            ),
+            partial_content=TextContentPayload(text=partial_content, language="en", encoding="utf-8"),
         )
 
         # Create SIMF message

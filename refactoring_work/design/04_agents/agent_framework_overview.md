@@ -37,8 +37,9 @@ Defines how agent capabilities are specified, discovered, and managed:
 - Cross-protocol capability mapping
 - Programmatic capability registration via ICapabilityManager
 
-The Capability System implements the `ICapabilityManager` interface, which provides methods for:
-- Registering capability handler functions with their input/output schemas
+The Capability System implements an `ICapabilityManager` interface that provides a standardized way to register, discover, and invoke capabilities. For a detailed API definition, see:
+- [ICapabilityManager Interface](./interfaces/capability_manager_interface.md)
+- [Agent Capabilities and Multi-Protocol Standard](./agent_capabilities.md)
 - Unregistering capabilities when they're no longer needed
 - Listing available capabilities for discovery purposes
 - Retrieving detailed capability information

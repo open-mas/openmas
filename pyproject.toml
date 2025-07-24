@@ -69,9 +69,7 @@ pytest-timeout = "^2.3.1"
 pytest-mock = "^3.14.0"
 pytest-xdist = "^3.6.0"
 # Linting and formatting
-black = "==25.1.0"
-isort = "==6.0.1"
-flake8 = "==7.2.0"
+ruff = "^0.1.0"
 mypy = "==1.15.0"
 # Type stubs
 types-requests = "^2.31.0.0"
@@ -99,29 +97,39 @@ build-backend = "poetry.core.masonry.api"
 # Code Quality Configuration
 # ============================================================================
 
-[tool.black]
-line-length = 88
-target-version = ["py310"]
-exclude = '''
-/(
-    \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-  | 0\.2\.0
-)/
-'''
+[tool.ruff]
+line-length = 120
+target-version = "py310"
 
-[tool.isort]
-profile = "black"
-line_length = 88
-skip_glob = ["*/.tox/*", "0.2.0/*"]
-known_first_party = ["openmas"]
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "N", "B", "SIM"]
+ignore = ["E203"]
+exclude = [
+    ".git",
+    "__pycache__",
+    ".tox",
+    ".eggs",
+    "*.egg",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+    "env",
+    "refactoring_work/**",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["F401", "F841"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.ruff.lint.isort]
+known-first-party = ["openmas"]
+force-single-line = false
+combine-as-imports = true
 
 [tool.mypy]
 python_version = "3.10"
@@ -131,13 +139,14 @@ disallow_untyped_defs = true
 disallow_incomplete_defs = true
 exclude = [
     "0\\.2\\.0/.*",
+    "refactoring_work/.*",
     "build/.*",
     "dist/.*"
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-norecursedirs = ["tests/backup", "0.2.0", "build", "dist"]
+norecursedirs = ["tests/backup", "0.2.0", "refactoring_work", "build", "dist"]
 python_files = "test_*.py"
 asyncio_mode = "auto"
 markers = [
@@ -162,6 +171,7 @@ omit = [
     "*/tests/*",
     "*/test_*",
     "0.2.0/*",
+    "refactoring_work/*",
     "build/*",
     "dist/*"
 ]

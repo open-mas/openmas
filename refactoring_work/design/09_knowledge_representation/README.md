@@ -1,52 +1,20 @@
 # OpenMAS Knowledge Representation & Reasoning (KR&R) System
 
-## Overview
+## 1. Overview
 
-This directory contains documentation about the Knowledge Representation and Reasoning (KR&R) System in OpenMAS. The KR&R System is a distinct architectural component responsible for **managing and providing access to structured knowledge**. It is a cornerstone of OpenMAS's reasoning agnostic design, supporting multiple knowledge representation formalisms and providing standardized interfaces for various reasoning engines to access this knowledge.
+The Knowledge Representation and Reasoning (KR&R) System is a core component of the OpenMAS framework, designed to provide agents with sophisticated capabilities for knowledge management and access. It serves as a centralized service that separates the storage and management of knowledge from an agent's primary decision-making logic (i.e., its Reasoning Engine).
 
-> **Important**: The KR&R System is *not* a reasoning approach itself but rather an enabling system that various `ReasoningEngines` (the agent's "brain") can leverage through well-defined interfaces like `IKnowledgeBase`.
+This architectural separation is crucial to OpenMAS's design, enabling agents to leverage diverse knowledge sources through a standardized set of interfaces without coupling their reasoning logic to any specific knowledge representation.
 
-## Key Capabilities
+## 2. Documentation Structure
 
-The KR&R module provides these core capabilities:
+This section provides a comprehensive guide to the KR&R system's architecture, design principles, and formal interfaces.
 
-1. **Multiple Knowledge Representation Formalisms**
-   - Symbolic (logic-based) representations
-   - Graph-based representations
-   - Probabilistic representations
-   - Neural/embedding-based representations
+*   **[Architecture](./architecture.md)**
+    *   Describes the high-level structure of the KR&R system, its key components, and how it interacts with other parts of the OpenMAS framework, particularly Reasoning Engines.
 
-2. **Knowledge Processing Capabilities**
-   - Internal inference mechanisms for knowledge bases (e.g., deductive, inductive, abductive)
-   - Temporal and spatial data processing
-   - Query processing and optimization
-   - Consistency checking
-   - Similarity search (for vector stores)
+*   **[Design Principles](./design_principles.md)**
+    *   Outlines the fundamental principles that guide the design of the KR&R system, such as representation agnosticism, scalability, and the separation of knowledge from reasoning.
 
-   > **Note**: These are internal knowledge processing capabilities of the KR&R System itself and should not be confused with the high-level agent reasoning performed by `ReasoningEngines`.
-
-3. **Knowledge Management**
-   - Knowledge acquisition
-   - Knowledge integration
-   - Knowledge evolution
-   - Consistency management
-   - Uncertainty handling
-
-## Documentation Structure
-
-| Document | Description |
-|----------|-------------|
-| [KR&R Architecture](./architecture.md) | High-level architecture of the KR&R System |
-| [Knowledge Access Interfaces](./knowledge_access_interfaces/README.md) | Interfaces for reasoning engines to access knowledge |
-| [Knowledge Representations](./representations/README.md) | Details on knowledge representation formalisms |
-| [Integration Guide](./integration.md) | How to integrate KR&R with agent reasoning engines |
-
-## Integration with Other Components
-
-The KR&R System integrates with other OpenMAS components:
-
-- **Agent Framework & Reasoning Engines** - Provides knowledge management and access for agent reasoning engines via standardized interfaces like `IKnowledgeBase` (defined in `./knowledge_access_interfaces/interfaces.md`)
-- **Architecture** - Supports the reasoning agnostic design described in `/01_architecture/reasoning_agnostic_design.md` by providing a common knowledge management layer that can be used by any reasoning approach
-- **Configuration** - Configured through the unified schema in `/03_configuration/`
-
-> **Important**: The KR&R System is not responsible for an agent's primary decision-making logic. That responsibility belongs to the agent's configured `ReasoningEngine` (the "brain"). The KR&R System's role is to manage and provide access to knowledge that these reasoning engines can leverage.
+*   **[Knowledge Access Interfaces](./knowledge_access_interfaces/README.md)**
+    *   Provides the formal definitions for the interfaces used to interact with the KR&R system, including the `IKnowledgeBase` for querying knowledge and the `IKnowledgeBaseRegistry` for discovering available knowledge bases.

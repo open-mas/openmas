@@ -2,209 +2,122 @@
 
 ## Overview
 
-This document formalizes the interfaces between different reasoning modules in OpenMAS, enabling seamless integration and interoperability between various reasoning approaches. It also defines the standardized interfaces that `ReasoningEngines` use to interact with knowledge managed by the KR&R System.
+This document formalizes the standardized interfaces for reasoning components in OpenMAS. The central piece is the `IReasoningEngine` interface, which provides a single, consistent entry point for the Agent Framework to invoke any reasoning process, from simple rule-based logic to complex hybrid strategies.
 
 ## Core Interface Principles
 
-The reasoning interfaces follow these design principles:
+1.  **Standardized Invocation**: A single, universal `IReasoningEngine` interface is used to execute a reasoning cycle.
+2.  **Composition over Inheritance**: Specialized reasoning logic is composed within an `IReasoningEngine` implementation rather than requiring a complex hierarchy of inherited interfaces.
+3.  **Pydantic-Driven Contracts**: All data structures for inputs (`ReasoningInput`) and outputs (`ReasoningResult`) are defined as Pydantic models, ensuring clear, type-safe, and self-documenting contracts.
+4.  **Decoupled Services**: Core services like knowledge bases and session management are provided to the engine during initialization, promoting loose coupling.
 
-1. **Standardized Interfaces**: All reasoning components implement common interfaces for consistency
-2. **Loose Coupling**: Components interact through well-defined interfaces without tight dependencies
-3. **Extension Points**: Clear extension points for adding new reasoning capabilities
-4. **Minimalistic Design**: Interfaces are minimal but complete for their purpose
-5. **Protocol Independence**: Reasoning interfaces are independent of communication protocols
-6. **Configuration-Driven**: Interface implementations are configurable through the unified schema
-7. **Knowledge Agnosticism**: Reasoning engines can work with different knowledge representations through standardized interfaces
+## Core Reasoning Interface
 
-## Core Reasoning Interfaces
+### `IReasoningEngine` (Standardized Invocation Contract)
 
-### IReasoner Interface
-
-The base interface implemented by all reasoning engines:
+The `IReasoningEngine` interface is the definitive, high-level contract for all reasoning components. It abstracts the internal complexity of any reasoning process into a single, well-defined entry point.
 
 ```python
-class IReasoner(ABC):
-    """Base interface for all reasoning components."""
+from abc import ABC, abstractmethod
+from typing import Dict, Any, Optional, List
+from pydantic import BaseModel, Field
+
+# --- Forward references to interfaces defined in other modules ---
+# These are defined in detail in their respective interface documents.
+class IKnowledgeBaseRegistry(ABC):
+    ...
+
+class ISessionManager(ABC):
+    ...
+
+# --- Standardized Input/Output Data Models ---
+
+class ReasoningInput(BaseModel):
+    """Standardized input for a reasoning cycle."""
+    trigger_event: str = Field(..., description="The event that initiated the reasoning cycle (e.g., 'message_received', 'scheduled_task').")
+    input_data: Dict[str, Any] = Field(..., description="The primary data for the reasoning cycle, such as a message payload or task parameters.")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional context, like message headers or trace IDs.")
+
+class ReasoningResult(BaseModel):
+    """Standardized output from a reasoning cycle."""
+    actions: List[Dict[str, Any]] = Field(..., description="A list of proposed actions for the agent to execute, e.g., sending a message, calling a capability.")
+    new_internal_state: Optional[Dict[str, Any]] = Field(None, description="Any proposed changes to the agent's internal state.")
+    confidence_score: Optional[float] = Field(None, description="A score indicating the engine's confidence in its result.")
+    explanation: Optional[str] = Field(None, description="A human-readable explanation of the reasoning process.")
+
+# --- Core Engine Interface ---
+
+class IReasoningEngine(ABC):
+    """Base interface for all reasoning engines, defining the standard invocation method."""
 
     @abstractmethod
-    async def setup(self, agent: Agent) -> None:
-        """Initialize the reasoning component."""
-        pass
+    async def setup(
+        self,
+        config: Dict[str, Any],
+        knowledge_registry: IKnowledgeBaseRegistry,
+        session_manager: ISessionManager
+    ) -> None:
+        """Initialize the reasoning engine with its configuration and access to core services."""
+        ...
 
     @abstractmethod
-    async def reason(self, percept: Any) -> ReasoningResult:
-        """Perform reasoning based on the given percept."""
-        pass
-
-    @abstractmethod
-    async def update_knowledge(self, knowledge: Any) -> None:
-        """Update the internal knowledge of the reasoner."""
-        pass
-
-    @abstractmethod
-    async def query_knowledge(self, query: Any) -> Any:
-        """Query the internal knowledge base."""
-        pass
+    async def execute_cycle(self, input_data: ReasoningInput) -> ReasoningResult:
+        """Perform a single, complete reasoning cycle based on the given input."""
+        ...
 
     @abstractmethod
     async def cleanup(self) -> None:
-        """Clean up resources used by the reasoner."""
-        pass
+        """Clean up any resources used by the reasoning engine."""
+        ...
 ```
 
-### IReasoningStrategy Interface
+## Specialized Reasoning Models
 
-Interface for reasoning strategies that orchestrate multiple reasoning approaches:
+While the `IReasoningEngine` interface is universal, implementations can use specialized internal models. The following are provided as examples of Pydantic models that specific engines (e.g., a symbolic or LLM-based engine) might use internally. They are not part of the formal interface itself.
 
 ```python
-class IReasoningStrategy(ABC):
-    """Interface for reasoning strategies."""
+# --- Models for a potential Symbolic Engine ---
+class Fact(BaseModel):
+    """Represents a basic assertion."""
+    subject: str
+    predicate: str
+    object: Any
 
-    @abstractmethod
-    async def setup(self, agent: Agent) -> None:
-        """Initialize the reasoning strategy."""
-        pass
+class Rule(BaseModel):
+    """Represents an if-then rule."""
+    name: str
+    conditions: List[Fact]
+    conclusion: Fact
 
-    @abstractmethod
-    async def select_reasoners(self, percept: Any) -> List[IReasoner]:
-        """Select reasoners to use for the given percept."""
-        pass
+class Query(BaseModel):
+    """Represents a query against a symbolic knowledge base."""
+    pattern: List[Fact]
 
-    @abstractmethod
-    async def combine_results(self, results: List[ReasoningResult]) -> ReasoningResult:
-        """Combine results from multiple reasoners."""
-        pass
+# --- Models for a potential LLM-based Engine ---
+class Prompt(BaseModel):
+    """Represents a structured prompt for an LLM."""
+    template_name: str
+    context: Dict[str, Any]
+    instructions: Optional[str] = None
 
-    @abstractmethod
-    async def handle_conflict(self, conflicting_results: List[ReasoningResult]) -> ReasoningResult:
-        """Resolve conflicts between results."""
-        pass
+class VerificationResult(BaseModel):
+    """Represents the result of verifying an LLM output."""
+    is_valid: bool
+    reasoning: Optional[str] = None
 ```
 
-### IKnowledgeBase Interface (Canonical Reference)
+## Integration with Agent Framework
 
-> **Migration Note:** The legacy IKnowledgeBase interface and all ambiguous method/type references have been removed. The canonical interface is now defined in `/09_knowledge_representation/knowledge_access_interfaces/interfaces.md` and must be used for all designs, documentation, and implementation.
+The reasoning engine integrates with the agent framework as follows:
 
-All IKnowledgeBase methods use explicit async signatures and Pydantic models for all parameters and return values. Specialized operations (graph queries, vector search, etc.) are supported via dedicated methods. See `interfaces.md` for full details and illustrative examples.
-
-## Specialized Reasoning Interfaces
-
-The framework provides specialized interfaces for different reasoning approaches:
-
-### ISymbolicReasoner Interface
-
-Interface for symbolic reasoning engines:
-
-```python
-class ISymbolicReasoner(IReasoner):
-    """Interface for symbolic reasoning engines."""
-
-    @abstractmethod
-    async def add_rule(self, rule: Rule) -> None:
-        """Add a rule to the symbolic reasoner."""
-        pass
-
-    @abstractmethod
-    async def add_fact(self, fact: Fact) -> None:
-        """Add a fact to the symbolic reasoner."""
-        pass
-
-    @abstractmethod
-    async def infer(self, query: Query) -> InferenceResult:
-        """Perform inference based on the given query."""
-        pass
-
-    @abstractmethod
-    async def explain(self, result: InferenceResult) -> Explanation:
-        """Explain how an inference result was derived."""
-        pass
-```
-
-### ILLMReasoner Interface
-
-Interface for LLM-based reasoning:
-
-```python
-class ILLMReasoner(IReasoner):
-    """Interface for LLM-based reasoning."""
-
-    @abstractmethod
-    async def get_prompt(self, context: Any) -> Prompt:
-        """Generate a prompt based on the given context."""
-        pass
-
-    @abstractmethod
-    async def parse_response(self, response: Any) -> ReasoningResult:
-        """Parse an LLM response into a reasoning result."""
-        pass
-
-    @abstractmethod
-    async def augment_context(self, context: Any) -> Any:
-        """Augment reasoning context with additional knowledge."""
-        pass
-
-    @abstractmethod
-    async def verify_result(self, result: ReasoningResult) -> VerificationResult:
-        """Verify an LLM-generated reasoning result."""
-        pass
-```
-
-## Integration with Agent Framework and KR&R System
-
-The reasoning interfaces integrate with the agent framework and KR&R System through:
-
-1. **Agent Reasoning Component**: Agents are configured with a primary `ReasoningEngine` via `reasoning.approach` that implements the `IReasoner` interface
-2. **Knowledge Management Configuration**: Agents specify which knowledge resources their reasoning engine will use via `knowledge_management_config`
-3. **KR&R System Integration**: The KR&R System provides implementations of the `IKnowledgeBase` interface for various knowledge representation types
-4. **Capability Implementation**: Agent capabilities utilize reasoning interfaces for implementation
-5. **Message Processing**: Agent message handlers use reasoning for processing incoming messages
-
-## Configuration Schema
-
-Reasoning interfaces and knowledge base access are configured through the unified configuration schema:
-
-```yaml
-agent:
-  # Reasoning engine configuration
-  reasoning:
-    approach: "symbolic_engine"  # The primary reasoning engine ("brain")
-    implementation: "rule_based"  # Specific implementation
-    config:
-      # Implementation-specific configuration
-      rules:
-        - name: "example_rule"
-          condition: "condition_expr"
-
-  # Knowledge management configuration
-  knowledge_management_config:
-    enabled: true
-    knowledge_bases:
-      - kb_id: "domain_ontology"  # Reference to a knowledge base managed by the KR&R System
-        type: "graph"             # The knowledge representation type
-      - kb_id: "business_rules"
-        type: "symbolic_facts"
-    default_knowledge_representation_types:
-      - "graph"
-      - "symbolic_facts"
-```
-
-## Knowledge Base Implementations
-
-The KR&R System provides various implementations of the `IKnowledgeBase` interface, each tailored to a specific knowledge representation type:
-
-1. **SymbolicKnowledgeBase**: For logical facts, rules, and symbolic reasoning
-2. **GraphKnowledgeBase**: For semantic networks, RDF graphs, and ontologies
-3. **VectorKnowledgeBase**: For vector embeddings and similarity-based retrieval
-4. **ProbabilisticKnowledgeBase**: For probabilistic facts and Bayesian reasoning
-5. **HybridKnowledgeBase**: Combines multiple representation types under a unified interface
-
-Each implementation handles the translation between the generic `IKnowledgeBase` methods and the specifics of their underlying storage and representation mechanisms.
-          action: "action_expr"
-```
+1.  **Configuration**: An agent's configuration in the unified schema specifies which `IReasoningEngine` implementation to use.
+2.  **Instantiation**: The Agent Framework instantiates the specified engine.
+3.  **Setup**: The framework calls the engine's `setup()` method, injecting the necessary dependencies (`IKnowledgeBaseRegistry`, `ISessionManager`).
+4.  **Invocation**: When a trigger event occurs (e.g., a message arrives), the framework constructs a `ReasoningInput` object and calls the engine's `execute_cycle()` method.
+5.  **Action**: The framework processes the `ReasoningResult` to execute actions, update state, etc.
 
 ## References
 
-- [Knowledge Representation Architecture](/refactoring_work/00b_overview/09_knowledge_representation/architecture.md)
-- [Hybrid Reasoning](/refactoring_work/00b_overview/09_knowledge_representation/reasoning/hybrid_reasoning.md)
-- [Configuration Schema](/refactoring_work/00b_overview/03_configuration/unified_configuration_schema.md)
-- [Agent Framework Integration](/refactoring_work/00b_overview/04_agents/integration.md)
+-   [Knowledge Access Interfaces](./../knowledge_access_interfaces/interfaces.md)
+-   [Reasoning Agnostic Design](/refactoring_work/design/01_architecture/reasoning_agnostic_design.md)
+-   [Unified Configuration Schema](/refactoring_work/design/03_configuration/unified_configuration_schema.md)

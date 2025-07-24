@@ -14,7 +14,7 @@ Based on specifications in:
 import asyncio
 import os
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
@@ -29,11 +29,7 @@ from openmas.core.simf import (
 )
 
 # Add path for MCP translator import
-sys.path.append(
-    os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "examples", "simf_mcp_integration"
-    )
-)
+sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "examples", "simf_mcp_integration"))
 
 try:
     from mcp_to_simf_translator import MCPToSIMFTranslator
@@ -58,9 +54,9 @@ class MCPAgent(Agent):
         self,
         agent_id: str,
         name: str,
-        mcp_server_command: List[str],
-        session_id: Optional[str] = None,
-        capabilities: Optional[List[str]] = None,
+        mcp_server_command: list[str],
+        session_id: str | None = None,
+        capabilities: list[str] | None = None,
         **kwargs,
     ):
         """
@@ -76,18 +72,16 @@ class MCPAgent(Agent):
             **kwargs: Additional configuration passed to base Agent
         """
         # Create agent configuration
-        config = AgentConfig(
-            agent_id=agent_id, name=name, capabilities=capabilities or []
-        )
+        config = AgentConfig(agent_id=agent_id, name=name, capabilities=capabilities or [])
 
         # Initialize base agent
         super().__init__(config=config, **kwargs)
 
         # MCP-specific configuration
         self.mcp_server_command = mcp_server_command
-        self.mcp_session: Optional[ClientSession] = None
+        self.mcp_session: ClientSession | None = None
         self.mcp_translator = MCPToSIMFTranslator(agent_id)
-        self.available_tools: Dict[str, Tool] = {}
+        self.available_tools: dict[str, Tool] = {}
 
         # Session management
         if session_id:
@@ -106,7 +100,7 @@ class MCPAgent(Agent):
         return self._running
 
     @property
-    def session_id(self) -> Optional[str]:
+    def session_id(self) -> str | None:
         """Get the current session ID."""
         return self.current_session_id
 
@@ -151,33 +145,31 @@ class MCPAgent(Agent):
             # Create server parameters
             server_params = StdioServerParameters(
                 command=self.mcp_server_command[0],
-                args=(
-                    self.mcp_server_command[1:]
-                    if len(self.mcp_server_command) > 1
-                    else []
-                ),
+                args=(self.mcp_server_command[1:] if len(self.mcp_server_command) > 1 else []),
                 env=None,
             )
 
             # Test connection with proper initialization sequence
             try:
-                async with stdio_client(server_params) as (read, write):
-                    async with ClientSession(read, write) as session:
-                        # CRITICAL: Explicitly initialize session to prevent race
-                        # condition
-                        await asyncio.wait_for(session.initialize(), timeout=10.0)
+                async with (
+                    stdio_client(server_params) as (read, write),
+                    ClientSession(read, write) as session,
+                ):
+                    # CRITICAL: Explicitly initialize session to prevent race
+                    # condition
+                    await asyncio.wait_for(session.initialize(), timeout=10.0)
 
-                        # If we get here, the session is properly initialized
-                        self.logger.info("MCP connection test successful")
+                    # If we get here, the session is properly initialized
+                    self.logger.info("MCP connection test successful")
 
-                        # Store connection info for later use
-                        self._server_params = server_params
-                        # Set flag to indicate successful connection (for tests)
-                        self.mcp_session = "connected"  # Simple indicator for tests
+                    # Store connection info for later use
+                    self._server_params = server_params
+                    # Set flag to indicate successful connection (for tests)
+                    self.mcp_session = "connected"  # Simple indicator for tests
 
             except Exception as e:
                 self.logger.error(f"MCP connection test failed: {e}")
-                raise AgentConfigurationError(f"MCP server connection test failed: {e}")
+                raise AgentConfigurationError(f"MCP server connection test failed: {e}") from e
 
             self.logger.info("Connected to MCP server successfully")
 
@@ -186,7 +178,7 @@ class MCPAgent(Agent):
             raise
         except Exception as e:
             self.logger.error(f"Failed to connect to MCP server: {e}")
-            raise AgentConfigurationError(f"MCP server connection failed: {e}")
+            raise AgentConfigurationError(f"MCP server connection failed: {e}") from e
 
     async def _discover_mcp_tools(self) -> None:
         """
@@ -197,43 +189,38 @@ class MCPAgent(Agent):
                 raise AgentError("MCP server not connected")
 
             # Use temporary session for tool discovery (proper MCP pattern)
-            async with stdio_client(self._server_params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    # CRITICAL: Explicitly initialize session before making requests
-                    await asyncio.wait_for(session.initialize(), timeout=10.0)
+            async with (
+                stdio_client(self._server_params) as (read, write),
+                ClientSession(read, write) as session,
+            ):
+                # CRITICAL: Explicitly initialize session before making requests
+                await asyncio.wait_for(session.initialize(), timeout=10.0)
 
-                    # Now it's safe to make MCP requests
-                    tools_response = await session.list_tools()
+                # Now it's safe to make MCP requests
+                tools_response = await session.list_tools()
 
-                    self.logger.info(
-                        f"Discovered {len(tools_response.tools)} MCP tools"
-                    )
+                self.logger.info(f"Discovered {len(tools_response.tools)} MCP tools")
 
-                    # Register each tool as a capability
-                    for tool in tools_response.tools:
-                        capability_name = (
-                            tool.name
-                        )  # Use actual tool name, not prefixed
+                # Register each tool as a capability
+                for tool in tools_response.tools:
+                    capability_name = tool.name  # Use actual tool name, not prefixed
 
-                        # Tool registered successfully - no need to store
-                        # capability dict
+                    # Tool registered successfully - no need to store
+                    # capability dict
 
-                        # Register the capability (base Agent only expects the name)
-                        await self.register_capability(capability_name)
+                    # Register the capability (base Agent only expects the name)
+                    await self.register_capability(capability_name)
 
-                        # Store the capability details with the capability name
-                        self.available_tools[capability_name] = tool
+                    # Store the capability details with the capability name
+                    self.available_tools[capability_name] = tool
 
-                        self.logger.debug(
-                            f"Registered MCP tool '{tool.name}' as capability "
-                            f"'{capability_name}'"
-                        )
+                    self.logger.debug(f"Registered MCP tool '{tool.name}' as capability " f"'{capability_name}'")
 
         except Exception as e:
             self.logger.error(f"Failed to discover MCP tools: {e}")
-            raise AgentError(f"MCP tool discovery failed: {e}")
+            raise AgentError(f"MCP tool discovery failed: {e}") from e
 
-    async def execute_mcp_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Any:
+    async def execute_mcp_tool(self, tool_name: str, parameters: dict[str, Any]) -> Any:
         """
         Execute an MCP tool with the given parameters.
 
@@ -249,39 +236,33 @@ class MCPAgent(Agent):
 
         try:
             # Use temporary session for tool execution (proper MCP pattern)
-            async with stdio_client(self._server_params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    # CRITICAL: Explicitly initialize session before making requests
-                    await asyncio.wait_for(session.initialize(), timeout=10.0)
+            async with (
+                stdio_client(self._server_params) as (read, write),
+                ClientSession(read, write) as session,
+            ):
+                # CRITICAL: Explicitly initialize session before making requests
+                await asyncio.wait_for(session.initialize(), timeout=10.0)
 
-                    # Now it's safe to execute the tool
-                    result = await session.call_tool(tool_name, parameters)
+                # Now it's safe to execute the tool
+                result = await session.call_tool(tool_name, parameters)
 
-                    # Extract the actual result from the MCP response
-                    if (
-                        hasattr(result, "structuredContent")
-                        and result.structuredContent
-                    ):
-                        # Return the structured content which is the actual result
-                        extracted_result = result.structuredContent
-                    elif hasattr(result, "content") and result.content:
-                        # Fallback to text content if structured content not available
-                        extracted_result = (
-                            result.content[0].text if result.content else str(result)
-                        )
-                    else:
-                        # Fallback to string representation
-                        extracted_result = str(result)
+                # Extract the actual result from the MCP response
+                if hasattr(result, "structuredContent") and result.structuredContent:
+                    # Return the structured content which is the actual result
+                    extracted_result = result.structuredContent
+                elif hasattr(result, "content") and result.content:
+                    # Fallback to text content if structured content not available
+                    extracted_result = result.content[0].text if result.content else str(result)
+                else:
+                    # Fallback to string representation
+                    extracted_result = str(result)
 
-                    self.logger.debug(
-                        f"Executed MCP tool '{tool_name}' with result: "
-                        f"{extracted_result}"
-                    )
-                    return extracted_result
+                self.logger.debug(f"Executed MCP tool '{tool_name}' with result: " f"{extracted_result}")
+                return extracted_result
 
         except Exception as e:
             self.logger.error(f"Failed to execute MCP tool '{tool_name}': {e}")
-            raise AgentError(f"MCP tool execution failed: {e}")
+            raise AgentError(f"MCP tool execution failed: {e}") from e
 
     async def execute_capability(self, simf_message: SIMFMessage) -> SIMFMessage:
         """
@@ -333,17 +314,13 @@ class MCPAgent(Agent):
                     session_id=self.session_id,
                 )
 
-                self.logger.error(
-                    f"MCP capability execution failed: {capability_name} - {e}"
-                )
+                self.logger.error(f"MCP capability execution failed: {capability_name} - {e}")
                 return error_response
 
         except Exception as e:
             # Create error response for unexpected errors
             error_response = create_invocation_result_message(
-                invocation_name=(
-                    capability_name if "capability_name" in locals() else "unknown"
-                ),
+                invocation_name=(capability_name if "capability_name" in locals() else "unknown"),
                 status=InvocationStatus.FAILURE,
                 target_agent_id=simf_message.source_agent_id or "unknown",
                 result={"error": str(e)},
@@ -354,7 +331,7 @@ class MCPAgent(Agent):
             self.logger.error(f"Unexpected error during capability execution: {e}")
             return error_response
 
-    def get_mcp_tools(self) -> Dict[str, Tool]:
+    def get_mcp_tools(self) -> dict[str, Tool]:
         """
         Get all available MCP tools.
 
@@ -381,7 +358,7 @@ class MCPAgent(Agent):
 # ============================================================================
 
 
-def create_mcp_agent_from_config(config: Dict[str, Any]) -> MCPAgent:
+def create_mcp_agent_from_config(config: dict[str, Any]) -> MCPAgent:
     """
     Create MCPAgent from configuration dictionary.
 
@@ -441,4 +418,4 @@ def create_mcp_agent_from_config(config: Dict[str, Any]) -> MCPAgent:
         )
 
     except Exception as e:
-        raise AgentConfigurationError(f"Failed to create MCPAgent from config: {e}")
+        raise AgentConfigurationError(f"Failed to create MCPAgent from config: {e}") from e

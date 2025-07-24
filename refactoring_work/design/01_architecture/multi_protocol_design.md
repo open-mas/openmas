@@ -12,20 +12,24 @@ The following diagram illustrates how a single OpenMAS agent can support multipl
 componentDiagram
     component "OpenMAS Agent" as Agent {
         component "Agent Core" as Core {
+            component "IMessageHandler" as Handler
             component "Agent Framework" as Framework
             component "ReasoningEngine" as Reasoning
             component "KR&R System" as KRR
         }
 
-        component "Protocol Interfaces" as Protocols {
-            component "A2A Protocol Interface" as A2A
-            component "MCP Protocol Interface" as MCP
-            component "HTTP Protocol Interface" as HTTP
-            component "MQTT Protocol Interface" as MQTT
-            component "gRPC Protocol Interface" as GRPC
+        component "Protocol Adapters" as Adapters {
+            component "A2A Protocol Adapter" as A2A
+            component "MCP Protocol Adapter" as MCP
+            component "HTTP Protocol Adapter" as HTTP
+            component "MQTT Protocol Adapter" as MQTT
+            component "gRPC Protocol Adapter" as GRPC
         }
 
         Reasoning --> KRR : uses
+        Handler --> Framework : SIMF
+        Framework --> Reasoning : SIMF
+        Reasoning --> Framework : SIMF
     }
 
     component "A2A Client" as A2AClient
@@ -40,14 +44,11 @@ componentDiagram
     MQTTBroker --> MQTT : MQTT Protocol
     GRPCClient --> GRPC : gRPC Protocol
 
-    A2A --> Framework : SIMF
-    MCP --> Framework : SIMF
-    HTTP --> Framework : SIMF
-    MQTT --> Framework : SIMF
-    GRPC --> Framework : SIMF
-
-    Framework --> Reasoning : SIMF
-    Reasoning --> Framework : SIMF
+    A2A --> Handler : SIMF
+    MCP --> Handler : SIMF
+    HTTP --> Handler : SIMF
+    MQTT --> Handler : SIMF
+    GRPC --> Handler : SIMF
 
     Framework --> A2A : SIMF
     Framework --> MCP : SIMF
@@ -89,25 +90,21 @@ The Standard Internal Message Format provides a rich set of payload types design
 
 These payload types ensure that no semantic information is lost during protocol translation, enabling true cross-protocol interoperability. For complete details on each payload type and protocol-specific mappings, see [Standard Internal Message Format](./internal_message_format_standard.md).
 
-## Protocol Interface Components
+## Core Communication Components
 
-Each protocol interface consists of these key components:
+OpenMAS's protocol layer is built on a clear separation of concerns, with two primary interfaces ensuring modularity and flexibility:
 
-1. **Protocol Adapter**: Implements the [IProtocolAdapter interface](../02_protocols/iprotocol_adapter_interface.md) to convert between protocol-specific message formats and SIMF
-   - `to_internal_format()`: Converts from protocol format to SIMF, selecting the appropriate payload type based on message content
-   - `from_internal_format()`: Converts from SIMF to protocol format, translating payload types to protocol-specific structures
-   - `connect()`, `disconnect()`: Manages protocol connection lifecycle
-   - `send_message()`, `register_message_callback()`: Handles message transmission and reception
-   - `get_status()`, `get_capabilities()`: Provides protocol status and capability information
+1.  **Protocol Adapter (`IProtocolAdapter`)**: This component is a pure translator and connection manager. Its sole responsibilities are:
+    - **Connection Lifecycle**: Managing the connection to the external endpoint (`connect()`, `disconnect()`, `get_status()`).
+    - **Message Translation**: Converting messages between the protocol-specific format and the Standard Internal Message Format (SIMF) (`to_internal_format()`, `from_internal_format()`).
+    - It does **not** handle message dispatching or contain any business logic. See the full [IProtocolAdapter interface definition](../02_protocols/iprotocol_adapter_interface.md).
 
-2. **Protocol-Specific Handler**: Manages protocol-specific communication details
-   - Connection management
-   - Authentication
-   - Protocol-specific metadata
+2.  **Message Handler (`IMessageHandler`)**: This component acts as the entry point for all inbound communications into the agent's core logic. Its responsibilities are:
+    - **Receiving Inbound Messages**: It receives messages in the SIMF format from one or more protocol adapters.
+    - **Processing and Dispatching**: It contains the logic to process the inbound message and route it to the appropriate component within the Agent Framework.
+    - This clean handoff ensures that the agent's core is completely decoupled from the transport protocol. See the full [IMessageHandler interface definition](../02_protocols/common/imessage_handler_interface.md).
 
-3. **Capability Mapper**: Maps agent capabilities to protocol-specific representations
-   - Exposes appropriate capabilities based on protocol constraints
-   - Translates capability invocations between protocols
+3.  **Agent Framework**: For outbound messages, the Agent Framework constructs a SIMF message and passes it directly to the appropriate `IProtocolAdapter`'s `from_internal_format()` method for translation and transmission.
 
 ## Unified Configuration
 
@@ -189,5 +186,6 @@ These translations maintain semantic fidelity through the rich SIMF payload type
 - [Standard Internal Message Format](./internal_message_format_standard.md)
 - [Reasoning Agnostic Design](./reasoning_agnostic_design.md)
 - [IProtocolAdapter Interface](../02_protocols/iprotocol_adapter_interface.md)
+- [IMessageHandler Interface](../02_protocols/common/imessage_handler_interface.md)
 - [Configuration Schema](../03_configuration/unified_configuration_schema.md)
 - [Protocol-to-Pattern Mapping](../02_protocols/protocol_to_pattern_mapping.md)

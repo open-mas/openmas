@@ -11,7 +11,7 @@ refactoring_work/design/01_architecture/internal_message_format_standard.md
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional, Union
+from typing import Any, Literal, Union
 from uuid import uuid4
 
 from pydantic import BaseModel, Field, field_validator
@@ -146,35 +146,27 @@ class TextContentPayload(BasePayload):
 class StructuredDataContentPayload(BasePayload):
     """Payload for structured data (JSON objects, etc.)."""
 
-    payload_type: Literal[PayloadType.STRUCTURED_DATA_CONTENT] = (
-        PayloadType.STRUCTURED_DATA_CONTENT
-    )
-    data: Dict[str, Any] = Field(..., description="Structured data object")
+    payload_type: Literal[PayloadType.STRUCTURED_DATA_CONTENT] = PayloadType.STRUCTURED_DATA_CONTENT
+    data: dict[str, Any] = Field(..., description="Structured data object")
 
 
 class AssetReferenceContentPayload(BasePayload):
     """Payload for references to binary assets (images, files, etc.)."""
 
-    payload_type: Literal[PayloadType.ASSET_REFERENCE_CONTENT] = (
-        PayloadType.ASSET_REFERENCE_CONTENT
-    )
+    payload_type: Literal[PayloadType.ASSET_REFERENCE_CONTENT] = PayloadType.ASSET_REFERENCE_CONTENT
     asset_id: str = Field(..., description="Unique identifier for the asset")
     asset_type: AssetType = Field(..., description="Type of the asset")
-    mime_type: Optional[str] = Field(None, description="MIME type of the asset")
+    mime_type: str | None = Field(None, description="MIME type of the asset")
 
     # Protocol-specific resource metadata
-    resource_metadata: Optional[Dict[str, Any]] = Field(
-        None, description="Protocol-specific resource metadata"
-    )
+    resource_metadata: dict[str, Any] | None = Field(None, description="Protocol-specific resource metadata")
 
 
 class MultiPartContentPayload(BasePayload):
     """Payload for messages with multiple content parts."""
 
-    payload_type: Literal[PayloadType.MULTI_PART_CONTENT] = (
-        PayloadType.MULTI_PART_CONTENT
-    )
-    parts: List[
+    payload_type: Literal[PayloadType.MULTI_PART_CONTENT] = PayloadType.MULTI_PART_CONTENT
+    parts: list[
         Union[
             TextContentPayload,
             StructuredDataContentPayload,
@@ -188,15 +180,9 @@ class MultiPartContentPayload(BasePayload):
 class InvocationContentPayload(BasePayload):
     """Payload for capability or tool invocations."""
 
-    payload_type: Literal[PayloadType.INVOCATION_CONTENT] = (
-        PayloadType.INVOCATION_CONTENT
-    )
-    invocation_name: str = Field(
-        ..., description="Name of the capability or tool being invoked"
-    )
-    arguments: Dict[str, Any] = Field(
-        default_factory=dict, description="Arguments for the invocation"
-    )
+    payload_type: Literal[PayloadType.INVOCATION_CONTENT] = PayloadType.INVOCATION_CONTENT
+    invocation_name: str = Field(..., description="Name of the capability or tool being invoked")
+    arguments: dict[str, Any] = Field(default_factory=dict, description="Arguments for the invocation")
 
 
 class ErrorInfo(BaseModel):
@@ -204,78 +190,46 @@ class ErrorInfo(BaseModel):
 
     code: str = Field(..., description="Error code")
     message: str = Field(..., description="Error message")
-    details: Optional[Dict[str, Any]] = Field(
-        None, description="Additional error details"
-    )
+    details: dict[str, Any] | None = Field(None, description="Additional error details")
 
 
 class InvocationResultContentPayload(BasePayload):
     """Payload for results of capability or tool invocations."""
 
-    payload_type: Literal[PayloadType.INVOCATION_RESULT_CONTENT] = (
-        PayloadType.INVOCATION_RESULT_CONTENT
-    )
-    invocation_name: str = Field(
-        ..., description="Name of the capability or tool that was invoked"
-    )
+    payload_type: Literal[PayloadType.INVOCATION_RESULT_CONTENT] = PayloadType.INVOCATION_RESULT_CONTENT
+    invocation_name: str = Field(..., description="Name of the capability or tool that was invoked")
     status: InvocationStatus = Field(..., description="Status of the invocation")
-    result: Optional[Dict[str, Any]] = Field(
-        None, description="Result data for successful invocations"
-    )
-    error: Optional[ErrorInfo] = Field(
-        None, description="Error information for failed invocations"
-    )
+    result: dict[str, Any] | None = Field(None, description="Result data for successful invocations")
+    error: ErrorInfo | None = Field(None, description="Error information for failed invocations")
 
 
 class StreamContextContentPayload(BasePayload):
     """Payload for messages that are part of a streaming sequence."""
 
-    payload_type: Literal[PayloadType.STREAM_CONTEXT_CONTENT] = (
-        PayloadType.STREAM_CONTEXT_CONTENT
-    )
-    stream_id: str = Field(
-        ..., description="Identifier for the stream this message belongs to"
-    )
+    payload_type: Literal[PayloadType.STREAM_CONTEXT_CONTENT] = PayloadType.STREAM_CONTEXT_CONTENT
+    stream_id: str = Field(..., description="Identifier for the stream this message belongs to")
     sequence_number: int = Field(..., description="Position in the stream sequence")
     stream_position: StreamPosition = Field(..., description="Position in the stream")
-    is_heartbeat: bool = Field(
-        default=False, description="Whether this is a keepalive message"
-    )
-    content: Optional[
-        Union[
-            TextContentPayload,
-            StructuredDataContentPayload,
-            AssetReferenceContentPayload,
-            InvocationContentPayload,
-            InvocationResultContentPayload,
-        ]
-    ] = Field(None, description="The actual content payload")
-    estimated_remaining: Optional[int] = Field(
-        None, description="Estimated number of remaining messages"
-    )
+    is_heartbeat: bool = Field(default=False, description="Whether this is a keepalive message")
+    content: (
+        InvocationContentPayload
+        | InvocationResultContentPayload
+        | AssetReferenceContentPayload
+        | TextContentPayload
+        | None
+    ) = Field(None, description="The actual content payload")
+    estimated_remaining: int | None = Field(None, description="Estimated number of remaining messages")
 
 
 class KnowledgeRepresentationContentPayload(BasePayload):
     """Payload for formal knowledge structures used in symbolic reasoning."""
 
-    payload_type: Literal[PayloadType.KNOWLEDGE_REPRESENTATION_CONTENT] = (
-        PayloadType.KNOWLEDGE_REPRESENTATION_CONTENT
-    )
-    formalism: KnowledgeFormalism = Field(
-        ..., description="Knowledge representation formalism"
-    )
-    representation: Union[str, Dict[str, Any]] = Field(
-        ..., description="The actual knowledge content"
-    )
-    context_id: Optional[str] = Field(
-        None, description="Identifier for the knowledge context/KB"
-    )
-    operation: Optional[KnowledgeOperation] = Field(
-        None, description="Knowledge operation"
-    )
-    metadata: Optional[Dict[str, Any]] = Field(
-        None, description="Additional information about the knowledge"
-    )
+    payload_type: Literal[PayloadType.KNOWLEDGE_REPRESENTATION_CONTENT] = PayloadType.KNOWLEDGE_REPRESENTATION_CONTENT
+    formalism: KnowledgeFormalism = Field(..., description="Knowledge representation formalism")
+    representation: str | dict[str, Any] = Field(..., description="The actual knowledge content")
+    context_id: str | None = Field(None, description="Identifier for the knowledge context/KB")
+    operation: KnowledgeOperation | None = Field(None, description="Knowledge operation")
+    metadata: dict[str, Any] | None = Field(None, description="Additional information about the knowledge")
 
 
 class EventContentPayload(BasePayload):
@@ -284,28 +238,24 @@ class EventContentPayload(BasePayload):
     payload_type: Literal[PayloadType.EVENT_CONTENT] = PayloadType.EVENT_CONTENT
     event_type: str = Field(..., description="Type of event (domain-specific)")
     event_source: str = Field(..., description="Source of the event")
-    timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="When the event occurred"
-    )
-    data: Dict[str, Any] = Field(default_factory=dict, description="Event data payload")
-    severity: Optional[EventSeverity] = Field(None, description="Event severity level")
-    is_transient: bool = Field(
-        default=True, description="Whether the event is point-in-time or persistent"
-    )
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="When the event occurred")
+    data: dict[str, Any] = Field(default_factory=dict, description="Event data payload")
+    severity: EventSeverity | None = Field(None, description="Event severity level")
+    is_transient: bool = Field(default=True, description="Whether the event is point-in-time or persistent")
 
 
 # Create PayloadUnion after all payload types are defined
-PayloadUnion = Union[
-    TextContentPayload,
-    StructuredDataContentPayload,
-    AssetReferenceContentPayload,
-    MultiPartContentPayload,
-    InvocationContentPayload,
-    InvocationResultContentPayload,
-    StreamContextContentPayload,
-    KnowledgeRepresentationContentPayload,
-    EventContentPayload,
-]
+PayloadUnion = (
+    TextContentPayload
+    | StructuredDataContentPayload
+    | AssetReferenceContentPayload
+    | MultiPartContentPayload
+    | InvocationContentPayload
+    | InvocationResultContentPayload
+    | StreamContextContentPayload
+    | KnowledgeRepresentationContentPayload
+    | EventContentPayload
+)
 
 # Update MultiPartContentPayload to use PayloadUnion
 MultiPartContentPayload.model_rebuild()
@@ -340,30 +290,18 @@ class SIMFMessage(BaseModel):
         default_factory=datetime.utcnow,
         description="Time when this message was created or processed",
     )
-    target_agent_id: str = Field(
-        ..., description="Identifier of the agent that should receive this message"
-    )
+    target_agent_id: str = Field(..., description="Identifier of the agent that should receive this message")
     message_flow_direction: MessageFlowDirection = Field(
         ..., description="Direction of message flow relative to the agent"
     )
-    message_type: MessageType = Field(
-        ..., description="Type of the message for routing and processing"
-    )
+    message_type: MessageType = Field(..., description="Type of the message for routing and processing")
     payload: PayloadUnion = Field(..., description="Content of the message")
 
     # Optional fields
-    session_id: Optional[str] = Field(
-        None, description="Identifier for the conversation/session"
-    )
-    source_protocol_type: Optional[str] = Field(
-        None, description="Protocol type that the message originated from"
-    )
-    source_agent_id: Optional[str] = Field(
-        None, description="Identifier of the agent that sent this message"
-    )
-    metadata: Optional[SIMFMetadata] = Field(
-        default_factory=SIMFMetadata, description="Additional contextual information"
-    )
+    session_id: str | None = Field(None, description="Identifier for the conversation/session")
+    source_protocol_type: str | None = Field(None, description="Protocol type that the message originated from")
+    source_agent_id: str | None = Field(None, description="Identifier of the agent that sent this message")
+    metadata: SIMFMetadata | None = Field(default_factory=SIMFMetadata, description="Additional contextual information")
 
     class Config:
         use_enum_values = True
@@ -395,9 +333,9 @@ def create_text_message(
     text: str,
     target_agent_id: str,
     message_type: MessageType = MessageType.PLAIN_TEXT_MESSAGE,
-    source_agent_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    source_agent_id: str | None = None,
+    session_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> SIMFMessage:
     """Create a SIMF message with text content."""
     return SIMFMessage(
@@ -412,12 +350,12 @@ def create_text_message(
 
 
 def create_structured_data_message(
-    data: Dict[str, Any],
+    data: dict[str, Any],
     target_agent_id: str,
     message_type: MessageType = MessageType.USER_QUERY,
-    source_agent_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    source_agent_id: str | None = None,
+    session_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> SIMFMessage:
     """Create a SIMF message with structured data content."""
     return SIMFMessage(
@@ -435,12 +373,12 @@ def create_asset_reference_message(
     asset_id: str,
     asset_type: AssetType,
     target_agent_id: str,
-    mime_type: Optional[str] = None,
-    resource_metadata: Optional[Dict[str, Any]] = None,
+    mime_type: str | None = None,
+    resource_metadata: dict[str, Any] | None = None,
     message_type: MessageType = MessageType.USER_QUERY,
-    source_agent_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    source_agent_id: str | None = None,
+    session_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> SIMFMessage:
     """Create a SIMF message with asset reference content."""
     return SIMFMessage(
@@ -460,12 +398,12 @@ def create_asset_reference_message(
 
 
 def create_multipart_message(
-    parts: List[PayloadUnion],
+    parts: list[PayloadUnion],
     target_agent_id: str,
     message_type: MessageType = MessageType.MULTI_PART_MESSAGE,
-    source_agent_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    source_agent_id: str | None = None,
+    session_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> SIMFMessage:
     """Create a SIMF message with multiple content parts."""
     return SIMFMessage(
@@ -481,12 +419,12 @@ def create_multipart_message(
 
 def create_invocation_message(
     invocation_name: str,
-    arguments: Dict[str, Any],
+    arguments: dict[str, Any],
     target_agent_id: str,
     message_type: MessageType = MessageType.TOOL_INVOCATION,
-    source_agent_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    source_agent_id: str | None = None,
+    session_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> SIMFMessage:
     """Create a SIMF message for capability or tool invocation."""
     return SIMFMessage(
@@ -495,9 +433,7 @@ def create_invocation_message(
         session_id=session_id,
         message_flow_direction=MessageFlowDirection.INBOUND,
         message_type=message_type,
-        payload=InvocationContentPayload(
-            invocation_name=invocation_name, arguments=arguments
-        ),
+        payload=InvocationContentPayload(invocation_name=invocation_name, arguments=arguments),
         metadata=SIMFMetadata(**metadata) if metadata else SIMFMetadata(),
     )
 
@@ -506,12 +442,12 @@ def create_invocation_result_message(
     invocation_name: str,
     status: InvocationStatus,
     target_agent_id: str,
-    result: Optional[Dict[str, Any]] = None,
-    error: Optional[ErrorInfo] = None,
+    result: dict[str, Any] | None = None,
+    error: ErrorInfo | None = None,
     message_type: MessageType = MessageType.TOOL_RESULT,
-    source_agent_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    source_agent_id: str | None = None,
+    session_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> SIMFMessage:
     """Create a SIMF message for invocation results."""
     return SIMFMessage(
@@ -531,10 +467,10 @@ def create_error_message(
     error_code: str,
     error_message: str,
     target_agent_id: str,
-    error_details: Optional[Dict[str, Any]] = None,
-    source_agent_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    error_details: dict[str, Any] | None = None,
+    source_agent_id: str | None = None,
+    session_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> SIMFMessage:
     """Create a SIMF error message."""
     return SIMFMessage(
@@ -546,9 +482,7 @@ def create_error_message(
         payload=InvocationResultContentPayload(
             invocation_name="error",
             status=InvocationStatus.FAILURE,
-            error=ErrorInfo(
-                code=error_code, message=error_message, details=error_details
-            ),
+            error=ErrorInfo(code=error_code, message=error_message, details=error_details),
         ),
         metadata=SIMFMetadata(**metadata) if metadata else SIMFMetadata(),
     )
@@ -557,13 +491,13 @@ def create_error_message(
 def create_event_message(
     event_type: str,
     event_source: str,
-    event_data: Dict[str, Any],
+    event_data: dict[str, Any],
     target_agent_id: str,
-    severity: Optional[EventSeverity] = None,
+    severity: EventSeverity | None = None,
     is_transient: bool = True,
-    source_agent_id: Optional[str] = None,
-    session_id: Optional[str] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    source_agent_id: str | None = None,
+    session_id: str | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> SIMFMessage:
     """Create a SIMF event notification message."""
     return SIMFMessage(

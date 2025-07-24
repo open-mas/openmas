@@ -14,8 +14,9 @@ Based on specifications in:
 import asyncio
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any
 from uuid import uuid4
 
 from openmas.core.simf import (
@@ -42,9 +43,7 @@ class IMessageHandler(ABC):
     """
 
     @abstractmethod
-    async def handle_incoming_message(
-        self, raw_message_data: Any, source_protocol_adapter: "IProtocolAdapter"
-    ) -> None:
+    async def handle_incoming_message(self, raw_message_data: Any, source_protocol_adapter: "IProtocolAdapter") -> None:
         """
         Handle incoming message from a protocol adapter.
 
@@ -80,9 +79,7 @@ class IAgentStateManager(ABC):
     """
 
     @abstractmethod
-    async def set_state(
-        self, key: str, value: Any, scope: str = "PRIVATE_PERSISTENT"
-    ) -> None:
+    async def set_state(self, key: str, value: Any, scope: str = "PRIVATE_PERSISTENT") -> None:
         """Set state value for a key."""
         pass
 
@@ -102,9 +99,7 @@ class IAgentStateManager(ABC):
         pass
 
     @abstractmethod
-    async def list_state_keys(
-        self, scope: str = "PRIVATE_PERSISTENT", prefix: Optional[str] = None
-    ) -> List[str]:
+    async def list_state_keys(self, scope: str = "PRIVATE_PERSISTENT", prefix: str | None = None) -> list[str]:
         """List all state keys."""
         pass
 
@@ -118,7 +113,7 @@ class IProtocolAdapter(ABC):
     """
 
     @abstractmethod
-    async def connect(self, config: Dict[str, Any]) -> None:
+    async def connect(self, config: dict[str, Any]) -> None:
         """Initialize protocol connection."""
         pass
 
@@ -133,9 +128,7 @@ class IProtocolAdapter(ABC):
         pass
 
     @abstractmethod
-    async def register_message_callback(
-        self, callback: Callable[[SIMFMessage], None]
-    ) -> None:
+    async def register_message_callback(self, callback: Callable[[SIMFMessage], None]) -> None:
         """Register callback for incoming messages."""
         pass
 
@@ -162,9 +155,9 @@ class AgentConfig:
         self,
         agent_id: str,
         name: str,
-        protocol_configs: Optional[Dict[str, Dict[str, Any]]] = None,
-        capabilities: Optional[List[str]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        protocol_configs: dict[str, dict[str, Any]] | None = None,
+        capabilities: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
     ):
         self.agent_id = agent_id
         self.name = name
@@ -189,8 +182,8 @@ class Agent(IMessageHandler):
     def __init__(
         self,
         config: AgentConfig,
-        state_manager: Optional[IAgentStateManager] = None,
-        protocol_adapters: Optional[Dict[str, IProtocolAdapter]] = None,
+        state_manager: IAgentStateManager | None = None,
+        protocol_adapters: dict[str, IProtocolAdapter] | None = None,
     ):
         """
         Initialize the agent.
@@ -207,17 +200,17 @@ class Agent(IMessageHandler):
         # Core components
         self.state_manager = state_manager
         self.protocol_adapters = protocol_adapters or {}
-        self.capabilities: Set[str] = set(config.capabilities)
+        self.capabilities: set[str] = set(config.capabilities)
 
         # Message handling
-        self.message_queue: Optional[asyncio.Queue[SIMFMessage]] = None
-        self.message_callbacks: List[Callable[[SIMFMessage], None]] = []
+        self.message_queue: asyncio.Queue[SIMFMessage] | None = None
+        self.message_callbacks: list[Callable[[SIMFMessage], None]] = []
         self._running = False
-        self._tasks: List[asyncio.Task] = []
+        self._tasks: list[asyncio.Task] = []
 
         # Session management
-        self.current_session_id: Optional[str] = None
-        self.sessions: Dict[str, Dict[str, Any]] = {}
+        self.current_session_id: str | None = None
+        self.sessions: dict[str, dict[str, Any]] = {}
 
         # Logging
         self.logger = logging.getLogger(f"openmas.agent.{self.agent_id}")
@@ -254,9 +247,7 @@ class Agent(IMessageHandler):
                 await adapter.register_message_callback(self._handle_protocol_message)
                 self.logger.info(f"Protocol adapter {adapter_name} started")
             except Exception as e:
-                self.logger.error(
-                    f"Failed to start protocol adapter {adapter_name}: {e}"
-                )
+                self.logger.error(f"Failed to start protocol adapter {adapter_name}: {e}")
                 raise
 
         # Initialize message queue in current event loop context
@@ -300,9 +291,7 @@ class Agent(IMessageHandler):
                 await adapter.disconnect()
                 self.logger.info(f"Protocol adapter {adapter_name} stopped")
             except Exception as e:
-                self.logger.error(
-                    f"Error stopping protocol adapter {adapter_name}: {e}"
-                )
+                self.logger.error(f"Error stopping protocol adapter {adapter_name}: {e}")
 
         # Clear message queue
         if self.message_queue is not None:
@@ -326,15 +315,10 @@ class Agent(IMessageHandler):
         Args:
             message: The SIMF message to send
         """
-        self.logger.debug(
-            f"Sending message {message.message_id} to {message.target_agent_id}"
-        )
+        self.logger.debug(f"Sending message {message.message_id} to {message.target_agent_id}")
 
         # If target is external (has protocol specified), use protocol adapter
-        if (
-            message.source_protocol_type
-            and message.source_protocol_type in self.protocol_adapters
-        ):
+        if message.source_protocol_type and message.source_protocol_type in self.protocol_adapters:
             adapter = self.protocol_adapters[message.source_protocol_type]
             await adapter.send_message(message)
         else:
@@ -354,7 +338,7 @@ class Agent(IMessageHandler):
             raise RuntimeError("Agent not started - message queue not initialized")
         return await self.message_queue.get()
 
-    async def execute_tool(self, tool_name: str, parameters: Dict[str, Any]) -> Any:
+    async def execute_tool(self, tool_name: str, parameters: dict[str, Any]) -> Any:
         """
         Execute a tool/capability.
 
@@ -380,9 +364,7 @@ class Agent(IMessageHandler):
     # Session Management
     # ========================================================================
 
-    async def start_session(
-        self, session_config: Optional[Dict[str, Any]] = None
-    ) -> str:
+    async def start_session(self, session_config: dict[str, Any] | None = None) -> str:
         """
         Start a new agent session.
 
@@ -404,7 +386,7 @@ class Agent(IMessageHandler):
         self.logger.info(f"Started session {session_id}")
         return session_id
 
-    async def end_session(self, session_id: Optional[str] = None) -> None:
+    async def end_session(self, session_id: str | None = None) -> None:
         """End a session."""
         session_id = session_id or self.current_session_id
         if session_id and session_id in self.sessions:
@@ -430,7 +412,7 @@ class Agent(IMessageHandler):
         self.capabilities.discard(capability_name)
         self.logger.info(f"Unregistered capability: {capability_name}")
 
-    def get_capabilities(self) -> List[str]:
+    def get_capabilities(self) -> list[str]:
         """Get list of available capabilities."""
         return list(self.capabilities)
 
@@ -438,9 +420,7 @@ class Agent(IMessageHandler):
     # IMessageHandler Implementation
     # ========================================================================
 
-    async def handle_incoming_message(
-        self, raw_message_data: Any, source_protocol_adapter: IProtocolAdapter
-    ) -> None:
+    async def handle_incoming_message(self, raw_message_data: Any, source_protocol_adapter: IProtocolAdapter) -> None:
         """Handle incoming message from a protocol adapter."""
         try:
             # Convert to SIMF format
@@ -455,9 +435,7 @@ class Agent(IMessageHandler):
                 raise RuntimeError("Agent not started - message queue not initialized")
             await self.message_queue.put(simf_message)
 
-            self.logger.debug(
-                f"Received message {simf_message.message_id} from protocol"
-            )
+            self.logger.debug(f"Received message {simf_message.message_id} from protocol")
 
         except Exception as e:
             self.logger.error(f"Failed to handle incoming message: {e}")
@@ -469,13 +447,9 @@ class Agent(IMessageHandler):
         """Prepare outgoing message for a protocol adapter."""
         try:
             # Convert from SIMF to protocol format
-            protocol_message = target_protocol_adapter.from_internal_format(
-                internal_message
-            )
+            protocol_message = target_protocol_adapter.from_internal_format(internal_message)
 
-            self.logger.debug(
-                f"Prepared message {internal_message.message_id} for protocol"
-            )
+            self.logger.debug(f"Prepared message {internal_message.message_id} for protocol")
 
             return protocol_message
 
@@ -501,9 +475,7 @@ class Agent(IMessageHandler):
                         break
 
                     # Wait for message with timeout to allow graceful shutdown
-                    message = await asyncio.wait_for(
-                        self.message_queue.get(), timeout=0.5
-                    )
+                    message = await asyncio.wait_for(self.message_queue.get(), timeout=0.5)
 
                     # Double-check we're still running after getting message
                     if not self._running:
@@ -514,12 +486,8 @@ class Agent(IMessageHandler):
                 except asyncio.TimeoutError:
                     continue  # Timeout is expected, continue loop
                 except RuntimeError as e:
-                    if "no running event loop" in str(
-                        e
-                    ) or "Event loop is closed" in str(e):
-                        self.logger.debug(
-                            "Event loop closed, stopping message processing"
-                        )
+                    if "no running event loop" in str(e) or "Event loop is closed" in str(e):
+                        self.logger.debug("Event loop closed, stopping message processing")
                         break
                     else:
                         self.logger.error(f"Runtime error processing message: {e}")
@@ -538,9 +506,7 @@ class Agent(IMessageHandler):
 
     async def _handle_message(self, message: SIMFMessage) -> None:
         """Handle a SIMF message."""
-        self.logger.debug(
-            f"Processing message {message.message_id} of type {message.message_type}"
-        )
+        self.logger.debug(f"Processing message {message.message_id} of type {message.message_type}")
 
         # Call registered callbacks
         for callback in self.message_callbacks:
@@ -567,9 +533,7 @@ class Agent(IMessageHandler):
 
     async def _handle_capability_invocation(self, message: SIMFMessage) -> None:
         """Handle capability invocation message."""
-        if hasattr(message.payload, "invocation_name") and hasattr(
-            message.payload, "arguments"
-        ):
+        if hasattr(message.payload, "invocation_name") and hasattr(message.payload, "arguments"):
             tool_name = message.payload.invocation_name
             parameters = message.payload.arguments
 
@@ -612,9 +576,7 @@ class Agent(IMessageHandler):
         )
         await self.send_message(response)
 
-    async def _execute_capability(
-        self, capability_name: str, parameters: Dict[str, Any]
-    ) -> Any:
+    async def _execute_capability(self, capability_name: str, parameters: dict[str, Any]) -> Any:
         """
         Execute a capability.
 

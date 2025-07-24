@@ -1,4 +1,102 @@
-# Knowledge Representation Integration
+# KR&R System Integration Guide
+
+This guide provides a practical walkthrough for developers on how to integrate a custom `ReasoningEngine` with the OpenMAS KR&R System. The integration process is centered around the `IKnowledgeBaseRegistry` and `IKnowledgeBase` interfaces.
+
+## Integration Flow Overview
+
+The core integration pattern for a reasoning engine is as follows:
+
+1.  **Discover**: At initialization, the reasoning engine accesses the `IKnowledgeBaseRegistry` to discover the knowledge bases available in the current agent's context.
+2.  **Select**: Based on its needs and configuration, the engine selects the specific knowledge bases it will interact with.
+3.  **Access**: The engine requests a handle to each required knowledge base from the registry. This handle is an object that implements the `IKnowledgeBase` interface.
+4.  **Interact**: The engine uses the standardized methods on the `IKnowledgeBase` handle (`query`, `assert_fact`, etc.) to read, write, and manage knowledge.
+
+This entire process is asynchronous to ensure non-blocking operation.
+
+## Step-by-Step Code Example
+
+Let's imagine we are building a `SimpleRuleEngine`. This engine needs to access a knowledge base of facts to evaluate its rules.
+
+### 1. Engine Initialization
+
+The reasoning engine would typically receive a reference to the `IKnowledgeBaseRegistry` upon its creation, likely through dependency injection from the agent framework.
+
+```python
+from .interfaces import IKnowledgeBase, IKnowledgeBaseRegistry, Fact, Query, QueryResult
+
+class SimpleRuleEngine:
+    def __init__(self, registry: IKnowledgeBaseRegistry, config: dict):
+        self._registry = registry
+        self._config = config
+        self._fact_kb: Optional[IKnowledgeBase] = None
+
+    async def initialize(self):
+        """Initializes the engine by connecting to its required KB."""
+        kb_id = self._config.get("fact_kb_id", "default_facts")
+        print(f"Engine trying to connect to KB: {kb_id}")
+
+        # Use the registry to get a handle to the configured KB
+        self._fact_kb = await self._registry.get_knowledge_base(kb_id)
+
+        if not self._fact_kb:
+            raise ConnectionError(f"Could not connect to knowledge base: {kb_id}")
+
+        print(f"Successfully connected to KB: {kb_id}")
+```
+
+### 2. Using the Knowledge Base
+
+Once initialized, the engine can use the `IKnowledgeBase` handle to interact with the knowledge store as part of its reasoning cycle.
+
+```python
+class SimpleRuleEngine:
+    # ... (init and initialize methods from above)
+
+    async def run_cycle(self):
+        """A single reasoning cycle of the engine."""
+        if not self._fact_kb:
+            print("Engine not initialized.")
+            return
+
+        # 1. Query the KB to get current state
+        query = Query(query_content="is_a(X, 'widget')")
+        result = await self._fact_kb.query(query)
+
+        if result.success:
+            print(f"Found {len(result.results)} widgets.")
+            for fact in result.results:
+                # 2. Perform some reasoning based on the facts
+                if self._needs_processing(fact):
+                    # 3. Assert a new fact based on reasoning
+                    new_fact = Fact(content=f"processed({fact.content})")
+                    await self._fact_kb.assert_fact(new_fact)
+                    print(f"Asserted new fact: {new_fact.content}")
+
+    def _needs_processing(self, fact: Fact) -> bool:
+        # Dummy logic for the example
+        return True
+```
+
+## 3. Agent Configuration
+
+Finally, the agent's configuration file ties everything together. It specifies which reasoning engine to use and which knowledge base it should connect to.
+
+```yaml
+agents:
+  rule_based_agent:
+    reasoning:
+      approach: "simple_rule_engine" # The engine we are building
+      fact_kb_id: "production_facts" # Custom config for our engine
+
+    knowledge_management_config:
+      enabled: true
+      knowledge_bases:
+        - kb_id: "production_facts" # The ID we reference above
+          type: "symbolic_facts"
+          # ... other KB-specific configuration
+```
+
+This example demonstrates the clean separation of concerns: the reasoning engine focuses on its logic, the KR&R system manages the data, and the configuration file declaratively links them together.
 
 ## Overview
 

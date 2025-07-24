@@ -10,7 +10,6 @@ import gzip
 import json
 import pickle
 from datetime import datetime
-# Removed unused imports
 
 import pytest
 
@@ -35,6 +34,8 @@ from openmas.core.simf.serialization import (
     message_to_json,
     serialize_simf_message,
 )
+
+# Removed unused imports
 
 
 class TestSerializationFormat:

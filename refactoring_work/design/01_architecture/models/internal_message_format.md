@@ -44,6 +44,7 @@ class PayloadType(str, Enum):
     STREAM_CONTEXT_CONTENT = "stream_context_content"
     KNOWLEDGE_REPRESENTATION_CONTENT = "knowledge_representation_content"
     EVENT_CONTENT = "event_content"
+    CONTROL_CONTENT = "control_content"
 
     # Note: This enum is extensible. New payload types can be added by extensions.
 
@@ -82,13 +83,19 @@ class InvocationContentPayload(BasePayload):
     invocation_name: str = Field(..., description="Name of the capability or tool being invoked")
     arguments: Dict[str, Any] = Field(..., description="Arguments for the invocation")
 
+class ErrorDetails(BaseModel):
+    """Standardized model for error information."""
+    code: str = Field(..., description="A service-specific error code.")
+    message: str = Field(..., description="A human-readable error message.")
+    details: Optional[Dict[str, Any]] = Field(None, description="Optional, additional structured details about the error.")
+
 class InvocationResultContentPayload(BasePayload):
     """Payload for results of capability or tool invocations."""
     payload_type: PayloadType = Field(PayloadType.INVOCATION_RESULT_CONTENT, description="Invocation result content payload type")
     invocation_name: str = Field(..., description="Name of the capability or tool that was invoked")
     status: str = Field(..., description="Status of the invocation ('success', 'failure', or 'pending')")
     result: Optional[Any] = Field(None, description="Optional, result data for successful invocations")
-    error: Optional[Dict[str, Any]] = Field(None, description="Optional, error information for failed invocations")
+    error: Optional[ErrorDetails] = Field(None, description="Optional, structured error information for failed invocations")
 
 class StreamContextContentPayload(BasePayload):
     """Payload for messages that are part of a streaming sequence."""
@@ -119,6 +126,12 @@ class EventContentPayload(BasePayload):
     severity: Optional[str] = Field(None, description="Optional, 'debug', 'info', 'warning', 'error', 'critical'")
     is_transient: bool = Field(True, description="Whether the event represents a point-in-time occurrence or a persistent state change")
 
+class ControlContentPayload(BasePayload):
+    """Payload for system-level control messages."""
+    payload_type: PayloadType = Field(PayloadType.CONTROL_CONTENT, description="Control content payload type")
+    command: str = Field(..., description="The control command (e.g., 'ACK', 'PING', 'SHUTDOWN_REQUEST')")
+    details: Optional[Dict[str, Any]] = Field(None, description="Optional parameters or details for the command.")
+
 # Union type for all possible payload types
 PayloadUnion = Union[
     TextContentPayload,
@@ -129,8 +142,17 @@ PayloadUnion = Union[
     InvocationResultContentPayload,
     StreamContextContentPayload,
     KnowledgeRepresentationContentPayload,
-    EventContentPayload
+    EventContentPayload,
+    ControlContentPayload
 ]
+
+class MessageMetadata(BaseModel):
+    """Structured metadata for a message."""
+    trace_id: Optional[str] = Field(None, description="Identifier for distributed tracing across services.")
+    priority: int = Field(10, description="Message priority, lower numbers are higher priority.")
+    time_to_live: Optional[int] = Field(None, description="How long the message is valid, in seconds.")
+    source_message_details: Optional[Dict[str, Any]] = Field(None, description="Original protocol-specific message info for debugging.")
+    custom_metadata: Dict[str, Any] = Field(default_factory=dict, description="Flexible key-value data for custom use cases.")
 
 class InternalMessageFormat(BaseModel):
     """
@@ -139,15 +161,15 @@ class InternalMessageFormat(BaseModel):
     and reasoning components.
     """
     message_id: str = Field(..., description="Unique identifier for this message, typically a UUID")
-    session_id: Optional[str] = Field(None, description="Identifier for the conversation/session this message belongs to")
+    session_id: Optional[str] = Field(None, description="Identifier for the conversation/session. Should be present for all messages in a multi-turn conversation.")
     timestamp: datetime = Field(..., description="Time when this message was created or processed")
     source_protocol_type: Optional[str] = Field(None, description="Protocol type that the message originated from (e.g., 'a2a-http', 'mcp-sse')")
-    source_agent_id: Optional[str] = Field(None, description="Identifier of the agent that sent this message")
+    source_agent_id: Optional[str] = Field(None, description="Identifier of the agent that sent this message. Should be present for any inter-agent communication.")
     target_agent_id: str = Field(..., description="Identifier of the agent that should receive this message")
     message_flow_direction: MessageFlowDirection = Field(..., description="Direction of message flow relative to the agent")
     message_type: MessageType = Field(..., description="Type of the message for routing and processing")
-    payload: PayloadUnion = Field(..., description="Content of the message")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional contextual information, flexible key-value data")
+    payload: PayloadUnion = Field(..., description="Content of the message, discriminated by 'payload_type'", discriminator="payload_type")
+    metadata: MessageMetadata = Field(default_factory=MessageMetadata, description="Structured metadata for the message.")
 
     class Config:
         """Configuration for the Pydantic model."""

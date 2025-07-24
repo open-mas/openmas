@@ -398,7 +398,151 @@ The `payload_type` discriminator can also be extended:
 
 While extensibility is supported, all OpenMAS components should recognize and properly handle the core types defined in this document to ensure interoperability.
 
+## 6. Pydantic Model Definition
+
+To provide a concrete, machine-readable, and enforceable contract for the Standard Internal Message Format, the following Pydantic models are defined. These models serve as the canonical implementation reference.
+
+```python
+from __future__ import annotations
+from abc import ABC
+from datetime import datetime
+from typing import Any, Dict, List, Literal, Optional, Union
+from uuid import UUID, uuid4
+
+from pydantic import BaseModel, Field
+
+# --- Enums and Literals for controlled vocabularies ---
+
+class MessageType(BaseModel):
+    LITERAL: Literal[
+        "USER_QUERY",
+        "AGENT_RESPONSE",
+        "CAPABILITY_INVOCATION",
+        "CAPABILITY_RESULT",
+        "TOOL_INVOCATION",
+        "TOOL_RESULT",
+        "EVENT_NOTIFICATION",
+        "SYSTEM_COMMAND",
+        "ACKNOWLEDGEMENT",
+        "ERROR_MESSAGE",
+        "PLAIN_TEXT_MESSAGE",
+        "MULTI_PART_MESSAGE",
+    ]
+
+class MessageFlowDirection(BaseModel):
+    LITERAL: Literal["inbound", "outbound", "internal"]
+
+# --- Payload Models ---
+
+class BasePayload(BaseModel, ABC):
+    """Abstract base for all payload types."""
+    payload_type: str
+
+class TextContentPayload(BasePayload):
+    payload_type: Literal["text_content"] = "text_content"
+    text: str = Field(..., description="The actual text content.")
+
+class StructuredDataPayload(BasePayload):
+    payload_type: Literal["structured_data_content"] = "structured_data_content"
+    data: Dict[str, Any] = Field(..., description="Any structured data object.")
+
+class AssetReferencePayload(BasePayload):
+    payload_type: Literal["asset_reference_content"] = "asset_reference_content"
+    asset_id: str = Field(..., description="Unique identifier for the asset.")
+    asset_type: str = Field(..., description="Type of the asset.")
+    mime_type: Optional[str] = Field(None, description="Optional MIME type of the asset.")
+    resource_metadata: Optional[Dict[str, Any]] = Field(None, description="Optional protocol-specific resource metadata.")
+
+class InvocationContentPayload(BasePayload):
+    payload_type: Literal["invocation_content"] = "invocation_content"
+    invocation_name: str = Field(..., description="Name of the capability or tool being invoked.")
+    arguments: Dict[str, Any] = Field(default_factory=dict, description="Arguments for the invocation.")
+
+class InvocationResultContentPayload(BasePayload):
+    payload_type: Literal["invocation_result_content"] = "invocation_result_content"
+    invocation_name: str = Field(..., description="Name of the capability or tool that was invoked.")
+    status: Literal["success", "failure", "pending"]
+    result: Optional[Any] = Field(None, description="Result data for successful invocations.")
+    error: Optional[Dict[str, Any]] = Field(None, description="Error information for failed invocations.")
+
+class EventContentPayload(BasePayload):
+    payload_type: Literal["event_content"] = "event_content"
+    event_type: str = Field(..., description="Type of event (domain-specific).")
+    event_source: str = Field(..., description="Source of the event.")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="When the event occurred.")
+    data: Dict[str, Any] = Field(..., description="Event data payload.")
+    severity: Optional[Literal["debug", "info", "warning", "error", "critical"]] = "info"
+    is_transient: bool = Field(True, description="Whether the event is point-in-time or a persistent state change.")
+
+# --- Recursive Payload Models ---
+
+AnyPayload = Union[
+    TextContentPayload,
+    StructuredDataPayload,
+    AssetReferencePayload,
+    InvocationContentPayload,
+    InvocationResultContentPayload,
+    EventContentPayload,
+    'MultiPartContentPayload',
+    'StreamContextContentPayload',
+    'KnowledgeRepresentationContentPayload'
+]
+
+class MultiPartContentPayload(BasePayload):
+    payload_type: Literal["multi_part_content"] = "multi_part_content"
+    parts: List[AnyPayload] = Field(..., description="Array of other payload objects.")
+
+class StreamContextContentPayload(BasePayload):
+    payload_type: Literal["stream_context_content"] = "stream_context_content"
+    stream_id: str = Field(..., description="Identifier for the stream.")
+    sequence_number: int = Field(..., description="Position in the stream sequence.")
+    stream_position: Literal["start", "middle", "end", "complete"]
+    is_heartbeat: bool = False
+    content: Optional[AnyPayload] = Field(None, description="The actual content payload.")
+    estimated_remaining: Optional[int] = None
+
+class KnowledgeRepresentationContentPayload(BasePayload):
+    payload_type: Literal["knowledge_representation_content"] = "knowledge_representation_content"
+    formalism: str = Field(..., description="Knowledge representation formalism (e.g., 'rdf', 'owl').")
+    representation: Union[str, Dict[str, Any]] = Field(..., description="The actual knowledge content.")
+    context_id: Optional[str] = Field(None, description="Identifier for the knowledge context/KB.")
+    operation: Optional[Literal["assert", "query", "retract", "update"]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+# Update forward references
+MultiPartContentPayload.model_rebuild()
+StreamContextContentPayload.model_rebuild()
+
+# --- Main SIMF Model ---
+
+class StandardInternalMessageFormat(BaseModel):
+    """The canonical Pydantic model for the Standard Internal Message Format."""
+    message_id: UUID = Field(default_factory=uuid4, description="Unique identifier for this message.")
+    session_id: Optional[UUID] = Field(None, description="Identifier for the conversation/session.")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Time of message creation.")
+    source_protocol_type: Optional[str] = Field(None, description="Protocol type of the original message.")
+    source_agent_id: Optional[str] = Field(None, description="Identifier of the sending agent.")
+    target_agent_id: str = Field(..., description="Identifier of the receiving agent.")
+    message_flow_direction: MessageFlowDirection.LITERAL = Field(..., description="Direction of message flow.")
+    message_type: MessageType.LITERAL = Field(..., description="Type of the message for routing.")
+    payload: Annotated[AnyPayload, Field(..., discriminator="payload_type")]
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional contextual key-value data.")
+
+    class Config:
+        arbitrary_types_allowed = True
+
+```
+
 ## 6. Adaptability for Reasoning Engines
+
+## 7. Formal Pydantic Model Definition
+
+The conceptual schema outlined in this document is formally defined using Pydantic models, which provide a machine-readable, type-validated implementation of the Standard Internal Message Format. These models serve as the single source of truth for development and validation within the Agent Framework.
+
+For the complete Pydantic model definitions, see:
+
+- [**Internal Message Format Pydantic Models**](./models/internal_message_format.md)
+
 
 The Standard Internal Message Format is designed to be consumed by various reasoning components within the OpenMAS framework.
 

@@ -1,87 +1,9 @@
-# Knowledge Access Interfaces for Reasoning Engines
+# KR&R System Interfaces
 
-## Overview
+This document is the single source of truth for the primary interfaces used to interact with the OpenMAS Knowledge Representation and Reasoning (KR&R) System. All interactions with knowledge bases are governed by these contracts to ensure consistency, type safety, and adherence to the framework's reasoning-agnostic design.
 
-This document formalizes the standardized interfaces through which `ReasoningEngines` (the agent's "brain") access knowledge managed by the KR&R System. These interfaces enable different reasoning approaches to interact with knowledge in a consistent way, supporting OpenMAS's reasoning agnosticism by maintaining a clean separation between knowledge management (handled by the KR&R System) and reasoning logic (implemented by various `ReasoningEngines`).
 
-## Core Interface Principles
-
-The reasoning interfaces follow these design principles:
-
-1. **Standardized Interfaces**: All reasoning components implement common interfaces for consistency
-2. **Loose Coupling**: Components interact through well-defined interfaces without tight dependencies
-3. **Extension Points**: Clear extension points for adding new reasoning capabilities
-4. **Minimalistic Design**: Interfaces are minimal but complete for their purpose
-5. **Protocol Independence**: Reasoning interfaces are independent of communication protocols
-6. **Configuration-Driven**: Interface implementations are configurable through the unified schema
-7. **Knowledge Agnosticism**: Reasoning engines can work with different knowledge representations through standardized interfaces
-
-## Core Reasoning Interfaces
-
-### IReasoner Interface
-
-The base interface implemented by all reasoning engines:
-
-```python
-class IReasoner(ABC):
-    """Base interface for all reasoning components."""
-
-    @abstractmethod
-    async def setup(self, agent: Agent) -> None:
-        """Initialize the reasoning component."""
-        pass
-
-    @abstractmethod
-    async def reason(self, percept: Any) -> ReasoningResult:
-        """Perform reasoning based on the given percept."""
-        pass
-
-    @abstractmethod
-    async def update_knowledge(self, knowledge: Any) -> None:
-        """Update the internal knowledge of the reasoner."""
-        pass
-
-    @abstractmethod
-    async def query_knowledge(self, query: Any) -> Any:
-        """Query the internal knowledge base."""
-        pass
-
-    @abstractmethod
-    async def cleanup(self) -> None:
-        """Clean up resources used by the reasoner."""
-        pass
-```
-
-### IReasoningStrategy Interface
-
-Interface for reasoning strategies that orchestrate multiple reasoning approaches:
-
-```python
-class IReasoningStrategy(ABC):
-    """Interface for reasoning strategies."""
-
-    @abstractmethod
-    async def setup(self, agent: Agent) -> None:
-        """Initialize the reasoning strategy."""
-        pass
-
-    @abstractmethod
-    async def select_reasoners(self, percept: Any) -> List[IReasoner]:
-        """Select reasoners to use for the given percept."""
-        pass
-
-    @abstractmethod
-    async def combine_results(self, results: List[ReasoningResult]) -> ReasoningResult:
-        """Combine results from multiple reasoners."""
-        pass
-
-    @abstractmethod
-    async def handle_conflict(self, conflicting_results: List[ReasoningResult]) -> ReasoningResult:
-        """Resolve conflicts between results."""
-        pass
-```
-
-### IKnowledgeBase Interface (Precise Specification)
+## 1. IKnowledgeBase Interface
 
 The `IKnowledgeBase` interface is the standardized abstraction layer for reasoning engines to interact with the KR&R System. This version specifies all method signatures, expected types, and supporting data models.
 
@@ -195,108 +117,37 @@ class IKnowledgeBase(ABC):
     @abstractmethod
     async def add_knowledge(self, knowledge_item: KnowledgeItem) -> KnowledgeItemReceipt:
         """Add a knowledge item to the knowledge base."""
-        pass
+        ...
 
     @abstractmethod
-    async def retrieve_knowledge(self, query: KnowledgeQuery) -> List[KnowledgeItem]:
-        """Retrieve knowledge items matching the query."""
-        pass
-
-# --- Knowledge Base Registry API ---
-from typing import Optional
-
-class KnowledgeBaseInfo(BaseModel):
-    """
-    Metadata describing a registered knowledge base in the KR&R system.
-    """
-    kb_name: str  # Unique identifier for the knowledge base
-    display_name: Optional[str] = None  # Human-friendly name
-    description: Optional[str] = None
-    representation_types: List[KnowledgeRepresentationType]  # Supported representations
-    tags: Optional[List[str]] = None
-    is_writable: bool = False  # Whether the KB allows mutation
-    is_external: bool = False  # True if the KB is managed externally
-    config: Optional[Dict[str, Any]] = None  # Additional config metadata
-
-class KnowledgeBaseFilterCriteria(BaseModel):
-    """
-    Criteria for filtering knowledge bases when listing or searching.
-    """
-    name_pattern: Optional[str] = None  # Wildcard or regex for kb_name/display_name
-    representation_types: Optional[List[KnowledgeRepresentationType]] = None
-    tags: Optional[List[str]] = None
-    is_writable: Optional[bool] = None
-    is_external: Optional[bool] = None
-
-class IKnowledgeBaseRegistry(ABC):
-    """
-    Interface for discovering, listing, and accessing available knowledge bases in the KR&R system.
-    """
-    @abstractmethod
-    async def list_knowledge_bases(
-        self,
-        filter_criteria: Optional[KnowledgeBaseFilterCriteria] = None
-    ) -> List[KnowledgeBaseInfo]:
+    async def retrieve_knowledge(self, query: KnowledgeQuery) -> List[Union[KnowledgeItem, SimilarityHit]]:
         """
-        List all available knowledge bases, optionally filtered by criteria.
-        """
-        pass
+        Retrieve knowledge items matching the query.
 
-    @abstractmethod
-    async def get_knowledge_base_info(
-        self,
-        kb_name: str
-    ) -> Optional[KnowledgeBaseInfo]:
-        """
-        Retrieve metadata for a specific knowledge base by unique name.
-        """
-        pass
+        This single method handles all types of queries, including structured
+        queries, vector similarity searches, and direct ID lookups, by using
+        the `KnowledgeQuery` model.
 
-    @abstractmethod
-    async def get_knowledge_base_accessor(
-        self,
-        kb_name: str
-    ) -> Optional[IKnowledgeBase]:
+        Returns:
+            A list of `KnowledgeItem` for most queries, or a list of
+            `SimilarityHit` for vector similarity searches.
         """
-        Obtain an accessor implementing IKnowledgeBase for the specified knowledge base.
-        Returns None if not found or not accessible.
-        """
-        pass
-
-# Example Usage:
-# registry: IKnowledgeBaseRegistry = ...
-# kb_list = await registry.list_knowledge_bases()
-# kb_accessor = await registry.get_knowledge_base_accessor("facts_kb")
-# if kb_accessor:
-#     results = await kb_accessor.retrieve_knowledge(...)
-
-        """Retrieve knowledge items matching the query."""
-        pass
+        ...
 
     @abstractmethod
     async def update_knowledge(self, item_id: str, updated_item_content: KnowledgeItemContent) -> KnowledgeItemReceipt:
         """Update the content of an existing knowledge item."""
-        pass
+        ...
 
     @abstractmethod
     async def delete_knowledge(self, item_id: str) -> bool:
         """Delete a knowledge item by its ID."""
-        pass
-
-    @abstractmethod
-    async def query_knowledge_graph(self, sparql_query: str) -> List[Dict[str, Any]]:
-        """Run a SPARQL query (for graph-based KBs)."""
-        pass
-
-    @abstractmethod
-    async def vector_similarity_search(self, vector: List[float], top_k: int) -> List[SimilarityHit]:
-        """Perform a vector similarity search (for embedding-based KBs)."""
-        pass
+        ...
 
     @abstractmethod
     async def get_knowledge_item_by_id(self, item_id: str) -> Optional[KnowledgeItem]:
-        """Retrieve a single knowledge item by ID."""
-        pass
+        """Retrieve a single knowledge item by its unique ID."""
+        ...
 ```
 
 #### Illustrative Usage Examples
@@ -342,73 +193,53 @@ query = KnowledgeQuery(
 results = await kb.retrieve_knowledge(query)
 
 # Example: Vector similarity search
-hits = await kb.vector_similarity_search(vector=[0.12, 0.77, ...], top_k=3)
-```
+query = KnowledgeQuery(
+    query_type=KnowledgeQueryType.VECTOR_SIMILARITY,
+    parameters={"query_vector": [0.12, 0.77, ...], "top_k": 3}
+)
+hits = await kb.retrieve_knowledge(query)
 
-> **Note:** All data structures are defined as Pydantic models for validation and serialization. The interface supports extension to new knowledge types by adding new content models and enums as needed.
+## 2. `IKnowledgeBaseRegistry` Interface
 
----
-
-## Specialized Reasoning Interfaces
-
-The framework provides specialized interfaces for different reasoning approaches:
-
-### ISymbolicReasoner Interface
-
-Interface for symbolic reasoning engines:
+The `IKnowledgeBaseRegistry` is the central discovery service for all available knowledge bases within the KR&R System. A reasoning engine uses this registry to find and get a handle to the specific knowledge bases it needs to perform its tasks.
 
 ```python
-class ISymbolicReasoner(IReasoner):
-    """Interface for symbolic reasoning engines."""
+# --- Registry-specific Models ---
+class KBInfo(BaseModel):
+    """Provides metadata about a registered Knowledge Base."""
+    kb_id: str = Field(..., description="The unique identifier for the knowledge base.")
+    description: str = Field(..., description="A human-readable description of the KB's purpose and content.")
+    representation_types: List[KnowledgeRepresentationType] = Field(..., description="A list of knowledge representation types supported by this KB.")
+    tags: List[str] = Field(default_factory=list, description="Tags for categorizing the KB.")
+
+
+# --- IKnowledgeBaseRegistry Interface ---
+class IKnowledgeBaseRegistry(ABC):
+    """Interface for discovering and accessing knowledge bases."""
 
     @abstractmethod
-    async def add_rule(self, rule: Rule) -> None:
-        """Add a rule to the symbolic reasoner."""
-        pass
+    async def list_knowledge_bases(self, filter_criteria: Optional[Dict[str, Any]] = None) -> List[KBInfo]:
+        """Lists available knowledge bases, optionally filtered by criteria.
+
+        Args:
+            filter_criteria: A dictionary to filter KBs, e.g., `{"representation_type": "graph_triple"}`.
+
+        Returns:
+            A list of KBInfo objects matching the criteria.
+        """
+        ...
 
     @abstractmethod
-    async def add_fact(self, fact: Fact) -> None:
-        """Add a fact to the symbolic reasoner."""
-        pass
+    async def get_knowledge_base_accessor(self, kb_id: str) -> Optional[IKnowledgeBase]:
+        """Retrieves an accessor object for a specific knowledge base.
 
-    @abstractmethod
-    async def infer(self, query: Query) -> InferenceResult:
-        """Perform inference based on the given query."""
-        pass
+        Args:
+            kb_id: The unique identifier of the knowledge base to access.
 
-    @abstractmethod
-    async def explain(self, result: InferenceResult) -> Explanation:
-        """Explain how an inference result was derived."""
-        pass
-```
-
-### ILLMReasoner Interface
-
-Interface for LLM-based reasoning:
-
-```python
-class ILLMReasoner(IReasoner):
-    """Interface for LLM-based reasoning."""
-
-    @abstractmethod
-    async def get_prompt(self, context: Any) -> Prompt:
-        """Generate a prompt based on the given context."""
-        pass
-
-    @abstractmethod
-    async def parse_response(self, response: Any) -> ReasoningResult:
-        """Parse an LLM response into a reasoning result."""
-        pass
-
-    @abstractmethod
-    async def augment_context(self, context: Any) -> Any:
-        """Augment reasoning context with additional knowledge."""
-        pass
-
-    @abstractmethod
-    async def verify_result(self, result: ReasoningResult) -> VerificationResult:
-        """Verify an LLM-generated reasoning result."""
-        pass
+        Returns:
+            An instance of a class implementing IKnowledgeBase, or None if not found.
+        """
+        ...
 ```
 
 ## Integration with Agent Framework and KR&R System
@@ -466,7 +297,7 @@ Each implementation handles the translation between the generic `IKnowledgeBase`
 
 ## References
 
-- [Knowledge Representation Architecture](/refactoring_work/00b_overview/09_knowledge_representation/architecture.md)
+- [Knowledge Representation Architecture](/refactoring_work/design/09_knowledge_representation/architecture.md)
 - [Hybrid Reasoning](/refactoring_work/00b_overview/09_knowledge_representation/reasoning/hybrid_reasoning.md)
 - [Configuration Schema](/refactoring_work/00b_overview/03_configuration/unified_configuration_schema.md)
 - [Agent Framework Integration](/refactoring_work/00b_overview/04_agents/integration.md)

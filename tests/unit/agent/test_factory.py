@@ -43,9 +43,7 @@ class CustomAgent(Agent):
 class MockStateManager(IAgentStateManager):
     """Mock state manager for testing."""
 
-    async def set_state(
-        self, key: str, value, scope: str = "PRIVATE_PERSISTENT"
-    ) -> None:
+    async def set_state(self, key: str, value, scope: str = "PRIVATE_PERSISTENT") -> None:
         pass
 
     async def get_state(self, key: str, scope: str = "PRIVATE_PERSISTENT"):
@@ -129,9 +127,7 @@ class TestConfigLoader:
 
     def test_load_nonexistent_file(self):
         """Test loading nonexistent file raises error."""
-        with pytest.raises(
-            AgentConfigurationError, match="Configuration file not found"
-        ):
+        with pytest.raises(AgentConfigurationError, match="Configuration file not found"):
             ConfigLoader.load_from_file("nonexistent.json")
 
     def test_load_unsupported_format(self):
@@ -141,9 +137,7 @@ class TestConfigLoader:
             temp_path = f.name
 
         try:
-            with pytest.raises(
-                AgentConfigurationError, match="Unsupported config file format"
-            ):
+            with pytest.raises(AgentConfigurationError, match="Unsupported config file format"):
                 ConfigLoader.load_from_file(temp_path)
         finally:
             Path(temp_path).unlink()
@@ -164,25 +158,19 @@ class TestConfigLoader:
         """Test validation fails for missing required fields."""
         # Missing agent_id
         config = {"name": "Test Agent"}
-        with pytest.raises(
-            AgentConfigurationError, match="Missing required field: agent_id"
-        ):
+        with pytest.raises(AgentConfigurationError, match="Missing required field: agent_id"):
             ConfigLoader.validate_config(config)
 
         # Missing name
         config = {"agent_id": "test_agent"}
-        with pytest.raises(
-            AgentConfigurationError, match="Missing required field: name"
-        ):
+        with pytest.raises(AgentConfigurationError, match="Missing required field: name"):
             ConfigLoader.validate_config(config)
 
     def test_validate_invalid_field_types(self):
         """Test validation fails for invalid field types."""
         # Invalid agent_id type
         config = {"agent_id": 123, "name": "Test Agent"}
-        with pytest.raises(
-            AgentConfigurationError, match="agent_id must be a non-empty string"
-        ):
+        with pytest.raises(AgentConfigurationError, match="agent_id must be a non-empty string"):
             ConfigLoader.validate_config(config)
 
         # Invalid capabilities type
@@ -191,9 +179,7 @@ class TestConfigLoader:
             "name": "Test Agent",
             "capabilities": "not_a_list",
         }
-        with pytest.raises(
-            AgentConfigurationError, match="capabilities must be a list"
-        ):
+        with pytest.raises(AgentConfigurationError, match="capabilities must be a list"):
             ConfigLoader.validate_config(config)
 
         # Invalid protocol_configs type
@@ -202,9 +188,7 @@ class TestConfigLoader:
             "name": "Test Agent",
             "protocol_configs": "not_a_dict",
         }
-        with pytest.raises(
-            AgentConfigurationError, match="protocol_configs must be a dictionary"
-        ):
+        with pytest.raises(AgentConfigurationError, match="protocol_configs must be a dictionary"):
             ConfigLoader.validate_config(config)
 
 

@@ -6,8 +6,7 @@ including the Standard Internal Message Format (SIMF) and other
 foundational components.
 """
 
-from .simf import (  # Core SIMF models and functionality; Payload models;;
-    # Factory functions; Validation; Serialization
+from .simf import (  # Core SIMF models and functionality
     AssetReferenceContentPayload,
     AssetType,
     BasePayload,

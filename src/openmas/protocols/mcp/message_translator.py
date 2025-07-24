@@ -6,7 +6,7 @@ and MCP protocol messages, preserving semantic information during translation.
 """
 
 import json
-from typing import Any, Dict
+from typing import Any
 from uuid import uuid4
 
 from openmas.core.simf import (
@@ -39,7 +39,7 @@ class MCPMessageTranslator:
         """
         self.agent_id = agent_id
 
-    def to_internal_format(self, mcp_message: Dict[str, Any]) -> SIMFMessage:
+    def to_internal_format(self, mcp_message: dict[str, Any]) -> SIMFMessage:
         """
         Convert MCP message to SIMF format.
 
@@ -80,11 +80,9 @@ class MCPMessageTranslator:
                 return self._translate_generic_message(mcp_message, message_id)
 
         except Exception as e:
-            raise MCPTranslationError(
-                f"Failed to translate MCP message to SIMF: {e}"
-            ) from e
+            raise MCPTranslationError(f"Failed to translate MCP message to SIMF: {e}") from e
 
-    def from_internal_format(self, simf_message: SIMFMessage) -> Dict[str, Any]:
+    def from_internal_format(self, simf_message: SIMFMessage) -> dict[str, Any]:
         """
         Convert SIMF message to MCP format.
 
@@ -114,15 +112,11 @@ class MCPMessageTranslator:
                 return self._simf_to_generic_message(simf_message)
 
         except Exception as e:
-            raise MCPTranslationError(
-                f"Failed to translate SIMF message to MCP: {e}"
-            ) from e
+            raise MCPTranslationError(f"Failed to translate SIMF message to MCP: {e}") from e
 
     # MCP -> SIMF translation methods
 
-    def _translate_tool_call(
-        self, mcp_message: Dict[str, Any], message_id: str, params: Dict[str, Any]
-    ) -> SIMFMessage:
+    def _translate_tool_call(self, mcp_message: dict[str, Any], message_id: str, params: dict[str, Any]) -> SIMFMessage:
         """Translate MCP tool call to SIMF invocation message."""
         tool_name = params.get("name", "unknown_tool")
         arguments = params.get("arguments", {})
@@ -141,9 +135,7 @@ class MCPMessageTranslator:
         simf_msg.message_id = message_id
         return simf_msg
 
-    def _translate_tool_list(
-        self, mcp_message: Dict[str, Any], message_id: str, params: Dict[str, Any]
-    ) -> SIMFMessage:
+    def _translate_tool_list(self, mcp_message: dict[str, Any], message_id: str, params: dict[str, Any]) -> SIMFMessage:
         """Translate MCP tool list request to SIMF invocation message."""
         simf_msg = create_invocation_message(
             invocation_name="list_tools",
@@ -160,7 +152,7 @@ class MCPMessageTranslator:
         return simf_msg
 
     def _translate_resource_read(
-        self, mcp_message: Dict[str, Any], message_id: str, params: Dict[str, Any]
+        self, mcp_message: dict[str, Any], message_id: str, params: dict[str, Any]
     ) -> SIMFMessage:
         """Translate MCP resource read to SIMF resource request."""
         uri = params.get("uri", "")
@@ -178,7 +170,7 @@ class MCPMessageTranslator:
         )
 
     def _translate_resource_list(
-        self, mcp_message: Dict[str, Any], message_id: str, params: Dict[str, Any]
+        self, mcp_message: dict[str, Any], message_id: str, params: dict[str, Any]
     ) -> SIMFMessage:
         """Translate MCP resource list to SIMF invocation message."""
         return create_invocation_message(
@@ -193,7 +185,7 @@ class MCPMessageTranslator:
         )
 
     def _translate_prompt_get(
-        self, mcp_message: Dict[str, Any], message_id: str, params: Dict[str, Any]
+        self, mcp_message: dict[str, Any], message_id: str, params: dict[str, Any]
     ) -> SIMFMessage:
         """Translate MCP prompt get to SIMF prompt request."""
         prompt_name = params.get("name", "unknown_prompt")
@@ -211,7 +203,7 @@ class MCPMessageTranslator:
         )
 
     def _translate_prompt_list(
-        self, mcp_message: Dict[str, Any], message_id: str, params: Dict[str, Any]
+        self, mcp_message: dict[str, Any], message_id: str, params: dict[str, Any]
     ) -> SIMFMessage:
         """Translate MCP prompt list to SIMF invocation message."""
         return create_invocation_message(
@@ -225,9 +217,7 @@ class MCPMessageTranslator:
             },
         )
 
-    def _translate_result(
-        self, mcp_message: Dict[str, Any], message_id: str
-    ) -> SIMFMessage:
+    def _translate_result(self, mcp_message: dict[str, Any], message_id: str) -> SIMFMessage:
         """Translate MCP result message to SIMF result."""
         result_data = mcp_message.get("result", {})
 
@@ -239,9 +229,7 @@ class MCPMessageTranslator:
             metadata={"original_mcp_message": mcp_message},
         )
 
-    def _translate_error(
-        self, mcp_message: Dict[str, Any], message_id: str
-    ) -> SIMFMessage:
+    def _translate_error(self, mcp_message: dict[str, Any], message_id: str) -> SIMFMessage:
         """Translate MCP error message to SIMF error."""
         error_data = mcp_message.get("error", {})
 
@@ -253,9 +241,7 @@ class MCPMessageTranslator:
             metadata={"original_mcp_message": mcp_message},
         )
 
-    def _translate_generic_message(
-        self, mcp_message: Dict[str, Any], message_id: str
-    ) -> SIMFMessage:
+    def _translate_generic_message(self, mcp_message: dict[str, Any], message_id: str) -> SIMFMessage:
         """Translate generic MCP message to SIMF text message."""
         # Convert entire MCP message to text for generic handling
         content = json.dumps(mcp_message, indent=2)
@@ -274,7 +260,7 @@ class MCPMessageTranslator:
 
     # SIMF -> MCP translation methods
 
-    def _simf_to_tool_call(self, simf_message: SIMFMessage) -> Dict[str, Any]:
+    def _simf_to_tool_call(self, simf_message: SIMFMessage) -> dict[str, Any]:
         """Convert SIMF tool invocation to MCP tool call."""
         payload = simf_message.payload
 
@@ -288,7 +274,7 @@ class MCPMessageTranslator:
             },
         }
 
-    def _simf_to_tool_result(self, simf_message: SIMFMessage) -> Dict[str, Any]:
+    def _simf_to_tool_result(self, simf_message: SIMFMessage) -> dict[str, Any]:
         """Convert SIMF tool result to MCP result."""
         payload = simf_message.payload
 
@@ -304,18 +290,12 @@ class MCPMessageTranslator:
                 "id": simf_message.message_id,
                 "error": {
                     "code": -1,
-                    "message": (
-                        payload.error.message
-                        if payload.error
-                        else "Tool execution failed"
-                    ),
+                    "message": (payload.error.message if payload.error else "Tool execution failed"),
                     "data": payload.error.details if payload.error else None,
                 },
             }
 
-    def _simf_to_resource_or_prompt_request(
-        self, simf_message: SIMFMessage
-    ) -> Dict[str, Any]:
+    def _simf_to_resource_or_prompt_request(self, simf_message: SIMFMessage) -> dict[str, Any]:
         """Convert SIMF capability invocation to MCP resource or prompt call."""
         payload = simf_message.payload
         arguments = payload.arguments or {}
@@ -360,9 +340,7 @@ class MCPMessageTranslator:
                 "params": arguments,
             }
 
-    def _simf_to_resource_or_prompt_response(
-        self, simf_message: SIMFMessage
-    ) -> Dict[str, Any]:
+    def _simf_to_resource_or_prompt_response(self, simf_message: SIMFMessage) -> dict[str, Any]:
         """Convert SIMF capability result to MCP result."""
         payload = simf_message.payload
 
@@ -372,7 +350,7 @@ class MCPMessageTranslator:
             "result": payload.result if hasattr(payload, "result") else payload.data,
         }
 
-    def _simf_to_error(self, simf_message: SIMFMessage) -> Dict[str, Any]:
+    def _simf_to_error(self, simf_message: SIMFMessage) -> dict[str, Any]:
         """Convert SIMF error to MCP error."""
         payload = simf_message.payload
 
@@ -386,7 +364,7 @@ class MCPMessageTranslator:
             },
         }
 
-    def _simf_to_generic_message(self, simf_message: SIMFMessage) -> Dict[str, Any]:
+    def _simf_to_generic_message(self, simf_message: SIMFMessage) -> dict[str, Any]:
         """Convert generic SIMF message to MCP message."""
         payload = simf_message.payload
 
@@ -404,8 +382,6 @@ class MCPMessageTranslator:
                 "method": "notifications/message",
                 "params": {
                     "type": "data",
-                    "content": (
-                        payload.data if hasattr(payload, "data") else str(payload)
-                    ),
+                    "content": (payload.data if hasattr(payload, "data") else str(payload)),
                 },
             }

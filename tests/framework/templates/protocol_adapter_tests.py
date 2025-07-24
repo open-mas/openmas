@@ -8,8 +8,9 @@ actual protocol behavior against the SIMF specification.
 
 import asyncio
 from abc import ABC, abstractmethod
+from collections.abc import Awaitable, Callable
 from datetime import datetime
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -47,7 +48,7 @@ class IProtocolAdapter(ABC):
     """
 
     @abstractmethod
-    async def connect(self, config: Dict[str, Any]) -> None:
+    async def connect(self, config: dict[str, Any]) -> None:
         """Initialize protocol connection."""
         pass
 
@@ -62,14 +63,12 @@ class IProtocolAdapter(ABC):
         pass
 
     @abstractmethod
-    async def register_message_callback(
-        self, callback: Callable[[SIMFMessage], Awaitable[None]]
-    ) -> None:
+    async def register_message_callback(self, callback: Callable[[SIMFMessage], Awaitable[None]]) -> None:
         """Register callback for incoming messages."""
         pass
 
     @abstractmethod
-    async def get_status(self) -> Dict[str, Any]:
+    async def get_status(self) -> dict[str, Any]:
         """Get current protocol connection status."""
         pass
 
@@ -96,7 +95,7 @@ def real_protocol_message_fixtures():
     Returns real protocol messages to prevent hallucination.
     """
 
-    def _create_fixtures(protocol_type: str) -> Dict[str, Any]:
+    def _create_fixtures(protocol_type: str) -> dict[str, Any]:
         if protocol_type == "mcp":
             return {
                 "initialize": {
@@ -212,9 +211,7 @@ class IProtocolAdapterTestTemplate:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_connect_with_valid_config(
-        self, adapter: IProtocolAdapter, create_test_protocol_config
-    ):
+    async def test_connect_with_valid_config(self, adapter: IProtocolAdapter, create_test_protocol_config):
         """Test successful connection with valid configuration."""
         config = create_test_protocol_config("test-protocol")
 
@@ -234,9 +231,7 @@ class IProtocolAdapterTestTemplate:
             await adapter.connect(invalid_config)
 
     @pytest.mark.asyncio
-    async def test_disconnect_cleans_up_resources(
-        self, adapter: IProtocolAdapter, create_test_protocol_config
-    ):
+    async def test_disconnect_cleans_up_resources(self, adapter: IProtocolAdapter, create_test_protocol_config):
         """Test that disconnect properly cleans up resources."""
         config = create_test_protocol_config("test-protocol")
         await adapter.connect(config)
@@ -249,9 +244,7 @@ class IProtocolAdapterTestTemplate:
         assert status.get("status") in ["disconnected", "offline", "stopped"]
 
     @pytest.mark.asyncio
-    async def test_multiple_connect_disconnect_cycles(
-        self, adapter: IProtocolAdapter, create_test_protocol_config
-    ):
+    async def test_multiple_connect_disconnect_cycles(self, adapter: IProtocolAdapter, create_test_protocol_config):
         """Test multiple connect/disconnect cycles for resource leaks."""
         config = create_test_protocol_config("test-protocol")
 
@@ -283,69 +276,49 @@ class IProtocolAdapterTestTemplate:
         for message_name, protocol_message in real_messages.items():
             # Validate the protocol message is real
             if protocol_type == "mcp":
-                assert validate_real_mcp_message(
-                    protocol_message
-                ), f"Invalid MCP message: {message_name}"
+                assert validate_real_mcp_message(protocol_message), f"Invalid MCP message: {message_name}"
             elif protocol_type == "a2a":
-                assert validate_real_a2a_message(
-                    protocol_message
-                ), f"Invalid A2A message: {message_name}"
+                assert validate_real_a2a_message(protocol_message), f"Invalid A2A message: {message_name}"
             elif protocol_type == "http":
-                assert validate_real_http_message(
-                    protocol_message
-                ), f"Invalid HTTP message: {message_name}"
+                assert validate_real_http_message(protocol_message), f"Invalid HTTP message: {message_name}"
 
             # Convert to SIMF
             simf_message = adapter.to_internal_format(protocol_message)
 
             # Validate SIMF message
-            assert isinstance(
-                simf_message, SIMFMessage
-            ), f"Result is not SIMFMessage for {message_name}"
+            assert isinstance(simf_message, SIMFMessage), f"Result is not SIMFMessage for {message_name}"
 
             # Validate SIMF message is valid
             validation_result = validate_simf_message(simf_message)
-            assert (
-                validation_result.is_valid
-            ), f"Invalid SIMF message for {message_name}: {validation_result.issues}"
+            assert validation_result.is_valid, f"Invalid SIMF message for {message_name}: {validation_result.issues}"
 
             # Check semantic preservation
-            self._validate_semantic_preservation(
-                protocol_message, simf_message, protocol_type
-            )
+            self._validate_semantic_preservation(protocol_message, simf_message, protocol_type)
 
-    def test_from_internal_format_with_real_simf_messages(
+    def test_simf_to_protocol_translation(
         self,
         adapter: IProtocolAdapter,
         protocol_type: str,
-        simf_message_fixtures: Dict[str, SIMFMessage],
+        simf_message_fixtures_translation: dict[str, SIMFMessage],
     ):
         """
         Test translation of SIMF messages to protocol format.
         Ensures SIMF semantic information is preserved.
         """
-        for message_name, simf_message in simf_message_fixtures.items():
+        for message_name, simf_message in simf_message_fixtures_translation.items():
             # Convert from SIMF to protocol format
             protocol_message = adapter.from_internal_format(simf_message)
 
             # Validate protocol message format
             if protocol_type == "mcp":
-                assert validate_real_mcp_message(
-                    protocol_message
-                ), f"Invalid MCP output for {message_name}"
+                assert validate_real_mcp_message(protocol_message), f"Invalid MCP output for {message_name}"
             elif protocol_type == "a2a":
-                assert validate_real_a2a_message(
-                    protocol_message
-                ), f"Invalid A2A output for {message_name}"
+                assert validate_real_a2a_message(protocol_message), f"Invalid A2A output for {message_name}"
             elif protocol_type == "http":
-                assert validate_real_http_message(
-                    protocol_message
-                ), f"Invalid HTTP output for {message_name}"
+                assert validate_real_http_message(protocol_message), f"Invalid HTTP output for {message_name}"
 
             # Check that key SIMF information is preserved
-            self._validate_simf_preservation(
-                simf_message, protocol_message, protocol_type
-            )
+            self._validate_simf_preservation(simf_message, protocol_message, protocol_type)
 
     def test_roundtrip_translation_preserves_semantics(
         self,
@@ -354,7 +327,8 @@ class IProtocolAdapterTestTemplate:
         real_protocol_message_fixtures,
     ):
         """
-        Test that roundtrip translation (protocol -> SIMF -> protocol) preserves semantics.
+        Test that roundtrip translation (protocol -> SIMF -> protocol) preserves
+        semantics.
         This catches translation errors that could lead to hallucination.
         """
         real_messages = real_protocol_message_fixtures(protocol_type)
@@ -369,17 +343,13 @@ class IProtocolAdapterTestTemplate:
             roundtrip_message = adapter.from_internal_format(simf_message)
 
             # Validate that semantic content is preserved
-            self._validate_roundtrip_semantics(
-                original_message, roundtrip_message, protocol_type
-            )
+            self._validate_roundtrip_semantics(original_message, roundtrip_message, protocol_type)
 
     # ========================================================================
     # Error Handling Tests
     # ========================================================================
 
-    def test_to_internal_format_handles_malformed_messages(
-        self, adapter: IProtocolAdapter
-    ):
+    def test_to_internal_format_handles_malformed_messages(self, adapter: IProtocolAdapter):
         """Test that malformed protocol messages are handled gracefully."""
         malformed_messages = [
             None,
@@ -394,21 +364,20 @@ class IProtocolAdapterTestTemplate:
                 adapter.to_internal_format(malformed_message)
 
     def test_from_internal_format_handles_unsupported_payload_types(
-        self, adapter: IProtocolAdapter, simf_message_fixtures: Dict[str, SIMFMessage]
+        self,
+        adapter: IProtocolAdapter,
+        simf_message_fixtures_unsupported: dict[str, SIMFMessage],
     ):
         """Test handling of SIMF payload types that the protocol doesn't support."""
         # Test with each message type
-        for message_name, simf_message in simf_message_fixtures.items():
+        for _message_name, simf_message in simf_message_fixtures.items():
             try:
                 result = adapter.from_internal_format(simf_message)
                 # If no exception, validate the result
                 assert result is not None
             except (ValueError, NotImplementedError) as e:
                 # Expected for unsupported payload types
-                assert (
-                    "unsupported" in str(e).lower()
-                    or "not implemented" in str(e).lower()
-                )
+                assert "unsupported" in str(e).lower() or "not implemented" in str(e).lower()
 
     # ========================================================================
     # Message Callback Tests
@@ -427,7 +396,8 @@ class IProtocolAdapterTestTemplate:
 
         await adapter.register_message_callback(test_callback)
 
-        # The callback should be registered (we can't test invocation without a real connection)
+        # The callback should be registered (we can't test invocation without a
+        # real connection)
         # This test validates the interface contract
         assert True  # If no exception was raised, registration succeeded
 
@@ -457,7 +427,7 @@ class IProtocolAdapterTestTemplate:
 
     def _validate_semantic_preservation(
         self,
-        protocol_message: Dict[str, Any],
+        protocol_message: dict[str, Any],
         simf_message: SIMFMessage,
         protocol_type: str,
     ):
@@ -472,7 +442,7 @@ class IProtocolAdapterTestTemplate:
     def _validate_simf_preservation(
         self,
         simf_message: SIMFMessage,
-        protocol_message: Dict[str, Any],
+        protocol_message: dict[str, Any],
         protocol_type: str,
     ):
         """Validate that SIMF -> protocol translation preserves SIMF semantics."""
@@ -483,9 +453,7 @@ class IProtocolAdapterTestTemplate:
         elif protocol_type == "http":
             self._validate_simf_to_http_preservation(simf_message, protocol_message)
 
-    def _validate_mcp_to_simf_semantics(
-        self, mcp_message: Dict[str, Any], simf_message: SIMFMessage
-    ):
+    def _validate_mcp_to_simf_semantics(self, mcp_message: dict[str, Any], simf_message: SIMFMessage):
         """Validate MCP -> SIMF semantic preservation."""
         # MCP tool calls should become SIMF tool invocations
         if mcp_message.get("method") == "tools/call":
@@ -496,18 +464,13 @@ class IProtocolAdapterTestTemplate:
         # MCP tool responses should become SIMF tool results
         elif "result" in mcp_message and "content" in mcp_message["result"]:
             assert simf_message.message_type == MessageType.TOOL_RESULT
-            assert (
-                simf_message.payload.payload_type
-                == PayloadType.INVOCATION_RESULT_CONTENT
-            )
+            assert simf_message.payload.payload_type == PayloadType.INVOCATION_RESULT_CONTENT
 
         # MCP errors should become SIMF error messages
         elif "error" in mcp_message:
             assert simf_message.message_type == MessageType.ERROR_MESSAGE
 
-    def _validate_a2a_to_simf_semantics(
-        self, a2a_message: Dict[str, Any], simf_message: SIMFMessage
-    ):
+    def _validate_a2a_to_simf_semantics(self, a2a_message: dict[str, Any], simf_message: SIMFMessage):
         """Validate A2A -> SIMF semantic preservation."""
         # A2A multi-part messages should preserve part structure
         if len(a2a_message.get("parts", [])) > 1:
@@ -516,22 +479,14 @@ class IProtocolAdapterTestTemplate:
 
         # A2A capability requests should become SIMF capability invocations
         parts = a2a_message.get("parts", [])
-        if (
-            parts
-            and isinstance(parts[0].get("content"), dict)
-            and "capability" in parts[0]["content"]
-        ):
+        if parts and isinstance(parts[0].get("content"), dict) and "capability" in parts[0]["content"]:
             assert simf_message.message_type == MessageType.CAPABILITY_INVOCATION
 
-    def _validate_http_to_simf_semantics(
-        self, http_message: Dict[str, Any], simf_message: SIMFMessage
-    ):
+    def _validate_http_to_simf_semantics(self, http_message: dict[str, Any], simf_message: SIMFMessage):
         """Validate HTTP -> SIMF semantic preservation."""
         # HTTP requests should become appropriate SIMF message types
         if "method" in http_message:
-            if http_message["method"] == "POST" and "/invoke" in http_message.get(
-                "url", ""
-            ):
+            if http_message["method"] == "POST" and "/invoke" in http_message.get("url", ""):
                 assert simf_message.message_type in [
                     MessageType.CAPABILITY_INVOCATION,
                     MessageType.TOOL_INVOCATION,
@@ -541,9 +496,7 @@ class IProtocolAdapterTestTemplate:
         elif http_message.get("status_code", 200) >= 400:
             assert simf_message.message_type == MessageType.ERROR_MESSAGE
 
-    def _validate_simf_to_mcp_preservation(
-        self, simf_message: SIMFMessage, mcp_message: Dict[str, Any]
-    ):
+    def _validate_simf_to_mcp_preservation(self, simf_message: SIMFMessage, mcp_message: dict[str, Any]):
         """Validate SIMF -> MCP preservation."""
         # SIMF tool invocations should become MCP tool calls
         if simf_message.message_type == MessageType.TOOL_INVOCATION:
@@ -554,9 +507,7 @@ class IProtocolAdapterTestTemplate:
         elif simf_message.message_type == MessageType.TOOL_RESULT:
             assert "result" in mcp_message or "error" in mcp_message
 
-    def _validate_simf_to_a2a_preservation(
-        self, simf_message: SIMFMessage, a2a_message: Dict[str, Any]
-    ):
+    def _validate_simf_to_a2a_preservation(self, simf_message: SIMFMessage, a2a_message: dict[str, Any]):
         """Validate SIMF -> A2A preservation."""
         # SIMF multi-part content should preserve parts
         if simf_message.payload.payload_type == PayloadType.MULTI_PART_CONTENT:
@@ -566,9 +517,7 @@ class IProtocolAdapterTestTemplate:
         required_fields = ["id", "timestamp", "sender", "recipient", "parts"]
         assert all(field in a2a_message for field in required_fields)
 
-    def _validate_simf_to_http_preservation(
-        self, simf_message: SIMFMessage, http_message: Dict[str, Any]
-    ):
+    def _validate_simf_to_http_preservation(self, simf_message: SIMFMessage, http_message: dict[str, Any]):
         """Validate SIMF -> HTTP preservation."""
         # HTTP messages should have proper structure
         if "method" in http_message:
@@ -580,9 +529,7 @@ class IProtocolAdapterTestTemplate:
             assert "status_code" in http_message
             assert isinstance(http_message["status_code"], int)
 
-    def _validate_roundtrip_semantics(
-        self, original: Dict[str, Any], roundtrip: Dict[str, Any], protocol_type: str
-    ):
+    def _validate_roundtrip_semantics(self, original: dict[str, Any], roundtrip: dict[str, Any], protocol_type: str):
         """Validate that roundtrip translation preserves core semantics."""
         if protocol_type == "mcp":
             # MCP message ID should be preserved
@@ -613,7 +560,7 @@ class IProtocolAdapterTestTemplate:
 def create_protocol_adapter_test_suite(
     adapter_class,
     protocol_type: str,
-    additional_fixtures: Optional[Dict[str, Any]] = None,
+    additional_fixtures: dict[str, Any] | None = None,
 ) -> type:
     """
     Factory function to create a complete test suite for a protocol adapter.
@@ -628,7 +575,6 @@ def create_protocol_adapter_test_suite(
     """
 
     class GeneratedProtocolAdapterTests(IProtocolAdapterTestTemplate):
-
         @pytest.fixture
         def adapter(self) -> IProtocolAdapter:
             return adapter_class()

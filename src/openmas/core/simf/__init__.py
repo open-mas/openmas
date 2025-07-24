@@ -6,8 +6,7 @@ Message Format, enabling type-safe message handling across all protocol adapters
 and reasoning engines.
 """
 
-from .models import (  # Core message structure; Enums; Payload models;;
-    # Factory functions
+from .models import (  # Core message structure and models
     AssetReferenceContentPayload,
     AssetType,
     BasePayload,

@@ -4,17 +4,19 @@ Anti-Hallucination Test Configuration
 This module provides pytest fixtures that validate against REAL MCP 1.12.0 behavior.
 CRITICAL: No mocking of external MCP SDK calls allowed in integration tests.
 
-Lessons from 0.2.0: 1000+ passing tests with 80% coverage but NONE worked with real libraries.
+Lessons from 0.2.0: 1000+ passing tests with 80% coverage but NONE worked with
+real libraries.
 This configuration prevents that by enforcing real-first testing patterns.
 """
 
 import asyncio
+import contextlib
 import os
 import subprocess
 import tempfile
 import time
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-from typing import AsyncGenerator, Generator
 
 import pytest
 
@@ -42,14 +44,14 @@ from openmas.core.simf import (
 
 
 @pytest.fixture(scope="session")
-def check_mcp_availability():
+def check_mcp_availability() -> None:
     """Ensure MCP SDK is available - fail fast if not"""
     if not MCP_AVAILABLE:
         pytest.skip("MCP SDK not available - install with 'pip install mcp'")
 
 
 @pytest.fixture(scope="session")
-def real_mcp_server(check_mcp_availability):
+def real_mcp_server(check_mcp_availability: None) -> FastMCP:
     """
     Minimal REAL MCP server - no mocking allowed.
 
@@ -71,9 +73,9 @@ def real_mcp_server(check_mcp_availability):
     @mcp.tool()
     def test_async_operation() -> str:
         """Test tool for validating async operations"""
-        import time
+        import time as time_module
 
-        time.sleep(0.1)  # Simulate async work
+        time_module.sleep(0.1)  # Simulate async work
         return "Async operation completed"
 
     @mcp.resource("test://resource/{id}")
@@ -96,7 +98,7 @@ def real_mcp_server(check_mcp_availability):
 
 
 @pytest.fixture
-def anti_hallucination_validator():
+def anti_hallucination_validator() -> object:
     """
     Validates no critical paths are mocked.
 
@@ -104,13 +106,12 @@ def anti_hallucination_validator():
     but none worked with real libraries.
     """
 
-    def validate_no_mocking(module_names: list[str]):
+    def validate_no_mocking(module_names: list[str]) -> None:
         """
         Ensure specified modules are not mocked.
 
         Args:
             module_names: List of module names that must NOT be mocked
-
         Raises:
             AssertionError: If any critical module is mocked
         """
@@ -125,8 +126,7 @@ def anti_hallucination_validator():
 
                 # Check for Mock, MagicMock, patch, etc.
                 if any(
-                    mock_indicator in module_type.lower()
-                    for mock_indicator in ["mock", "patch", "magicmock", "spec"]
+                    mock_indicator in module_type.lower() for mock_indicator in ["mock", "patch", "magicmock", "spec"]
                 ):
                     mocked_modules.append(module_name)
 
@@ -141,7 +141,7 @@ def anti_hallucination_validator():
 
 
 @pytest.fixture
-def mcp_timeout_manager():
+def mcp_timeout_manager() -> object:
     """
     Manages timeouts for MCP operations to prevent hanging.
 
@@ -149,18 +149,18 @@ def mcp_timeout_manager():
     """
 
     class TimeoutManager:
-        def __init__(self, default_timeout: int = 10):
+        def __init__(self, default_timeout: int = 10) -> None:
             self.default_timeout = default_timeout
 
-        async def with_timeout(self, coro, timeout: int = None):
+        async def with_timeout(self, coro, timeout: int | None = None) -> object:
             """Execute coroutine with timeout"""
             timeout = timeout or self.default_timeout
             try:
                 return await asyncio.wait_for(coro, timeout=timeout)
-            except asyncio.TimeoutError:
-                raise TimeoutError(f"Operation timed out after {timeout} seconds")
+            except asyncio.TimeoutError as e:
+                raise TimeoutError(f"Operation timed out after {timeout} seconds") from e
 
-        def sync_timeout(self, timeout: int = None) -> int:
+        def sync_timeout(self, timeout: int | None = None) -> int:
             """Get timeout value for sync operations"""
             return timeout or self.default_timeout
 
@@ -168,9 +168,7 @@ def mcp_timeout_manager():
 
 
 @pytest.fixture
-async def real_mcp_agent(
-    real_mcp_client_session, mcp_timeout_manager
-) -> "AsyncGenerator[MCPAgent, None]":
+async def real_mcp_agent(real_mcp_client_session, mcp_timeout_manager) -> "AsyncGenerator[MCPAgent, None]":
     """
     Real MCPAgent instance connected to actual MCP server.
 
@@ -203,14 +201,12 @@ async def real_mcp_agent(
         yield agent
     finally:
         # Ensure proper cleanup
-        try:
+        with contextlib.suppress(Exception):
             await mcp_timeout_manager.with_timeout(agent.stop())
-        except Exception:
-            pass  # Best effort cleanup
 
 
 @pytest.fixture
-def real_simf_messages():
+def real_simf_messages() -> dict[str, object]:
     """
     Factory for creating real SIMF messages for testing.
 
@@ -248,31 +244,23 @@ def real_simf_messages():
 
 
 # Pytest configuration for anti-hallucination testing
-def pytest_configure(config):
+def pytest_configure(config) -> None:
     """Configure pytest with anti-hallucination markers"""
     config.addinivalue_line(
         "markers",
         "anti_hallucination: Tests that validate real behavior without mocking",
     )
-    config.addinivalue_line(
-        "markers", "real: Tests using real external services/libraries"
-    )
+    config.addinivalue_line("markers", "real: Tests using real external services/libraries")
     config.addinivalue_line("markers", "mcp: Tests involving MCP protocol")
-    config.addinivalue_line(
-        "markers", "timeout: Tests with specific timeout requirements"
-    )
+    config.addinivalue_line("markers", "timeout: Tests with specific timeout requirements")
 
 
-def pytest_runtest_setup(item):
+def pytest_runtest_setup(item) -> None:
     """Setup for each test to enforce anti-hallucination rules"""
     # For tests marked as anti_hallucination, ensure MCP is available
-    if item.get_closest_marker("anti_hallucination"):
-        if not MCP_AVAILABLE:
-            pytest.skip("Anti-hallucination test requires real MCP SDK")
+    if item.get_closest_marker("anti_hallucination") and not MCP_AVAILABLE:
+        pytest.skip("Anti-hallucination test requires real MCP SDK")
 
     # For real tests, add warnings about external dependencies
-    if item.get_closest_marker("real"):
-        if os.getenv("CI") and os.getenv("SKIP_REAL_TESTS"):
-            pytest.skip(
-                "Skipping real tests in CI (set SKIP_REAL_TESTS=false to enable)"
-            )
+    if item.get_closest_marker("real") and os.getenv("CI") and os.getenv("SKIP_REAL_TESTS"):
+        pytest.skip("Skipping real tests in CI (set SKIP_REAL_TESTS=false to enable)")

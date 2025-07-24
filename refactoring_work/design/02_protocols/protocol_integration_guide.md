@@ -330,6 +330,78 @@ class LoggingObserver(MessageObserver):
 protocol_manager.add_observer(LoggingObserver())
 ```
 
+## Advanced: Message Processing Hooks
+
+To provide maximum flexibility, OpenMAS allows for the registration of custom pre-processing and post-processing hooks that can inspect or modify message data before it enters or after it leaves the core translation logic of a protocol adapter.
+
+-   **Pre-processors** act on raw, protocol-specific message data *before* it is passed to the adapter's `to_internal_format()` method.
+-   **Post-processors** act on protocol-specific message data *after* it has been translated from SIMF by the `from_internal_format()` method.
+
+This is useful for tasks like custom validation, data enrichment, logging, or format adjustments that are outside the scope of the standard translation logic.
+
+### Processor Interface Definitions
+
+All processors must implement a simple interface.
+
+```python
+from abc import ABC, abstractmethod
+from typing import Any, Dict
+
+class IMessageProcessor(ABC):
+    """Base interface for all message processors."""
+
+    @abstractmethod
+    def process(self, data: Any, context: Dict[str, Any]) -> Any:
+        """
+        Processes message data.
+
+        Args:
+            data: The message data to process. For pre-processors, this is the
+                  raw protocol data. For post-processors, this is the data
+                  translated from SIMF.
+            context: A dictionary containing contextual information, such as
+                     protocol type, message direction, etc.
+
+        Returns:
+            The processed (potentially modified) data.
+        """
+        pass
+
+class IMessagePreprocessor(IMessageProcessor):
+    """A hook for processing raw data before it is translated to SIMF."""
+    pass
+
+class IMessagePostprocessor(IMessageProcessor):
+    """A hook for processing protocol-specific data after it is translated from SIMF."""
+    pass
+```
+
+### Configuration
+
+Processors are registered within the protocol's configuration block.
+
+```yaml
+# Example: Attaching a custom validator and response modifier to an HTTP protocol adapter
+protocols:
+  http:
+    enabled: true
+    type: "http-rest"
+    options:
+      port: 8000
+    # Register custom processors for this specific protocol instance
+    processors:
+      preprocessors:
+        - class: "my_company.processors.RequestValidator"
+          config:
+            # Custom config passed to the processor's constructor
+            schema_path: "/schemas/http_request_v1.json"
+      postprocessors:
+        - class: "my_company.processors.ResponseWrapper"
+          config:
+            add_server_header: true
+            server_id: "openmas-instance-1"
+```
+
 ## References
 
 - [A2A Protocol Documentation](/refactoring_work/00b_overview/02_protocols/a2a/a2a_protocol.md)

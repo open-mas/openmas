@@ -5,9 +5,7 @@ This test suite validates the SIMF-MCP integration examples against real
 MCP protocol behavior to ensure no hallucination and proper semantic preservation.
 """
 
-import asyncio
 import json
-from typing import Any, Dict
 
 import pytest
 from integration_demo import MockMCPProtocolAdapter, SIMFMCPIntegrationDemo
@@ -42,9 +40,7 @@ class TestMCPToSIMFTranslation:
         )
 
         # Convert to SIMF
-        simf_message = self.translator.mcp_tool_call_to_simf(
-            mcp_request, self.session_id
-        )
+        simf_message = self.translator.mcp_tool_call_to_simf(mcp_request, self.session_id)
 
         # Validate SIMF structure
         assert simf_message.message_type == "TOOL_INVOCATION"
@@ -74,9 +70,7 @@ class TestMCPToSIMFTranslation:
         )
 
         # Roundtrip: MCP → SIMF → MCP
-        simf_message = self.translator.mcp_tool_call_to_simf(
-            original_mcp, self.session_id
-        )
+        simf_message = self.translator.mcp_tool_call_to_simf(original_mcp, self.session_id)
         reconstructed_mcp = self.translator.simf_to_mcp_tool_call(simf_message)
 
         # Validate semantic preservation
@@ -107,9 +101,7 @@ class TestMCPToSIMFTranslation:
         )
 
         # Convert to SIMF
-        simf_message = self.translator.mcp_tool_result_to_simf(
-            mcp_result, "test_001", self.session_id
-        )
+        simf_message = self.translator.mcp_tool_result_to_simf(mcp_result, "test_001", self.session_id)
 
         # Validate SIMF structure
         assert simf_message.message_type == "TOOL_RESULT"
@@ -135,9 +127,7 @@ class TestMCPToSIMFTranslation:
         )
 
         # Roundtrip conversion
-        simf_message = self.translator.mcp_tool_call_to_simf(
-            mcp_request, self.session_id
-        )
+        simf_message = self.translator.mcp_tool_call_to_simf(mcp_request, self.session_id)
         reconstructed_mcp = self.translator.simf_to_mcp_tool_call(simf_message)
 
         # Validate exact preservation
@@ -161,82 +151,71 @@ class TestRealMCPIntegration:
         """Test against real MCP server to validate our message formats."""
         translator = MCPToSIMFTranslator("real_test_agent")
 
-        async with stdio_client(server_params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
+        async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
+            await session.initialize()
 
-                # 1. Test real MCP tool call
-                result = await session.call_tool(
-                    "analyze_text",
-                    arguments={
+            # 1. Test real MCP tool call
+            result = await session.call_tool(
+                "analyze_text",
+                arguments={
+                    "text": "This is a real integration test!",
+                    "analysis_type": "sentiment",
+                },
+            )
+
+            # Validate real result structure
+            assert len(result.content) > 0
+            assert isinstance(result.content[0], TextContent)
+
+            # 2. Test our translation matches real format
+            mcp_request = CallToolRequest(
+                id="real_test",
+                method="tools/call",
+                params={
+                    "name": "analyze_text",
+                    "arguments": {
                         "text": "This is a real integration test!",
                         "analysis_type": "sentiment",
                     },
-                )
+                },
+            )
 
-                # Validate real result structure
-                assert len(result.content) > 0
-                assert isinstance(result.content[0], TextContent)
+            simf_message = translator.mcp_tool_call_to_simf(mcp_request, "real_session")
+            reconstructed_mcp = translator.simf_to_mcp_tool_call(simf_message)
 
-                # 2. Test our translation matches real format
-                mcp_request = CallToolRequest(
-                    id="real_test",
-                    method="tools/call",
-                    params={
-                        "name": "analyze_text",
-                        "arguments": {
-                            "text": "This is a real integration test!",
-                            "analysis_type": "sentiment",
-                        },
-                    },
-                )
-
-                simf_message = translator.mcp_tool_call_to_simf(
-                    mcp_request, "real_session"
-                )
-                reconstructed_mcp = translator.simf_to_mcp_tool_call(simf_message)
-
-                # Validate our reconstruction matches what worked with real server
-                assert reconstructed_mcp.params["name"] == "analyze_text"
-                assert (
-                    reconstructed_mcp.params["arguments"]["text"]
-                    == "This is a real integration test!"
-                )
+            # Validate our reconstruction matches what worked with real server
+            assert reconstructed_mcp.params["name"] == "analyze_text"
+            assert reconstructed_mcp.params["arguments"]["text"] == "This is a real integration test!"
 
     @pytest.mark.asyncio
     async def test_real_mcp_resource_access(self, server_params):
         """Test resource access against real MCP server."""
         translator = MCPToSIMFTranslator("resource_test_agent")
 
-        async with stdio_client(server_params) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
+        async with stdio_client(server_params) as (read, write), ClientSession(read, write) as session:
+            await session.initialize()
 
-                # List real resources
-                resources_result = await session.list_resources()
+            # List real resources
+            resources_result = await session.list_resources()
 
-                if resources_result.resources:
-                    resource = resources_result.resources[0]
+            if resources_result.resources:
+                resource = resources_result.resources[0]
 
-                    # Read real resource content
-                    content_result = await session.read_resource(resource.uri)
-                    content_text = ""
-                    for content_item in content_result.contents:
-                        if isinstance(content_item, TextContent):
-                            content_text += content_item.text
+                # Read real resource content
+                content_result = await session.read_resource(resource.uri)
+                content_text = ""
+                for content_item in content_result.contents:
+                    if isinstance(content_item, TextContent):
+                        content_text += content_item.text
 
-                    # Test our resource → SIMF conversion
-                    simf_message = translator.mcp_resource_to_simf(
-                        resource, content_text, "resource_session"
-                    )
+                # Test our resource → SIMF conversion
+                simf_message = translator.mcp_resource_to_simf(resource, content_text, "resource_session")
 
-                    # Validate SIMF asset reference
-                    assert (
-                        simf_message.payload.payload_type == "asset_reference_content"
-                    )
-                    assert simf_message.payload.asset_id == resource.uri
-                    assert simf_message.payload.mime_type == resource.mimeType
-                    assert len(simf_message.payload.content_preview) > 0
+                # Validate SIMF asset reference
+                assert simf_message.payload.payload_type == "asset_reference_content"
+                assert simf_message.payload.asset_id == resource.uri
+                assert simf_message.payload.mime_type == resource.mimeType
+                assert len(simf_message.payload.content_preview) > 0
 
 
 class TestProtocolAdapterPattern:
@@ -274,9 +253,7 @@ class TestProtocolAdapterPattern:
             params={"name": "test_tool", "arguments": {"param": "value"}},
         )
 
-        simf_message = await self.adapter.to_internal_format(
-            mcp_request, {"session_id": self.session_id}
-        )
+        simf_message = await self.adapter.to_internal_format(mcp_request, {"session_id": self.session_id})
 
         # Convert back
         reconstructed_mcp = await self.adapter.from_internal_format(simf_message)
@@ -342,9 +319,7 @@ class TestSemanticPreservation:
         )
 
         # Full roundtrip through adapter
-        simf_message = await self.adapter.to_internal_format(
-            mcp_request, {"session_id": "preservation_test"}
-        )
+        simf_message = await self.adapter.to_internal_format(mcp_request, {"session_id": "preservation_test"})
         reconstructed_mcp = await self.adapter.from_internal_format(simf_message)
 
         # Validate exact preservation
@@ -370,9 +345,7 @@ class TestSemanticPreservation:
         )
 
         # MCP result → SIMF → MCP result roundtrip
-        simf_message = self.translator.mcp_tool_result_to_simf(
-            mcp_result, "test_invocation", "preservation_test"
-        )
+        simf_message = self.translator.mcp_tool_result_to_simf(mcp_result, "test_invocation", "preservation_test")
         reconstructed_result = self.translator.simf_to_mcp_tool_result(simf_message)
 
         # Validate structure preservation
@@ -399,7 +372,7 @@ class TestFullIntegrationDemo:
         try:
             await demo.run_complete_demo()
             assert True  # Demo completed without exceptions
-        except Exception as e:
+        except Exception:
             # If MCP server not available, verify demo structure is correct
             assert hasattr(demo, "adapter")
             assert hasattr(demo, "session_id")

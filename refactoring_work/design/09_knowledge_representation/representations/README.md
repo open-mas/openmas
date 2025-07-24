@@ -1,4 +1,37 @@
-# Knowledge Representation Formats
+# Knowledge Representation Formalisms
+
+This directory provides detailed documentation on the specific knowledge representation formalisms supported by the OpenMAS KR&R System. The framework's representation-agnostic design allows for the flexible use of different models, and this section outlines the canonical types and their intended use cases.
+
+## Guiding Principles
+
+-   **Abstraction**: All representation-specific details are hidden behind the common `IKnowledgeBase` interface.
+-   **Extensibility**: New representation types can be added to the framework by creating a new implementation of the `IKnowledgeBase` interface.
+-   **Configuration**: Agents select and configure their required knowledge bases, specifying the representation type, in their configuration files.
+
+## Supported Representation Categories
+
+OpenMAS provides built-in support for three primary categories of knowledge representation. Each is suited to different types of information and reasoning tasks.
+
+### 1. Symbolic Representations
+
+Symbolic representations encode knowledge using discrete symbols, such as logical predicates, rules, and facts. They are ideal for domains that require precise, formal reasoning and explicit knowledge structures.
+
+-   **Use Cases**: Rule-based inference, logical deduction, planning, formal verification.
+-   **Details**: **[Symbolic Representations](./symbolic.md)** (Placeholder)
+
+### 2. Graph-Based Representations
+
+Graph-based representations model knowledge as a network of nodes and edges. This is well-suited for representing complex relationships, ontologies, and interconnected data.
+
+-   **Use Cases**: Semantic networks, knowledge graphs (e.g., RDF), social network analysis, conceptual modeling.
+-   **Details**: **[Graph-Based Representations](./graph.md)** (Placeholder)
+
+### 3. Vector-Based Representations
+
+Vector-based representations encode knowledge as numerical vectors (embeddings) in a high-dimensional space. This approach is powerful for capturing semantic similarity and is foundational to many modern AI and NLP tasks.
+
+-   **Use Cases**: Semantic search, document similarity, question answering, context retrieval for LLMs.
+-   **Details**: **[Vector-Based Representations](./vector.md)** (Placeholder)
 
 ## Overview
 

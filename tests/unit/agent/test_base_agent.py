@@ -40,9 +40,7 @@ class MockStateManager(IAgentStateManager):
     def __init__(self):
         self._state = {}
 
-    async def set_state(
-        self, key: str, value, scope: str = "PRIVATE_PERSISTENT"
-    ) -> None:
+    async def set_state(self, key: str, value, scope: str = "PRIVATE_PERSISTENT") -> None:
         self._state[f"{scope}:{key}"] = value
 
     async def get_state(self, key: str, scope: str = "PRIVATE_PERSISTENT"):
@@ -135,9 +133,7 @@ class TestAgentConfig:
             "a2a": {"port": 9090},
         }
 
-        config = AgentConfig(
-            agent_id="test_agent", name="Test Agent", protocol_configs=protocol_configs
-        )
+        config = AgentConfig(agent_id="test_agent", name="Test Agent", protocol_configs=protocol_configs)
 
         assert config.protocol_configs == protocol_configs
 
@@ -148,9 +144,7 @@ class TestAgent:
 
     async def test_agent_initialization(self):
         """Test basic agent initialization."""
-        config = AgentConfig(
-            agent_id="test_agent", name="Test Agent", capabilities=["test_capability"]
-        )
+        config = AgentConfig(agent_id="test_agent", name="Test Agent", capabilities=["test_capability"])
 
         agent = Agent(config)
 
@@ -281,9 +275,7 @@ class TestAgent:
         await agent.start()
 
         # Create test message
-        message = create_text_message(
-            text="Hello", target_agent_id="test_agent", source_agent_id="other_agent"
-        )
+        message = create_text_message(text="Hello", target_agent_id="test_agent", source_agent_id="other_agent")
 
         # Send message internally
         await agent.send_message(message)
@@ -296,9 +288,7 @@ class TestAgent:
 
     async def test_agent_tool_execution(self):
         """Test agent tool execution."""
-        config = AgentConfig(
-            agent_id="test_agent", name="Test Agent", capabilities=["test_tool"]
-        )
+        config = AgentConfig(agent_id="test_agent", name="Test Agent", capabilities=["test_tool"])
         agent = Agent(config)
 
         # Execute tool
@@ -316,9 +306,7 @@ class TestAgent:
         agent = Agent(config)
 
         # Should raise error for unknown capability
-        with pytest.raises(
-            ValueError, match="Capability 'unknown_tool' not registered"
-        ):
+        with pytest.raises(ValueError, match="Capability 'unknown_tool' not registered"):
             await agent.execute_tool("unknown_tool", {})
 
     async def test_agent_message_callbacks(self):
@@ -337,9 +325,7 @@ class TestAgent:
         await agent.start()
 
         # Send message
-        message = create_text_message(
-            text="Test", target_agent_id="test_agent", source_agent_id="other_agent"
-        )
+        message = create_text_message(text="Test", target_agent_id="test_agent", source_agent_id="other_agent")
         await agent.send_message(message)
 
         # Wait for processing

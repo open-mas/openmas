@@ -1,4 +1,104 @@
-# IProtocolAdapter Interface
+# Protocol Layer Interfaces
+
+## Overview
+
+This document defines the core interfaces for the OpenMAS Protocol Layer. To promote modularity and adherence to the Single Responsibility Principle, the protocol layer is broken down into three distinct interfaces:
+
+1.  **`IConnectionManager`**: Handles the lifecycle of a network connection (connecting, disconnecting, status checks).
+2.  **`IMessageTransport`**: Manages the low-level sending and receiving of raw data over an active connection.
+3.  **`IProtocolAdapter`**: Handles the high-level serialization and deserialization of data, converting between a protocol-specific format and the Standard Internal Message Format (SIMF).
+
+## 1. `IConnectionManager` Interface
+
+The `IConnectionManager` is responsible for establishing, maintaining, and tearing down a network connection.
+
+```python
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional
+from pydantic import BaseModel
+
+# --- Supporting Models ---
+class ConnectionStatus(BaseModel):
+    is_connected: bool
+    details: Dict[str, Any] = {}
+
+class ProtocolConfig(BaseModel):
+    # This would be defined in more detail elsewhere, serves as a placeholder
+    endpoint: str
+    security_params: Dict[str, Any] = {}
+    # ... other protocol-specific settings
+
+# --- Interface Definition ---
+class IConnectionManager(ABC):
+    """Manages the lifecycle of a protocol connection."""
+
+    @abstractmethod
+    async def connect(self, config: ProtocolConfig) -> None:
+        """Establishes a connection using the provided configuration."""
+        ...
+
+    @abstractmethod
+    async def disconnect(self) -> None:
+        """Terminates the connection."""
+        ...
+
+    @abstractmethod
+    async def get_status(self) -> ConnectionStatus:
+        """Returns the current status of the connection."""
+        ...
+```
+
+## 2. `IMessageTransport` Interface
+
+Once a connection is established by an `IConnectionManager`, the `IMessageTransport` handles the raw data transmission.
+
+```python
+# --- Interface Definition ---
+class IMessageTransport(ABC):
+    """Handles sending and receiving raw data over a connection."""
+
+    @abstractmethod
+    async def send(self, data: bytes) -> None:
+        """Sends a raw byte payload over the connection."""
+        ...
+
+    @abstractmethod
+    async def receive(self) -> bytes:
+        """Receives a raw byte payload from the connection."""
+        ...
+```
+
+## 3. `IProtocolAdapter` Interface
+
+The `IProtocolAdapter` sits at the highest level of abstraction, focusing solely on message format translation.
+
+```python
+# Assumes InternalMessageFormat is defined elsewhere, e.g., in the agent framework
+class InternalMessageFormat(BaseModel):
+    # Placeholder for the Standard Internal Message Format
+    message_id: str
+    payload: Dict[str, Any]
+    # ... other SIMF fields
+
+# --- Interface Definition ---
+class IProtocolAdapter(ABC):
+    """Translates messages between a specific protocol format and the internal standard."""
+
+    @abstractmethod
+    def to_internal_format(self, protocol_message: Any) -> InternalMessageFormat:
+        """Converts a protocol-specific message into the Standard Internal Message Format (SIMF)."""
+        ...
+
+    @abstractmethod
+    def from_internal_format(self, internal_message: InternalMessageFormat) -> Any:
+        """Converts a SIMF message into the protocol-specific format."""
+        ...
+```
+
+## References
+
+-   [Multi-Protocol Design](/refactoring_work/design/01_architecture/multi_protocol_design.md)
+-   [Standard Internal Message Format](/refactoring_work/design/04_agents/internal_message_format_standard.md)
 
 ## Overview
 
@@ -21,7 +121,16 @@ from enum import Enum
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Union
 from pydantic import BaseModel, Field
 
-from openmas.agent.models.internal_message_format import InternalMessageFormat
+from openmas.agent.models.internal_message_format import (
+    InternalMessageFormat,
+    MessageType,
+    PayloadType,
+    InvocationContentPayload,
+    InvocationResultContentPayload,
+    StructuredDataContentPayload,
+    TextContentPayload,
+)
+import uuid
 
 
 class ConnectionStatus(str, Enum):
@@ -161,47 +270,7 @@ class IProtocolAdapter(ABC):
         """
         pass
 
-    @abstractmethod
-    async def send_message(self, internal_message: InternalMessageFormat) -> None:
-        """
-        Send a message using the protocol.
 
-        This method converts the internal message format to the protocol-specific
-        format and transmits it. The conversion preserves all semantic information
-        while adapting to protocol-specific constraints.
-
-        Args:
-            internal_message: Message in the Standard Internal Message Format
-
-        Raises:
-            MessageTranslationError: If the message cannot be converted to protocol format
-            UnsupportedMessageTypeError: If the message type is not supported
-            ConnectionError: If the connection is not available
-            ProtocolError: For other protocol-specific errors
-        """
-        pass
-
-    @abstractmethod
-    async def register_message_callback(
-        self,
-        callback: Callable[[InternalMessageFormat], Awaitable[None]]
-    ) -> None:
-        """
-        Register a callback function for incoming messages.
-
-        This method sets up the callback that will be invoked when messages
-        are received through the protocol. The callback receives messages
-        that have been converted to the Standard Internal Message Format.
-
-        Args:
-            callback: Async function to call when messages are received.
-                Must accept a single InternalMessageFormat parameter.
-
-        Raises:
-            ValueError: If the callback is invalid
-            ProtocolError: If callback registration fails
-        """
-        pass
 
     @abstractmethod
     async def get_status(self) -> ProtocolStatus:
@@ -360,37 +429,41 @@ Protocol adapters must handle translation errors gracefully:
 
 ```python
 class MCPProtocolAdapter(IProtocolAdapter):
-    """Example MCP protocol adapter implementation."""
+    """
+    Example MCP protocol adapter implementation.
+    This class demonstrates how to translate between the MCP format and the
+    Standard Internal Message Format (SIMF).
+    """
 
     def to_internal_format(self, protocol_message: Dict[str, Any]) -> InternalMessageFormat:
-        """Convert MCP message to SIMF."""
+        """Convert an incoming MCP message (as a dict) to SIMF."""
         message_id = protocol_message.get("id", str(uuid.uuid4()))
 
-        # Determine message type based on MCP message structure
+        # Determine SIMF message type and payload from MCP message structure
         if "method" in protocol_message:
-            if protocol_message["method"] == "tools/call":
+            if protocol_message.get("method") == "tools/call":
                 message_type = MessageType.TOOL_INVOCATION
                 payload = InvocationContentPayload(
                     payload_type=PayloadType.INVOCATION_CONTENT,
-                    invocation_name=protocol_message["params"]["name"],
-                    arguments=protocol_message["params"]["arguments"]
+                    invocation_name=protocol_message.get("params", {}).get("name"),
+                    arguments=protocol_message.get("params", {}).get("arguments")
                 )
-            else:
+            else: # Handle other methods as generic structured data
                 message_type = MessageType.SYSTEM_COMMAND
                 payload = StructuredDataContentPayload(
                     payload_type=PayloadType.STRUCTURED_DATA_CONTENT,
-                    data=protocol_message["params"]
+                    data=protocol_message.get("params", {})
                 )
         elif "result" in protocol_message:
             message_type = MessageType.TOOL_RESULT
             payload = InvocationResultContentPayload(
                 payload_type=PayloadType.INVOCATION_RESULT_CONTENT,
-                invocation_name="unknown",  # Would need context to determine
+                invocation_name="unknown",  # In a real scenario, this would be correlated with the request
                 status="success",
-                result=protocol_message["result"]
+                result=protocol_message.get("result")
             )
         else:
-            # Handle other MCP message types
+            # Fallback for any other message structure
             message_type = MessageType.PLAIN_TEXT_MESSAGE
             payload = TextContentPayload(
                 payload_type=PayloadType.TEXT_CONTENT,
@@ -400,28 +473,49 @@ class MCPProtocolAdapter(IProtocolAdapter):
         return InternalMessageFormat(
             message_id=message_id,
             timestamp=datetime.utcnow(),
-            source_protocol_type="mcp-sse",
-            target_agent_id="local",
-            message_flow_direction=MessageFlowDirection.INBOUND,
+            source_protocol_type="mcp",
             message_type=message_type,
             payload=payload,
-            metadata={"mcp_method": protocol_message.get("method")}
+            # Store the original message for debugging or deep inspection
+            metadata={"raw_mcp_message": protocol_message}
         )
 
     def from_internal_format(self, internal_message: InternalMessageFormat) -> Dict[str, Any]:
-        """Convert SIMF to MCP message."""
-        if internal_message.payload.payload_type == PayloadType.INVOCATION_CONTENT:
+        """Convert a SIMF message to an outgoing MCP message (as a dict)."""
+        payload = internal_message.payload
+
+        if payload.payload_type == PayloadType.INVOCATION_CONTENT:
             return {
                 "jsonrpc": "2.0",
                 "id": internal_message.message_id,
                 "method": "tools/call",
                 "params": {
-                    "name": internal_message.payload.invocation_name,
-                    "arguments": internal_message.payload.arguments
+                    "name": payload.invocation_name,
+                    "arguments": payload.arguments
                 }
             }
-        elif internal_message.payload.payload_type == PayloadType.TEXT_CONTENT:
+        elif payload.payload_type == PayloadType.INVOCATION_RESULT_CONTENT:
             return {
+                "jsonrpc": "2.0",
+                "id": internal_message.message_id, # Corresponds to the request ID
+                "result": payload.result
+            }
+        elif payload.payload_type == PayloadType.TEXT_CONTENT:
+            # MCP doesn't have a standard for plain text messages, so we can
+            # wrap it in a generic structure.
+            return {
+                "jsonrpc": "2.0",
+                "id": internal_message.message_id,
+                "method": "sendMessage",
+                "params": {
+                    "content": payload.text
+                }
+            }
+        else:
+            raise MessageTranslationError(
+                f"Cannot convert SIMF payload type '{payload.payload_type}' to an MCP message."
+            )
+```
                 "jsonrpc": "2.0",
                 "id": internal_message.message_id,
                 "result": {

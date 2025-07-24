@@ -1,4 +1,14 @@
-# Knowledge Access Interfaces for Reasoning Engines
+# Knowledge Access Interfaces
+
+This directory contains the formal definitions for the interfaces that govern all interactions with the Knowledge Representation & Reasoning (KR&R) System in OpenMAS.
+
+## Single Source of Truth
+
+To ensure consistency and clarity, all KR&R interface definitions, including core data models and the primary `IKnowledgeBase` and `IKnowledgeBaseRegistry` contracts, are consolidated into a single document:
+
+-   **[KR&R System Interfaces](./interfaces.md)**: This document is the canonical source for all KR&R API contracts.
+
+Reasoning engines and other components that need to interact with the KR&R system should adhere strictly to the interfaces defined in that file. This approach supports the framework's core principles of modularity, type safety, and reasoning agnosticism.
 
 ## Overview
 

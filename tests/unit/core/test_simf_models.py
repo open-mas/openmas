@@ -24,9 +24,7 @@ class TestSIMFModels:
 
     def test_simf_message_creation(self):
         """Test basic SIMF message creation."""
-        message = create_text_message(
-            text="Hello, OpenMAS!", target_agent_id="test-agent"
-        )
+        message = create_text_message(text="Hello, OpenMAS!", target_agent_id="test-agent")
 
         assert message.target_agent_id == "test-agent"
         assert message.message_type == MessageType.PLAIN_TEXT_MESSAGE

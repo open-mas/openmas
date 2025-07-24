@@ -7,9 +7,10 @@ cross-protocol pattern compatibility.
 """
 
 import asyncio
+import contextlib
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Optional
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
@@ -40,26 +41,22 @@ class IPatternEngine(ABC):
     """
 
     @abstractmethod
-    async def register_pattern(self, pattern: Dict[str, Any]) -> None:
+    async def register_pattern(self, pattern: dict[str, Any]) -> None:
         """Register a new communication pattern."""
         pass
 
     @abstractmethod
-    async def execute_pattern(
-        self, pattern_name: str, config: Dict[str, Any], message: SIMFMessage
-    ) -> Dict[str, Any]:
+    async def execute_pattern(self, pattern_name: str, config: dict[str, Any], message: SIMFMessage) -> dict[str, Any]:
         """Execute a specific pattern."""
         pass
 
     @abstractmethod
-    async def get_available_patterns(self) -> List[Dict[str, Any]]:
+    async def get_available_patterns(self) -> list[dict[str, Any]]:
         """Get list of registered patterns."""
         pass
 
     @abstractmethod
-    async def create_pattern_instance(
-        self, pattern_name: str, config: Dict[str, Any]
-    ) -> "IPatternInstance":
+    async def create_pattern_instance(self, pattern_name: str, config: dict[str, Any]) -> "IPatternInstance":
         """Create pattern instance for stateful patterns."""
         pass
 
@@ -69,9 +66,7 @@ class IPatternEngine(ABC):
         pass
 
     @abstractmethod
-    async def validate_pattern_config(
-        self, pattern_name: str, config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def validate_pattern_config(self, pattern_name: str, config: dict[str, Any]) -> dict[str, Any]:
         """Validate pattern configuration."""
         pass
 
@@ -90,12 +85,12 @@ class IPatternInstance(ABC):
         pass
 
     @abstractmethod
-    async def process_message(self, message: SIMFMessage) -> Optional[Dict[str, Any]]:
+    async def process_message(self, message: SIMFMessage) -> dict[str, Any] | None:
         """Process incoming message."""
         pass
 
     @abstractmethod
-    async def get_status(self) -> Dict[str, Any]:
+    async def get_status(self) -> dict[str, Any]:
         """Get current instance status."""
         pass
 
@@ -314,9 +309,7 @@ class IPatternEngineTestTemplate:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_register_valid_pattern(
-        self, pattern_engine: IPatternEngine, pattern_execution_fixtures
-    ):
+    async def test_register_valid_pattern(self, pattern_engine: IPatternEngine, pattern_execution_fixtures):
         """Test registration of valid communication patterns."""
         pattern = pattern_execution_fixtures["request_response_pattern"]
 
@@ -343,9 +336,7 @@ class IPatternEngineTestTemplate:
                 await pattern_engine.register_pattern(invalid_pattern)
 
     @pytest.mark.asyncio
-    async def test_register_multiple_patterns(
-        self, pattern_engine: IPatternEngine, pattern_execution_fixtures
-    ):
+    async def test_register_multiple_patterns(self, pattern_engine: IPatternEngine, pattern_execution_fixtures):
         """Test registration of multiple patterns."""
         patterns = [
             pattern_execution_fixtures["request_response_pattern"],
@@ -365,9 +356,7 @@ class IPatternEngineTestTemplate:
         assert "delegation" in pattern_names
 
     @pytest.mark.asyncio
-    async def test_register_duplicate_pattern_name(
-        self, pattern_engine: IPatternEngine, pattern_execution_fixtures
-    ):
+    async def test_register_duplicate_pattern_name(self, pattern_engine: IPatternEngine, pattern_execution_fixtures):
         """Test handling of duplicate pattern names."""
         pattern = pattern_execution_fixtures["request_response_pattern"]
 
@@ -379,23 +368,20 @@ class IPatternEngineTestTemplate:
         duplicate_pattern["version"] = "2.0.0"
 
         # Implementation may either update or raise error - both are valid
-        try:
+        with contextlib.suppress(ValueError):
             await pattern_engine.register_pattern(duplicate_pattern)
-        except ValueError:
-            # Error is acceptable for duplicate names
-            pass
 
     # ========================================================================
     # Pattern Execution Tests
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_execute_pattern_with_valid_simf_message(
+    async def test_pattern_execution_with_valid_simf_messages(
         self,
         pattern_engine: IPatternEngine,
         pattern_execution_fixtures,
         pattern_config_fixtures,
-        simf_message_fixtures,
+        simf_message_fixtures_exec,
     ):
         """Test pattern execution with valid SIMF messages."""
         # Register pattern
@@ -406,9 +392,7 @@ class IPatternEngineTestTemplate:
         config = pattern_config_fixtures["request_response_config"]
         message = simf_message_fixtures["tool_invocation"]
 
-        result = await pattern_engine.execute_pattern(
-            pattern_name="request_response", config=config, message=message
-        )
+        result = await pattern_engine.execute_pattern(pattern_name="request_response", config=config, message=message)
 
         # Validate result structure
         assert isinstance(result, dict)
@@ -421,32 +405,28 @@ class IPatternEngineTestTemplate:
         for msg in result["messages"]:
             if isinstance(msg, SIMFMessage):
                 validation_result = validate_simf_message(msg)
-                assert (
-                    validation_result.is_valid
-                ), f"Invalid SIMF message: {validation_result.issues}"
+                assert validation_result.is_valid, f"Invalid SIMF message: {validation_result.issues}"
 
     @pytest.mark.asyncio
-    async def test_execute_nonexistent_pattern(
+    async def test_execute_pattern_with_nonexistent_pattern(
         self,
         pattern_engine: IPatternEngine,
         pattern_config_fixtures,
-        simf_message_fixtures,
+        simf_message_fixtures_nonexistent,
     ):
         """Test execution failure with nonexistent pattern."""
         config = pattern_config_fixtures["request_response_config"]
-        message = simf_message_fixtures["tool_invocation"]
+        message = simf_message_fixtures_nonexistent["tool_invocation"]
 
         with pytest.raises((ValueError, KeyError)):
-            await pattern_engine.execute_pattern(
-                pattern_name="nonexistent_pattern", config=config, message=message
-            )
+            await pattern_engine.execute_pattern(pattern_name="nonexistent_pattern", config=config, message=message)
 
     @pytest.mark.asyncio
     async def test_execute_pattern_with_invalid_config(
         self,
         pattern_engine: IPatternEngine,
         pattern_execution_fixtures,
-        simf_message_fixtures,
+        simf_message_fixtures_invalid,
     ):
         """Test pattern execution with invalid configuration."""
         # Register pattern
@@ -478,9 +458,7 @@ class IPatternEngineTestTemplate:
 
         for protocol in supported_protocols:
             # Should support declared protocols
-            assert (
-                pattern_engine.supports_protocol("request_response", protocol) or True
-            )  # May need registration first
+            assert pattern_engine.supports_protocol("request_response", protocol) or True  # May need registration first
 
         # Should not support undeclared protocols
         unsupported_protocols = ["websocket", "grpc", "custom"]
@@ -488,18 +466,14 @@ class IPatternEngineTestTemplate:
             if protocol not in supported_protocols:
                 # Implementation may return False or raise exception
                 try:
-                    result = pattern_engine.supports_protocol(
-                        "request_response", protocol
-                    )
+                    result = pattern_engine.supports_protocol("request_response", protocol)
                     if result is not None:
                         assert result is False
                 except (ValueError, KeyError):
                     # Exception is also acceptable
                     pass
 
-    def test_supports_protocol_for_nonexistent_pattern(
-        self, pattern_engine: IPatternEngine
-    ):
+    def test_supports_protocol_for_nonexistent_pattern(self, pattern_engine: IPatternEngine):
         """Test protocol compatibility for nonexistent patterns."""
         with pytest.raises((ValueError, KeyError)):
             pattern_engine.supports_protocol("nonexistent_pattern", "mcp")
@@ -522,9 +496,7 @@ class IPatternEngineTestTemplate:
 
         # Validate config
         config = pattern_config_fixtures["request_response_config"]
-        result = await pattern_engine.validate_pattern_config(
-            pattern_name="request_response", config=config
-        )
+        result = await pattern_engine.validate_pattern_config(pattern_name="request_response", config=config)
 
         # Should indicate valid configuration
         assert isinstance(result, dict)
@@ -554,10 +526,7 @@ class IPatternEngineTestTemplate:
 
             # Should indicate invalid configuration
             assert isinstance(result, dict)
-            assert (
-                result.get("is_valid", False) is False
-                or len(result.get("errors", [])) > 0
-            )
+            assert result.get("is_valid", False) is False or len(result.get("errors", [])) > 0
 
     # ========================================================================
     # Pattern Instance Tests
@@ -581,9 +550,7 @@ class IPatternEngineTestTemplate:
             "options": {"buffer_size": 2048, "heartbeat_interval": 15},
         }
 
-        instance = await pattern_engine.create_pattern_instance(
-            pattern_name="streaming", config=config
-        )
+        instance = await pattern_engine.create_pattern_instance(pattern_name="streaming", config=config)
 
         # Validate instance
         assert isinstance(instance, IPatternInstance)
@@ -603,7 +570,7 @@ class IPatternEngineTestTemplate:
         self,
         pattern_engine: IPatternEngine,
         pattern_execution_fixtures,
-        simf_message_fixtures,
+        simf_message_fixtures_processing,
     ):
         """Test pattern instance message processing."""
         # Register pattern
@@ -612,9 +579,7 @@ class IPatternEngineTestTemplate:
 
         # Create and start instance
         config = {"pattern_name": "streaming", "options": {}}
-        instance = await pattern_engine.create_pattern_instance(
-            pattern_name="streaming", config=config
-        )
+        instance = await pattern_engine.create_pattern_instance(pattern_name="streaming", config=config)
         await instance.start()
 
         # Process message
@@ -648,7 +613,7 @@ class IPatternEngineTestTemplate:
         pattern_engine: IPatternEngine,
         pattern_execution_fixtures,
         pattern_config_fixtures,
-        simf_message_fixtures,
+        simf_message_fixtures_concurrent,
     ):
         """Test concurrent execution of multiple patterns."""
         # Register patterns
@@ -662,7 +627,7 @@ class IPatternEngineTestTemplate:
 
         # Execute patterns concurrently
         tasks = []
-        for i in range(3):
+        for _i in range(3):
             task = pattern_engine.execute_pattern(
                 pattern_name="request_response",
                 config=pattern_config_fixtures["request_response_config"],
@@ -684,9 +649,7 @@ class IPatternEngineTestTemplate:
 # ============================================================================
 
 
-def create_pattern_engine_test_suite(
-    engine_class, additional_fixtures: Optional[Dict[str, Any]] = None
-) -> type:
+def create_pattern_engine_test_suite(engine_class, additional_fixtures: dict[str, Any] | None = None) -> type:
     """
     Factory function to create a complete test suite for a pattern engine.
 
@@ -699,7 +662,6 @@ def create_pattern_engine_test_suite(
     """
 
     class GeneratedPatternEngineTests(IPatternEngineTestTemplate):
-
         @pytest.fixture
         def pattern_engine(self) -> IPatternEngine:
             return engine_class()

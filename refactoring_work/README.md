@@ -1,38 +1,49 @@
 # OpenMAS 0.3.0 Refactoring Work
 
-This directory contains all design work, implementation planning, and AI support materials for the OpenMAS 0.3.0 refactoring project.
+This directory contains all design work, planning systems, and setup materials for the OpenMAS 0.3.0 refactoring project.
 
 ## 📁 Directory Organization
 
-### 00_design/
+### design/
 **Complete design documentation for OpenMAS 0.3.0**
 
-This contains the comprehensive architecture and design documentation that guides the 0.3.0 implementation:
+Comprehensive architecture and design documentation that guides the 0.3.0 implementation:
 
-- `PLANNING.md` - Master planning document identifying all implementation gaps
-- `TASK_*.md` - Completed design task specifications (5 completed out of ~12 needed)
-- `01_architecture/` through `17_security/` - Detailed component design documentation
+- `PLANNING.md` & `PLANNING2.md` - Master planning documents with implementation status
+- `01_architecture/` through `15_deployment/` - Detailed component design documentation
+- `reference/` - Design patterns and architectural reference materials
+- Refined interface definitions with resolved conflicts and single sources of truth
 
-**Status**: Core agent framework APIs complete, missing protocol and extension system APIs
+**Status**: Core APIs refined and conflicts resolved; ready for implementation
 
-### 01_implementation_plan/
-**Implementation planning and project setup**
+### planning/
+**V2 Planning System & Task Management**
 
-Contains concrete implementation planning:
-- Project structure setup
-- Tooling configuration
-- Implementation phase planning
-- Development workflow
+Advanced planning system with AI continuity and anti-hallucination safeguards:
+- `AI_CONTINUITY_SYSTEM.md` - V2 AI session management with task creation integration
+- `TASK_CREATION_PROTOCOL.md` - Bulletproof task creation with design alignment enforcement
+- `00_ACTIVE_TASKS/`, `01_READY_TO_START/`, `02_BLOCKED/` - Status-based task organization
+- `core_documents/` - Current phase tracking and task coordination
+- `archive/` - Completed work organized by phases
 
-**Status**: Basic structure defined, needs completion of phase planning
+**Status**: V2 system operational with integrated anti-hallucination safeguards
 
-### 02_ai_support/
-**AI assistant support materials**
+### setup/
+**0.3.0 Implementation Setup Guides**
 
-Consolidated AI helper content:
-- `knowledge_base/` - Reference information for AI assistants
-- `prompt_templates/` - Structured prompts for development phases
-- `prompts_configuration/` - Configuration system analysis
+One-off setup guidance based on 0.2.0 lessons learned:
+- `project_setup/` - Project structure, configuration, dependencies, documentation setup
+- `testing_setup/` - Testing framework, protocol testing, integration testing guidance
+
+**Status**: Ready for one-off review and application during 0.3.0 initial setup
+
+### 0.2.0/
+**Previous Version Reference**
+
+Complete OpenMAS 0.2.0 codebase preserved for reference:
+- Full previous implementation available for consultation
+- No backward compatibility required (0.3.0 is complete rewrite)
+- Reference only - not part of active development
 
 ## 🎯 Current Project Status
 
@@ -85,17 +96,37 @@ The extensive design work has validated these key architectural decisions:
 
 ## 📚 How to Use This Documentation
 
-- **Implementing missing APIs**: Start with high-priority TASK files in `00_design/`
-- **Understanding architecture**: Read `00_design/01_architecture/`
-- **Component details**: Navigate to specific component directories
-- **Implementation guidance**: Use AI support materials in `02_ai_support/`
+### **For AI Agents**
+- **Starting any work**: Follow V2 session start protocol in `planning/AI_CONTINUITY_SYSTEM.md`
+- **Creating new tasks**: **MANDATORY** - Follow `planning/TASK_CREATION_PROTOCOL.md`
+- **Understanding architecture**: Read `design/01_architecture/` and related design docs
+- **Implementation setup**: Review guides in `setup/` directory
 
-## 🧹 Recent Organization Changes
+### **For Developers**
+- **Architecture overview**: Start with `design/01_architecture/`
+- **Component details**: Navigate to specific component directories in `design/`
+- **Current status**: Check `planning/core_documents/current_phase.md`
+- **Reference implementation**: Consult `0.2.0/` for previous approaches (reference only)
 
-**Cleaned up from previous structure:**
-- Consolidated `00a_AI_help/` + `00_AI/` → `02_ai_support/`
-- Moved `00b_overview/` → `00_design/` (well-organized design docs)
-- Extracted `99_implementation_plan/` → `01_implementation_plan/`
-- Removed duplicate and outdated content
+## 🧹 Major Organizational Improvements
 
-This organization separates design work from implementation planning and provides clear navigation for the upcoming implementation phase.
+**V2 Planning System Integration:**
+- Implemented bulletproof task creation protocol with design alignment enforcement
+- Integrated anti-hallucination safeguards to prevent 0.2.0 disasters (1000+ meaningless tests)
+- Enhanced AI continuity system with mandatory design document review
+- Status-based task organization with clear lifecycle management
+
+**Directory Structure Refinements:**
+- `00_design/` → `design/` - Cleaned and refined design documentation
+- `01_implementation_plan/` → `setup/` - Focused on 0.3.0 setup guides from 0.2.0 lessons
+- `02_ai_support/` → **REMOVED** - Consolidated into V2 planning system
+- `0.2.0/` → `refactoring_work/0.2.0/` - Moved reference implementation into project structure
+- Resolved interface conflicts and established single sources of truth
+
+**Anti-Hallucination Measures:**
+- Mandatory design document review before task creation
+- Explicit architectural constraint verification
+- Required cross-reference updates and design alignment statements
+- Prohibition against assumption-based requirements
+
+This organization ensures strict design alignment, prevents AI hallucinations, and provides clear navigation for reliable 0.3.0 development.

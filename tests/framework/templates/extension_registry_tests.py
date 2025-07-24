@@ -1,18 +1,20 @@
 """
 IExtensionRegistry Test Framework Template
 
-This module provides comprehensive test templates for IExtensionRegistry implementations,
+This module provides comprehensive test templates for IExtensionRegistry
+implementations,
 designed to validate extension discovery, loading, configuration validation, dependency
 resolution, and lifecycle management.
 """
 
 import asyncio
+import contextlib
 import shutil
 import tempfile
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Type
+from typing import Any, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -50,12 +52,12 @@ class IExtension(ABC):
 
     @property
     @abstractmethod
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
         """List of required dependencies."""
         pass
 
     @abstractmethod
-    async def initialize(self, config: Dict[str, Any]) -> None:
+    async def initialize(self, config: dict[str, Any]) -> None:
         """Initialize the extension."""
         pass
 
@@ -65,7 +67,7 @@ class IExtension(ABC):
         pass
 
     @abstractmethod
-    def get_capabilities(self) -> Dict[str, Any]:
+    def get_capabilities(self) -> dict[str, Any]:
         """Get extension capabilities."""
         pass
 
@@ -77,21 +79,17 @@ class IExtensionRegistry(ABC):
     """
 
     @abstractmethod
-    async def discover_extensions(
-        self, search_paths: List[str]
-    ) -> List[Dict[str, Any]]:
+    async def discover_extensions(self, search_paths: list[str]) -> list[dict[str, Any]]:
         """Discover available extensions in search paths."""
         pass
 
     @abstractmethod
-    async def register_extension(self, extension_info: Dict[str, Any]) -> None:
+    async def register_extension(self, extension_info: dict[str, Any]) -> None:
         """Register an extension."""
         pass
 
     @abstractmethod
-    async def load_extension(
-        self, extension_name: str, config: Optional[Dict[str, Any]] = None
-    ) -> IExtension:
+    async def load_extension(self, extension_name: str, config: dict[str, Any] | None = None) -> IExtension:
         """Load and initialize an extension."""
         pass
 
@@ -101,29 +99,27 @@ class IExtensionRegistry(ABC):
         pass
 
     @abstractmethod
-    async def get_loaded_extensions(self) -> List[str]:
+    async def get_loaded_extensions(self) -> list[str]:
         """Get list of currently loaded extensions."""
         pass
 
     @abstractmethod
-    async def get_available_extensions(self) -> List[Dict[str, Any]]:
+    async def get_available_extensions(self) -> list[dict[str, Any]]:
         """Get list of all available extensions."""
         pass
 
     @abstractmethod
-    async def resolve_dependencies(self, extension_name: str) -> List[str]:
+    async def resolve_dependencies(self, extension_name: str) -> list[str]:
         """Resolve extension dependencies."""
         pass
 
     @abstractmethod
-    async def validate_extension_config(
-        self, extension_name: str, config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def validate_extension_config(self, extension_name: str, config: dict[str, Any]) -> dict[str, Any]:
         """Validate extension configuration."""
         pass
 
     @abstractmethod
-    def get_extension(self, extension_name: str) -> Optional[IExtension]:
+    def get_extension(self, extension_name: str) -> IExtension | None:
         """Get loaded extension instance."""
         pass
 
@@ -139,7 +135,7 @@ class IExtensionRegistry(ABC):
 
 
 @pytest.fixture
-def extension_definitions():
+def extension_definitions() -> dict[str, dict[str, Any]]:
     """Real extension definitions for testing."""
     return {
         "logging_extension": {
@@ -281,7 +277,7 @@ def extension_definitions():
 
 
 @pytest.fixture
-def extension_configs():
+def extension_configs() -> dict[str, dict[str, Any]]:
     """Valid extension configurations for testing."""
     return {
         "logging_config": {
@@ -308,7 +304,7 @@ def extension_configs():
 
 
 @pytest.fixture
-def dependency_scenarios():
+def dependency_scenarios() -> dict[str, dict[str, Any]]:
     """Extension dependency resolution scenarios."""
     return {
         "simple_chain": {
@@ -354,9 +350,7 @@ def dependency_scenarios():
 class MockExtension(IExtension):
     """Mock extension for testing."""
 
-    def __init__(
-        self, name: str, version: str = "1.0.0", dependencies: List[str] = None
-    ):
+    def __init__(self, name: str, version: str = "1.0.0", dependencies: list[str] = None) -> None:
         self._name = name
         self._version = version
         self._dependencies = dependencies or []
@@ -365,28 +359,35 @@ class MockExtension(IExtension):
 
     @property
     def name(self) -> str:
+        """Get the extension name."""
         return self._name
 
     @property
     def version(self) -> str:
+        """Get the extension version."""
         return self._version
 
     @property
-    def dependencies(self) -> List[str]:
+    def dependencies(self) -> list[str]:
+        """Get the extension dependencies."""
         return self._dependencies
 
-    async def initialize(self, config: Dict[str, Any]) -> None:
+    async def initialize(self, config: dict[str, Any]) -> None:
+        """Initialize the extension."""
         self._initialized = True
         self._config = config
 
     async def shutdown(self) -> None:
+        """Shutdown the extension."""
         self._initialized = False
 
-    def get_capabilities(self) -> Dict[str, Any]:
+    def get_capabilities(self) -> dict[str, Any]:
+        """Get the extension capabilities."""
         return self._capabilities
 
     @property
     def is_initialized(self) -> bool:
+        """Check if the extension is initialized."""
         return self._initialized
 
 
@@ -413,9 +414,7 @@ class IExtensionRegistryTestTemplate:
         Override this fixture in your test class to provide your
         IExtensionRegistry implementation for testing.
         """
-        raise NotImplementedError(
-            "Must provide extension_registry fixture in test class"
-        )
+        raise NotImplementedError("Must provide extension_registry fixture in test class")
 
     @pytest.fixture
     def temp_extension_dir(self):
@@ -463,15 +462,11 @@ class TestExtension:
         assert len(extensions) == 0
 
     @pytest.mark.asyncio
-    async def test_discover_extensions_in_nonexistent_path(
-        self, extension_registry: IExtensionRegistry
-    ):
+    async def test_discover_extensions_in_nonexistent_path(self, extension_registry: IExtensionRegistry):
         """Test discovery in nonexistent directory."""
         # Should handle gracefully (empty list or exception)
         try:
-            extensions = await extension_registry.discover_extensions(
-                ["/nonexistent/path"]
-            )
+            extensions = await extension_registry.discover_extensions(["/nonexistent/path"])
             assert isinstance(extensions, list)
         except (FileNotFoundError, ValueError):
             # Exception is acceptable
@@ -482,9 +477,7 @@ class TestExtension:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_register_valid_extension(
-        self, extension_registry: IExtensionRegistry, extension_definitions
-    ):
+    async def test_register_valid_extension(self, extension_registry: IExtensionRegistry, extension_definitions):
         """Test registration of valid extensions."""
         extension = extension_definitions["logging_extension"]
 
@@ -497,9 +490,7 @@ class TestExtension:
         assert "logging_extension" in extension_names
 
     @pytest.mark.asyncio
-    async def test_register_invalid_extension(
-        self, extension_registry: IExtensionRegistry
-    ):
+    async def test_register_invalid_extension(self, extension_registry: IExtensionRegistry):
         """Test registration failure with invalid extension."""
         invalid_extensions = [
             {},  # Empty extension
@@ -513,9 +504,7 @@ class TestExtension:
                 await extension_registry.register_extension(invalid_ext)
 
     @pytest.mark.asyncio
-    async def test_register_duplicate_extension(
-        self, extension_registry: IExtensionRegistry, extension_definitions
-    ):
+    async def test_register_duplicate_extension(self, extension_registry: IExtensionRegistry, extension_definitions):
         """Test handling of duplicate extension registration."""
         extension = extension_definitions["logging_extension"]
 
@@ -523,11 +512,8 @@ class TestExtension:
         await extension_registry.register_extension(extension)
 
         # Register duplicate - should handle gracefully
-        try:
+        with contextlib.suppress(ValueError):
             await extension_registry.register_extension(extension)
-        except ValueError:
-            # Error is acceptable for duplicates
-            pass
 
     # ========================================================================
     # Extension Loading Tests
@@ -563,9 +549,7 @@ class TestExtension:
             assert "logging_extension" in loaded_extensions
 
     @pytest.mark.asyncio
-    async def test_load_nonexistent_extension(
-        self, extension_registry: IExtensionRegistry
-    ):
+    async def test_load_nonexistent_extension(self, extension_registry: IExtensionRegistry):
         """Test loading failure with nonexistent extension."""
         with pytest.raises((ValueError, KeyError)):
             await extension_registry.load_extension("nonexistent_extension")
@@ -582,9 +566,7 @@ class TestExtension:
         invalid_config = {"validation_level": "strict"}  # Missing encryption_key
 
         with pytest.raises((ValueError, TypeError)):
-            await extension_registry.load_extension(
-                "security_extension", invalid_config
-            )
+            await extension_registry.load_extension("security_extension", invalid_config)
 
     # ========================================================================
     # Dependency Resolution Tests
@@ -615,9 +597,7 @@ class TestExtension:
         assert "logging_extension" in deps
 
     @pytest.mark.asyncio
-    async def test_resolve_complex_dependencies(
-        self, extension_registry: IExtensionRegistry, extension_definitions
-    ):
+    async def test_resolve_complex_dependencies(self, extension_registry: IExtensionRegistry, extension_definitions):
         """Test resolution of complex dependency graphs."""
         # Register all extensions
         extensions = [
@@ -638,14 +618,10 @@ class TestExtension:
         assert "metrics_extension" in deps
 
     @pytest.mark.asyncio
-    async def test_resolve_missing_dependencies(
-        self, extension_registry: IExtensionRegistry, extension_definitions
-    ):
+    async def test_resolve_missing_dependencies(self, extension_registry: IExtensionRegistry, extension_definitions):
         """Test dependency resolution with missing dependencies."""
         # Register only security extension (missing its dependencies)
-        await extension_registry.register_extension(
-            extension_definitions["security_extension"]
-        )
+        await extension_registry.register_extension(extension_definitions["security_extension"])
 
         # Should fail to resolve
         with pytest.raises((ValueError, KeyError)):
@@ -692,16 +668,11 @@ class TestExtension:
         ]
 
         for invalid_config in invalid_configs:
-            result = await extension_registry.validate_extension_config(
-                "security_extension", invalid_config
-            )
+            result = await extension_registry.validate_extension_config("security_extension", invalid_config)
 
             # Should indicate invalid configuration
             assert isinstance(result, dict)
-            assert (
-                result.get("is_valid", False) is False
-                or len(result.get("errors", [])) > 0
-            )
+            assert result.get("is_valid", False) is False or len(result.get("errors", [])) > 0
 
     # ========================================================================
     # Extension Lifecycle Tests
@@ -720,9 +691,7 @@ class TestExtension:
 
         # Mock the extension creation
         mock_ext = MockExtension("logging_extension")
-        with patch.object(
-            extension_registry, "_create_extension_instance", return_value=mock_ext
-        ):
+        with patch.object(extension_registry, "_create_extension_instance", return_value=mock_ext):
             # Load extension
             loaded_ext = await extension_registry.load_extension(
                 "logging_extension", extension_configs["logging_config"]
@@ -755,13 +724,9 @@ class TestExtension:
 
         # Mock the extension creation
         mock_ext = MockExtension("logging_extension")
-        with patch.object(
-            extension_registry, "_create_extension_instance", return_value=mock_ext
-        ):
+        with patch.object(extension_registry, "_create_extension_instance", return_value=mock_ext):
             # Load extension first
-            await extension_registry.load_extension(
-                "logging_extension", extension_configs["logging_config"]
-            )
+            await extension_registry.load_extension("logging_extension", extension_configs["logging_config"])
 
             # Reload extension
             await extension_registry.reload_extension("logging_extension")
@@ -783,13 +748,9 @@ class TestExtension:
 
         # Mock the extension creation
         mock_ext = MockExtension("logging_extension")
-        with patch.object(
-            extension_registry, "_create_extension_instance", return_value=mock_ext
-        ):
+        with patch.object(extension_registry, "_create_extension_instance", return_value=mock_ext):
             # Load extension
-            await extension_registry.load_extension(
-                "logging_extension", extension_configs["logging_config"]
-            )
+            await extension_registry.load_extension("logging_extension", extension_configs["logging_config"])
 
             # Get extension instance
             instance = extension_registry.get_extension("logging_extension")
@@ -805,17 +766,13 @@ class TestExtension:
     # ========================================================================
 
     @pytest.mark.asyncio
-    async def test_unload_nonexistent_extension(
-        self, extension_registry: IExtensionRegistry
-    ):
+    async def test_unload_nonexistent_extension(self, extension_registry: IExtensionRegistry):
         """Test unloading nonexistent extension."""
         with pytest.raises((ValueError, KeyError)):
             await extension_registry.unload_extension("nonexistent_extension")
 
     @pytest.mark.asyncio
-    async def test_reload_nonexistent_extension(
-        self, extension_registry: IExtensionRegistry
-    ):
+    async def test_reload_nonexistent_extension(self, extension_registry: IExtensionRegistry):
         """Test reloading nonexistent extension."""
         with pytest.raises((ValueError, KeyError)):
             await extension_registry.reload_extension("nonexistent_extension")
@@ -848,12 +805,8 @@ class TestExtension:
         ):
             # Load extensions concurrently
             tasks = [
-                extension_registry.load_extension(
-                    "logging_extension", extension_configs["logging_config"]
-                ),
-                extension_registry.load_extension(
-                    "metrics_extension", extension_configs["metrics_config"]
-                ),
+                extension_registry.load_extension("logging_extension", extension_configs["logging_config"]),
+                extension_registry.load_extension("metrics_extension", extension_configs["metrics_config"]),
             ]
 
             results = await asyncio.gather(*tasks)
@@ -873,9 +826,7 @@ class TestExtension:
 # ============================================================================
 
 
-def create_extension_registry_test_suite(
-    registry_class, additional_fixtures: Optional[Dict[str, Any]] = None
-) -> type:
+def create_extension_registry_test_suite(registry_class, additional_fixtures: dict[str, Any] | None = None) -> type:
     """
     Factory function to create a complete test suite for an extension registry.
 
@@ -888,7 +839,6 @@ def create_extension_registry_test_suite(
     """
 
     class GeneratedExtensionRegistryTests(IExtensionRegistryTestTemplate):
-
         @pytest.fixture
         def extension_registry(self) -> IExtensionRegistry:
             return registry_class()

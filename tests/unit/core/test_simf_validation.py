@@ -167,7 +167,7 @@ class TestSIMFValidator:
         result = validator.validate(message)
 
         # Check if validation passes or only has enum-related warnings
-        critical_errors = [err for err in result.errors if not ("MessageType enum value" in err.message)]
+        critical_errors = [err for err in result.errors if "MessageType enum value" not in err.message]
         assert len(critical_errors) == 0, f"Critical validation errors: {critical_errors}"
         assert result.message == message
 
@@ -188,7 +188,7 @@ class TestSIMFValidator:
         result = validator.validate(message_dict)
 
         # Check that there are no critical errors (ignore enum type checking)
-        critical_errors = [err for err in result.errors if not ("MessageType enum value" in err.message)]
+        critical_errors = [err for err in result.errors if "MessageType enum value" not in err.message]
         assert len(critical_errors) == 0, f"Critical validation errors: {critical_errors}"
         assert isinstance(result.message, SIMFMessage)
 
@@ -351,7 +351,7 @@ class TestValidationUtility:
         result = validate_simf_message(message, strict=False)
 
         # Check that there are no critical errors (ignore enum type checking)
-        critical_errors = [err for err in result.errors if not ("MessageType enum value" in err.message)]
+        critical_errors = [err for err in result.errors if "MessageType enum value" not in err.message]
         assert len(critical_errors) == 0, f"Critical validation errors: {critical_errors}"
 
     def test_validate_simf_message_invalid(self):
@@ -450,5 +450,5 @@ class TestEdgeCases:
         """Test validation catches empty agent IDs."""
         validator = SIMFValidator()
 
-        with pytest.raises(Exception):  # Should fail during message creation
+        with pytest.raises(ValueError):  # Should fail during message creation
             create_text_message(text="Hello", target_agent_id="")  # Empty agent ID

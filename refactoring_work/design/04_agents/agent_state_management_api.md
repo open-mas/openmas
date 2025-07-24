@@ -1,210 +1,165 @@
-# Agent State Management API
+# Agent State Management Interface
 
-## Overview
+## 1. Overview
 
-The Agent State Management API provides a standardized interface for agents to persistently save, load, and manage their internal state within the OpenMAS Agent Framework. This API ensures that agents can maintain their state across restarts and sessions, providing mechanisms for data persistence with well-defined scopes and serialization approaches.
+The `IAgentState` interface provides a formal contract for managing an agent's internal state. It is designed to be a comprehensive and flexible tool that supports simple key-value storage, robust persistence, and a powerful publish-subscribe mechanism for reactive, event-driven programming within an agent.
 
-## Key Concepts
+This allows for a clean separation of concerns, where an agent's components can access and react to state changes without being tightly coupled.
 
-### State vs. Session
-
-- **Agent State**: Long-lived data belonging to an agent that persists beyond individual sessions (e.g., learned preferences, configuration, counters)
-- **Session State**: Temporary data tied to a specific interaction session (handled by the Session Management API)
-
-### State Scopes
-
-State scopes define the visibility and lifetime of stored state data:
-
-- **Private Persistent**: State private to the agent, persists across agent restarts
-- **Session-Specific Persistent**: State associated with a particular session ID, persists if the session can be resumed
-- **In-Memory Session-Only**: State tied to the current active session, lost when session ends or agent restarts
-- **Shared**: State that can be accessed by other agents (with proper authorization)
-
-### Data Serialization
-
-The API handles serialization and deserialization of various data types:
-
-- Native support for JSON-serializable primitives (str, int, float, bool, list, dict)
-- Automatic handling of Pydantic models (serialized to JSON and deserialized back to models)
-- Support for bytes storage for binary data
-
-## IAgentStateManager Interface
-
-The `IAgentStateManager` interface defines the core methods for agent state management:
+## 2. IAgentState Interface Definition
 
 ```python
-from enum import Enum
-from typing import Any, Dict, List, Optional, Type, TypeVar, Generic
-from pydantic import BaseModel
+from abc import ABC, abstractmethod
+from typing import Any, Callable, Coroutine, Dict, List, Optional
 
-T = TypeVar('T')
+# Type alias for a callback function that handles state changes.
+# The callback receives the key, old value, and new value.
+StateChangeCallback = Callable[[str, Any, Any], Coroutine[Any, Any, None]]
 
-class AgentStateScope(str, Enum):
-    """Defines the scope and lifetime of agent state data."""
+class IAgentState(ABC):
+    """
+    Defines the interface for an agent's state management.
 
-    PRIVATE_PERSISTENT = "private_persistent"
-    """State private to the agent that persists across restarts."""
+    This interface provides methods for key-value storage, persistence, and a
+    publish-subscribe system for state changes.
+    """
 
-    SESSION_SPECIFIC_PERSISTENT = "session_specific_persistent"
-    """State associated with a specific session that persists if the session can be resumed."""
+    # --- Key-Value Store Operations ---
 
-    IN_MEMORY_SESSION_ONLY = "in_memory_session_only"
-    """State tied to the current active session, lost when the session ends or the agent restarts."""
-
-    SHARED = "shared"
-    """State that can be accessed by other agents (with proper authorization)."""
-
-
-class IAgentStateManager:
-    """Interface for managing agent state persistence."""
-
-    async def set_state(self, key: str, value: Any, scope: AgentStateScope = AgentStateScope.PRIVATE_PERSISTENT) -> None:
+    @abstractmethod
+    async def set(self, key: str, value: Any) -> None:
         """
-        Store a value in the agent's state.
+        Sets a value for a given key in the agent's state.
+
+        This method will trigger a notification to all subscribers of the key.
 
         Args:
-            key: A string identifier for the state entry
-            value: The data to be stored (must be serializable)
-            scope: The visibility/lifetime scope of the state
-
-        Raises:
-            ValueError: If the value cannot be serialized
-            StateStorageError: If there's an error with the storage backend
+            key: The key to set.
+            value: The value to associate with the key.
         """
         pass
 
-    async def get_state(self, key: str, scope: AgentStateScope = AgentStateScope.PRIVATE_PERSISTENT) -> Optional[Any]:
+    @abstractmethod
+    async def get(self, key: str, default: Optional[Any] = None) -> Any:
         """
-        Retrieve a value from the agent's state.
+        Retrieves a value for a given key from the agent's state.
 
         Args:
-            key: The identifier for the state entry to retrieve
-            scope: The scope to look for the state in
+            key: The key to retrieve.
+            default: The default value to return if the key does not exist.
 
         Returns:
-            The deserialized state value, or None if not found
-
-        Raises:
-            StateStorageError: If there's an error with the storage backend
+            The value associated with the key, or the default value.
         """
         pass
 
-    async def get_state_as_model(self, key: str, model_class: Type[T], scope: AgentStateScope = AgentStateScope.PRIVATE_PERSISTENT) -> Optional[T]:
+    @abstractmethod
+    async def delete(self, key: str) -> bool:
         """
-        Retrieve a value from the agent's state and convert it to a Pydantic model.
+        Deletes a key-value pair from the agent's state.
+
+        This method will trigger a notification to all subscribers of the key.
 
         Args:
-            key: The identifier for the state entry to retrieve
-            model_class: The Pydantic model class to convert the value to
-            scope: The scope to look for the state in
+            key: The key to delete.
 
         Returns:
-            The state value converted to the specified Pydantic model, or None if not found
-
-        Raises:
-            ValueError: If the stored value cannot be converted to the specified model
-            StateStorageError: If there's an error with the storage backend
+            True if the key was deleted, False if it did not exist.
         """
         pass
 
-    async def delete_state(self, key: str, scope: AgentStateScope = AgentStateScope.PRIVATE_PERSISTENT) -> bool:
+    @abstractmethod
+    async def get_all(self) -> Dict[str, Any]:
         """
-        Delete a value from the agent's state.
-
-        Args:
-            key: The identifier for the state entry to delete
-            scope: The scope to delete the state from
+        Retrieves a copy of the entire agent state.
 
         Returns:
-            True if deletion was successful or key didn't exist, False on failure
-
-        Raises:
-            StateStorageError: If there's an error with the storage backend
+            A dictionary representing the agent's current state.
         """
         pass
 
-    async def has_state(self, key: str, scope: AgentStateScope = AgentStateScope.PRIVATE_PERSISTENT) -> bool:
+    # --- Persistence Operations ---
+
+    @abstractmethod
+    async def save(self) -> None:
         """
-        Check if a key exists in the agent's state.
+        Persists the current state to a durable storage backend.
 
-        Args:
-            key: The identifier to check for
-            scope: The scope to check in
-
-        Returns:
-            True if the key exists, False otherwise
-
-        Raises:
-            StateStorageError: If there's an error with the storage backend
+        The specific backend (e.g., file, database) is determined by the
+        implementing class.
         """
         pass
 
-    async def list_state_keys(self, scope: AgentStateScope = AgentStateScope.PRIVATE_PERSISTENT, prefix: Optional[str] = None) -> List[str]:
+    @abstractmethod
+    async def load(self) -> None:
         """
-        List all keys in the agent's state, optionally filtered by prefix.
-
-        Args:
-            scope: The scope to list keys from
-            prefix: Optional prefix to filter keys by
-
-        Returns:
-            A list of keys in the specified scope
-
-        Raises:
-            StateStorageError: If there's an error with the storage backend
+        Loads the state from the durable storage backend, replacing the
+        current in-memory state.
         """
         pass
 
-    async def clear_scope(self, scope: AgentStateScope) -> None:
+    # --- Publish-Subscribe Operations for State Changes ---
+
+    @abstractmethod
+    async def subscribe(
+        self, key: str, callback: StateChangeCallback
+    ) -> None:
         """
-        Clear all state entries in a specific scope.
+        Subscribes a callback to be notified of changes to a specific key.
 
         Args:
-            scope: The scope to clear
+            key: The key to subscribe to. Can support wildcards (e.g., 'config.*').
+            callback: The async function to call when the key's value changes.
+        """
+        pass
 
-        Raises:
-            StateStorageError: If there's an error with the storage backend
+    @abstractmethod
+    async def unsubscribe(
+        self, key: str, callback: StateChangeCallback
+    ) -> None:
+        """
+        Unsubscribes a callback from notifications for a specific key.
+
+        Args:
+            key: The key to unsubscribe from.
+            callback: The callback function to remove.
+        """
+        pass
+
+    @abstractmethod
+    async def publish(self, key: str, old_value: Any, new_value: Any) -> None:
+        """
+        Manually publishes a state change event to all subscribers.
+
+        This is typically called internally by the `set` and `delete` methods,
+        but can be used to broadcast custom state-related events.
+
+        Args:
+            key: The key that has changed.
+            old_value: The previous value of the key.
+            new_value: The new value of the key.
         """
         pass
 ```
 
-## Serialization and Supported Types
+## 3. Usage Example
 
-The state manager handles serialization and deserialization automatically:
-
-1. **Primitive Types**: Basic Python types (str, int, float, bool, list, dict) are serialized directly to JSON
-2. **Pydantic Models**: Automatically serialized to JSON and deserialized back to model instances
-3. **Bytes Data**: Raw binary data is stored with appropriate encoding
-
-### Handling Pydantic Models
-
-Pydantic models are serialized to JSON and can be retrieved in two ways:
-
-1. Using `get_state()` which returns the raw deserialized dict
-2. Using `get_state_as_model()` which automatically converts the data to a specified Pydantic model
-
-Example:
+Here is a conceptual example of how this interface might be used within an agent.
 
 ```python
-# Define a Pydantic model
-from pydantic import BaseModel
+class ExampleAgent(Agent):
+    async def setup(self):
+        await super().setup()
+        # Subscribe to changes in the 'config.mode' state variable
+        await self.state.subscribe("config.mode", self.on_mode_change)
 
-class UserPreferences(BaseModel):
-    theme: str = "light"
-    notifications_enabled: bool = True
-    display_name: str = "User"
+    async def on_mode_change(self, key: str, old_value: Any, new_value: Any):
+        print(f"Agent mode changed from '{old_value}' to '{new_value}'. Reconfiguring... ")
+        # Logic to reconfigure the agent based on the new mode
 
-# Storing a model
-prefs = UserPreferences(theme="dark", display_name="Alice")
-await agent_context.state_manager.set_state("user_preferences", prefs)
-
-# Retrieving as a dict
-prefs_dict = await agent_context.state_manager.get_state("user_preferences")
-# prefs_dict = {"theme": "dark", "notifications_enabled": True, "display_name": "Alice"}
-
-# Retrieving as a model
-prefs_model = await agent_context.state_manager.get_state_as_model("user_preferences", UserPreferences)
-# prefs_model is a UserPreferences instance
+    async def some_action(self):
+        # Change the agent's mode, which will trigger the callback
+        await self.state.set("config.mode", "aggressive")
 ```
 
 ## Implementation Considerations
@@ -358,21 +313,41 @@ For session-specific state that should not persist beyond the current session, u
 
 ## Error Handling
 
-The Agent State Management API defines these exceptions:
+The Agent State Management API defines a hierarchy of custom exceptions to allow for specific and predictable error handling.
 
 ```python
 class StateStorageError(Exception):
-    """Base exception for state storage errors."""
+    """Base exception for all state storage-related errors."""
     pass
 
 class StateSerializationError(StateStorageError):
-    """Exception raised when state serialization fails."""
+    """Exception raised when a value cannot be serialized or deserialized.
+
+    This can happen if an object is not supported by the configured
+    serialization format (e.g., trying to store a complex, non-Pydantic
+    object as JSON).
+    """
+    pass
+
+class StateNotFoundError(StateStorageError):
+    """Exception raised when a specific state key is expected but not found.
+
+    While `get_state` returns `None` for missing keys, this exception can be used
+    in more restrictive contexts where the absence of a key is considered
+    an error.
+    """
+    pass
+
+class StateAccessDeniedError(StateStorageError):
+    """Exception raised when an agent attempts to access a state entry
+    without the required permissions (e.g., accessing another agent's
+    private state).
+    """
     pass
 
 class StateDeserializationError(StateStorageError):
     """Exception raised when state deserialization fails."""
     pass
-
 class StateBackendError(StateStorageError):
     """Exception raised when there's an error with the storage backend."""
     pass
@@ -390,11 +365,10 @@ class StateBackendError(StateStorageError):
 
 Potential future enhancements to the API:
 
-1. **State Change Notifications**: Subscribe to state changes with a callback mechanism
-2. **Transactional Updates**: Support for atomic multi-key operations
-3. **Versioning**: Track state versions for conflict resolution
-4. **Schema Evolution**: Handle schema changes gracefully for Pydantic models
-5. **Query Capabilities**: More advanced querying for state entries
+1. **Transactional Updates**: Support for atomic multi-key operations
+2. **Versioning**: Track state versions for conflict resolution
+3. **Schema Evolution**: Handle schema changes gracefully for Pydantic models
+4. **Query Capabilities**: More advanced querying for state entries
 
 ## Related Documentation
 

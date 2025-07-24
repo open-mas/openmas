@@ -1,102 +1,125 @@
-# Run Command
+# CLI Command: `run`
 
-## Overview
+## 1. Overview
 
-The `run` command starts and manages OpenMAS agents and systems. It supports running individual agents, multi-agent systems, and various deployment configurations while providing monitoring and control capabilities.
+The `openmas run` command is the primary tool for starting and managing OpenMAS agents and systems from the command line. It is designed to be flexible, supporting various configurations for local development, testing, and production scenarios.
 
-## Usage
-
-```bash
-openmas run [options]
-```
-
-## Options
-
-| Option | Description |
-|--------|-------------|
-| `--config`, `-c` | Path to configuration file (required) |
-| `--agent`, `-a` | Agent ID to run (for multi-agent configurations) |
-| `--all` | Run all agents in the configuration |
-| `--mode`, `-m` | Run mode (development, production, testing) |
-| `--port`, `-p` | Port for the agent or system API |
-| `--host` | Host for the agent or system API |
-| `--detach`, `-d` | Run in detached mode (background) |
-| `--env`, `-e` | Environment variables (format: KEY=VALUE) |
-| `--log-file` | Path to log file |
-| `--reload` | Enable automatic reload on file changes |
-| `--protocol` | Override the protocol to use (a2a, mcp, http, mqtt, grpc) |
-| `--reasoning-engine` | Override the reasoning engine (rule, bdi, llm, hybrid, knowledge_graph) |
-| `--llm-model` | LLM model to use (applicable with --reasoning-engine=llm) |
-| `--reasoning-config` | Path to reasoning engine specific configuration |
-
-## Run Modes
-
-The `run` command supports several run modes:
-
-| Mode | Description |
-|------|-------------|
-| `development` | Development mode with additional debugging capabilities |
-| `production` | Production mode optimized for performance |
-| `testing` | Testing mode for running test scenarios |
-
-## Examples
-
-### Run a Single Agent
+## 2. Usage
 
 ```bash
-openmas run --config config/agent_config.yaml
+openmas run --config <path_to_config.yaml> [OPTIONS]
 ```
 
-This runs a single agent using the specified configuration file.
+## 3. Key Parameters in Detail
 
-### Run Multiple Agents
+| Parameter | Short | Description |
+|---|---|---|
+| `--config` | `-c` | **(Required)** Specifies the path to the YAML configuration file that defines the agent(s) and system settings. |
+| `--agent-id`| `-a` | Runs only the agent with the specified ID from a configuration file that contains multiple agents. If omitted, the command attempts to run the entire system or the single agent defined. |
+| `--log-level`| `-l` | Overrides the logging level defined in the configuration file. Accepts standard levels like `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
+| `--detach` | `-d` | Runs the agent or system in a detached (background) mode. The command will return control to the terminal, and the process will continue running in the background. |
+| `--reload` | | Enables hot-reloading. The agent/system will automatically restart when source code files are changed. Ideal for development. |
 
+## 4. Practical Scenarios & Examples
+
+Below are examples demonstrating how to use the `run` command in common development scenarios.
+
+### Scenario 1: Running a Single Agent for Development
+
+This is the most common use case for developing and debugging a single agent's logic.
+
+**Command:**
 ```bash
-openmas run --config config/multi_agent_config.yaml --all
+# Run the agent defined in 'my_agent_config.yaml'
+# Enable hot-reloading for code changes and set log level to DEBUG
+openmas run --config ./configs/my_agent_config.yaml --reload --log-level DEBUG
 ```
 
-This runs all agents defined in the multi-agent configuration file.
+**Example `configs/my_agent_config.yaml`:**
+```yaml
+version: "0.3.0"
+agents:
+  - id: "my_dev_agent"
+    name: "My Development Agent"
+    type: "basic"
+communication:
+  protocol: "mcp"
+  transport: "local"
+observability:
+  logging:
+    level: "INFO" # Will be overridden by --log-level DEBUG
+```
 
-### Run a Specific Agent from a Multi-Agent Configuration
+### Scenario 2: Running a Specific Agent from a Multi-Agent System
 
+When you have a large system defined but only want to start one agent to test its interactions.
+
+**Command:**
 ```bash
-openmas run --config config/multi_agent_config.yaml --agent agent1
+# From the multi-agent config, run only the agent with id 'agent_two'
+openmas run --config ./configs/multi_agent_system.yaml --agent-id agent_two
 ```
 
-This runs only the agent with ID "agent1" from the multi-agent configuration.
+**Example `configs/multi_agent_system.yaml`:**
+```yaml
+version: "0.3.0"
+system:
+  name: "my_multi_agent_system"
+agents:
+  - id: "agent_one"
+    name: "Agent One"
+    type: "basic"
+    communication:
+      port: 8001
+  - id: "agent_two" # This agent will be started
+    name: "Agent Two"
+    type: "basic"
+    communication:
+      port: 8002
+communication:
+  protocol: "a2a"
+  transport: "http"
+```
 
-### Run in Development Mode with Automatic Reload
+### Scenario 3: Starting a System in the Background
 
+Useful for running a system as a background service and capturing its logs.
+
+**Command:**
 ```bash
-openmas run --config config/agent_config.yaml --mode development --reload
+# Run all agents from the config in detached mode
+# Redirect all output to a log file
+openmas run --config ./configs/multi_agent_system.yaml --detach --log-file system.log
 ```
+This command will start the processes and immediately return. You can monitor the system's activity by tailing the `system.log` file.
 
-This runs the agent in development mode with automatic reloading when files change.
+## 5. Overriding Configuration at Runtime
 
-### Run in Background
+The `run` command allows you to override certain configuration values directly from the command line, which is useful for quick experiments without modifying YAML files.
 
+| Parameter | Description |
+|---|---|
+| `--port` | Overrides the communication port for an agent. |
+| `--host` | Overrides the communication host. |
+| `--protocol` | Overrides the communication protocol (e.g., `a2a`, `mcp`). |
+| `--reasoning-engine` | Overrides the reasoning engine for an agent. |
+
+**Example:**
 ```bash
-openmas run --config config/agent_config.yaml --detach
+# Run 'agent_one' but force it to use the MCP protocol on port 9000
+openmas run -c ./configs/multi_agent_system.yaml -a agent_one --protocol mcp --port 9000
 ```
 
-This runs the agent in detached mode (background) and returns control to the terminal.
+## 6. Runtime Control
 
-## Runtime Control
-
-When running in interactive mode (not detached), the `run` command provides a command interface for controlling the running agent or system:
+When running in the foreground (without `--detach`), you can interact with the running system. After the system starts, press `Enter` to access an interactive command prompt for runtime control.
 
 | Command | Description |
-|---------|-------------|
-| `help` | Show available commands |
-| `status` | Show agent/system status |
-| `stop` | Stop the agent/system |
-| `restart` | Restart the agent/system |
-| `logs` | Show logs |
-| `info` | Show detailed information |
-| `send` | Send a message to an agent |
-| `exit` | Exit the command interface |
-
-## Logging
+|---|---|
+| `status` | Show the current status of all agents. |
+| `stop` | Gracefully stop the agent or system. |
+| `logs` | View the latest logs. |
+| `exit` | Exit the interactive prompt and shut down the system. |
 
 The `run` command provides configurable logging capabilities:
 

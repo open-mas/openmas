@@ -1,102 +1,118 @@
-# Validate Command
+# CLI Command: `validate`
 
-## Overview
+## 1. Overview
 
-The `validate` command checks OpenMAS configuration files against the unified configuration schema to ensure they are valid and complete. This command helps catch configuration errors before attempting to run agents or systems.
+The `openmas validate` command is a crucial tool for ensuring that your OpenMAS configuration files are correctly structured and adhere to the framework's schema. Running this command before `run` can save significant time by catching errors early.
 
-## Usage
-
-```bash
-openmas validate [options]
-```
-
-## Options
-
-| Option | Description |
-|--------|-------------|
-| `--file`, `-f` | Path to configuration file (required) |
-| `--schema`, `-s` | Path to schema file (default: built-in schema) |
-| `--verbose`, `-v` | Show detailed validation results |
-| `--fix` | Attempt to fix common validation errors |
-| `--output`, `-o` | Write fixed configuration to specified file |
-| `--strict` | Enable strict validation (fail on warnings) |
-| `--protocol-specific` | Validate protocol-specific sections only (a2a, mcp, http, mqtt, grpc) |
-| `--reasoning-specific` | Validate reasoning-specific sections only (rule, bdi, llm, hybrid, knowledge_graph) |
-| `--capability-map` | Validate capability mappings across protocols |
-| `--body-brain-separation` | Verify proper separation between communication body and reasoning brain |
-| `--deep` | Perform deep validation including cross-references and dependency checks |
-
-## Validation Types
-
-The `validate` command performs several types of validation:
-
-| Validation Type | Description |
-|----------------|-------------|
-| Schema Validation | Validates the configuration against the JSON Schema |
-| Reference Validation | Checks that all references within the configuration are valid |
-| Dependency Validation | Verifies that required dependencies are configured |
-| Protocol Compatibility | Checks that protocol configurations are compatible |
-| Reasoning Compatibility | Verifies that reasoning configurations are compatible with protocols |
-
-## Examples
-
-### Validate a Configuration File
+## 2. Usage
 
 ```bash
-openmas validate --file config/agent_config.yaml
+openmas validate --file <path_to_config.yaml> [OPTIONS]
 ```
 
-This validates the agent configuration file against the built-in schema.
+## 3. Key Parameters
 
-### Validate and Fix a Configuration File
+| Parameter | Short | Description |
+|---|---|---|
+| `--file` | `-f` | **(Required)** Specifies the path to the YAML configuration file to be validated. |
+| `--schema`| `-s` | Specifies a path to a custom schema file. If omitted, `validate` uses the built-in schema corresponding to the OpenMAS version. |
+| `--verbose`| `-v` | Provides a more detailed output, showing every check performed, not just the errors. |
 
+## 4. Practical Scenarios & Examples
+
+### Scenario 1: Basic Validation of a Configuration File
+
+This is the most common use case.
+
+**Command:**
 ```bash
-openmas validate --file config/agent_config.yaml --fix --output config/fixed_agent_config.yaml
+openmas validate --file ./configs/my_agent_config.yaml
 ```
 
-This validates the configuration, attempts to fix any errors, and writes the fixed configuration to a new file.
+**Example Output (Success):**
+```
+✅ Validation successful: ./configs/my_agent_config.yaml is valid.
+```
 
-### Validate Multiple Configuration Files
+**Example Output (Failure):**
+```
+❌ Validation failed for ./configs/my_agent_config.yaml:
 
+[ERROR] SchemaError
+  - Path: agents[0].communication
+  - Message: "'protocl' is not one of ['protocol']"
+  - Help: Did you mean 'protocol'?
+
+[ERROR] SchemaError
+  - Path: agents[0].name
+  - Message: "'name' is a required property"
+```
+
+This output clearly indicates two errors:
+1. A typo (`protocl` instead of `protocol`).
+2. A missing `name` field for the first agent.
+
+### Scenario 2: Validating Multiple Files at Once
+
+You can pass multiple file paths to validate them in a single command.
+
+**Command:**
 ```bash
-openmas validate --file config/agent_config.yaml config/protocols_config.yaml
+openmas validate -f ./configs/agent1.yaml ./configs/agent2.yaml
 ```
 
-This validates multiple configuration files and reports errors for each.
-
-## Validation Messages
-
-The `validate` command provides detailed feedback on validation errors:
-
-### Error Types
-
-| Error Type | Description |
-|------------|-------------|
-| `SchemaError` | Configuration does not match the schema |
-| `ReferenceError` | Reference to a non-existent element |
-| `DependencyError` | Missing required dependency |
-| `CompatibilityError` | Incompatible configuration elements |
-| `WarningError` | Potential issues that may cause problems |
-
-### Error Format
-
+**Example Output:**
 ```
-[ERROR] SchemaError in agent_config.yaml:
-  Path: $.protocols[0].settings
-  Message: Required property 'type' is missing
+✅ Validation successful: ./configs/agent1.yaml is valid.
+❌ Validation failed for ./configs/agent2.yaml:
+
+[ERROR] SchemaError
+  - Path: version
+  - Message: "'0.2.0' does not match '^0.3.0'"
+
+Found 1 error(s) in 2 file(s).
 ```
 
-## Exit Codes
+### Scenario 3: Validating Against a Custom Schema
 
-| Exit Code | Description |
-|-----------|-------------|
-| 0 | Validation successful (no errors) |
-| 1 | Validation failed (errors found) |
-| 2 | Validation command error (file not found, etc.) |
+If you have extended the OpenMAS schema for custom components, you can validate against your version.
 
-## Integration with Development Workflows
+**Command:**
+```bash
+openmas validate -f ./configs/my_custom_agent.yaml -s ./schemas/my_extended_schema.json
+```
 
-The `validate` command can be integrated into development workflows:
+## 5. Exit Codes for Automation
+
+The `validate` command uses exit codes to signal its result, making it easy to integrate into automated scripts and CI/CD pipelines.
+
+| Exit Code | Meaning |
+|---|---|
+| `0` | Success. All files are valid. |
+| `1` | Failure. At least one validation error was found. |
+| `2` | Command Error. E.g., a specified file was not found. |
+
+**Example CI/CD Script:**
+
+```yaml
+# .github/workflows/ci.yml
+jobs:
+  lint-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install OpenMAS
+        run: pip install openmas
+
+      - name: Validate all configurations
+        run: openmas validate --file ./configs/*.yaml
+```
+If any configuration file in the `configs/` directory is invalid, the `validate` command will exit with code `1`, causing the CI pipeline to fail as expected.
 
 - **Pre-commit hooks**: Validate configuration files before committing changes
 - **CI/CD pipelines**: Validate configurations as part of continuous integration

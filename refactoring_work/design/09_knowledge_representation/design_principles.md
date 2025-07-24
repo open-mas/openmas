@@ -1,4 +1,48 @@
-# Knowledge Representation Design Principles
+# KR&R System Design Principles
+
+This document outlines the fundamental design principles that guide the architecture and implementation of the OpenMAS Knowledge Representation and Reasoning (KR&R) System. These principles ensure that the system is robust, flexible, and aligned with the core architectural goals of the framework.
+
+## 1. Principle 1: Strict Separation of Knowledge and Reasoning
+
+This is the most critical principle of the KR&R system.
+
+-   **Responsibility**: The KR&R system's sole responsibility is to **manage the lifecycle of knowledge**—storing, retrieving, updating, and ensuring the consistency of information. It acts as a specialized service.
+-   **Consumption**: An agent's `ReasoningEngine` (its "brain") is the **consumer** of this knowledge service. It contains the agent's decision-making logic and queries the KR&R system to inform its processes.
+
+-   **Benefit**: This separation decouples an agent's logic from the underlying data storage, making the system highly modular and enabling the core goal of **reasoning agnosticism**.
+
+## 2. Principle 2: Representation Agnosticism
+
+-   **Goal**: The KR&R system must not be tied to a single knowledge representation formalism. It is designed to support a diverse range of representations through a common framework.
+-   **Implementation**: This is achieved by abstracting the specifics of each data store behind the standardized `IKnowledgeBase` interface. The framework can simultaneously support:
+    -   Symbolic stores (for logical facts and rules)
+    -   Graph databases (for semantic networks and knowledge graphs)
+    -   Vector stores (for neural embeddings and similarity search)
+    -   Other future representations.
+-   **Benefit**: Developers can choose the most appropriate knowledge representation for their specific problem domain without altering the agent's core reasoning code.
+
+## 3. Principle 3: Standardized, Asynchronous Interfaces
+
+-   **Goal**: All interactions with the KR&R system must occur through well-defined, stable, and non-blocking interfaces.
+-   **Implementation**:
+    -   The `IKnowledgeBase` interface provides a canonical set of methods (`query`, `assert`, `retract`, etc.) for all knowledge bases.
+    -   The `IKnowledgeBaseRegistry` provides a standard way to discover and access these knowledge bases.
+    -   All interface methods are designed to be `async`, ensuring that knowledge operations do not block the agent's main execution thread.
+-   **Benefit**: This provides a predictable and consistent developer experience, simplifies integration, and ensures the high performance required for multi-agent systems.
+
+## 4. Principle 4: Extensibility by Design
+
+-   **Goal**: The KR&R system must be easy to extend with new capabilities.
+-   **Implementation**: The architecture is designed to be extensible through the OpenMAS extension system. New knowledge base implementations can be added to the framework by:
+    1.  Implementing the `IKnowledgeBase` interface.
+    2.  Registering the new implementation so it can be discovered by the `IKnowledgeBaseRegistry`.
+-   **Benefit**: This allows the framework to evolve and incorporate new data technologies and representation formalisms as they emerge.
+
+## 5. Principle 5: Dynamic Discovery and Binding
+
+-   **Goal**: Agents should not be statically compiled with knowledge of specific knowledge bases. They should be able to discover and connect to them at runtime.
+-   **Implementation**: The `IKnowledgeBaseRegistry` acts as a dynamic service locator. An agent's configuration specifies which knowledge bases it *requires*, and the reasoning engine uses the registry to find and bind to those resources when the agent starts.
+-   **Benefit**: This provides significant runtime flexibility, allowing agent configurations to be easily changed and redeployed without code changes. It also facilitates knowledge sharing scenarios where agents may need to connect to KBs that are created dynamically.
 
 ## Overview
 

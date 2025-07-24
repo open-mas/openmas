@@ -191,7 +191,7 @@ class TestAgentCapabilityError:
             capability_name="file_processor",
         )
 
-        expected = "Agent worker-agent: Capability execution failed (Capability: file_processor)"
+        expected = "Agent worker-agent: Capability execution failed " "(Capability: file_processor)"
         assert str(error) == expected
         assert error.capability_name == "file_processor"
 
