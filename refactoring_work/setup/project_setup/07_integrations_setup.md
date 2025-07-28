@@ -169,50 +169,50 @@ class IntegrationConfig:
 
 class IntegrationManager:
     """Central manager for all external integrations."""
-    
+
     def __init__(self):
         self._integrations: Dict[str, Any] = {}
         self._connection_pool = ConnectionPool()
         self._health_monitor = HealthMonitor()
         self._retry_manager = RetryManager()
-    
+
     async def register_integration(self, config: IntegrationConfig) -> bool:
         """Register a new integration."""
         try:
             # Create integration instance based on type
             integration = await self._create_integration(config)
-            
+
             # Test connection
             if await self._test_integration(integration, config):
                 self._integrations[config.name] = integration
-                
+
                 # Start health monitoring if configured
                 if config.health_check_url:
                     await self._health_monitor.add_integration(config.name, config.health_check_url)
-                
+
                 return True
             else:
                 return False
-                
+
         except Exception as e:
             print(f"Failed to register integration {config.name}: {e}")
             return False
-    
+
     async def get_integration(self, name: str) -> Optional[Any]:
         """Get a registered integration by name."""
         return self._integrations.get(name)
-    
+
     async def list_integrations(self) -> List[str]:
         """List all registered integrations."""
         return list(self._integrations.keys())
-    
+
     async def health_check(self, name: Optional[str] = None) -> Dict[str, bool]:
         """Perform health check on integrations."""
         if name:
             return {name: await self._health_monitor.check_integration(name)}
         else:
             return await self._health_monitor.check_all_integrations()
-    
+
     async def _create_integration(self, config: IntegrationConfig) -> Any:
         """Create integration instance based on configuration."""
         if config.integration_type == IntegrationType.API:
@@ -224,7 +224,7 @@ class IntegrationManager:
         # Add other integration types...
         else:
             raise ValueError(f"Unsupported integration type: {config.integration_type}")
-    
+
     async def _test_integration(self, integration: Any, config: IntegrationConfig) -> bool:
         """Test integration connectivity."""
         try:
@@ -267,7 +267,7 @@ class ApiResponse:
 
 class RestClient:
     """REST API client with OpenMAS integration features."""
-    
+
     def __init__(self, base_url: str, auth_config: Dict[str, Any], settings: Dict[str, Any]):
         self.base_url = base_url.rstrip('/')
         self.auth_config = auth_config
@@ -275,50 +275,50 @@ class RestClient:
         self.serializer = JsonSerializer()
         self.retry_manager = RetryManager()
         self._session: Optional[aiohttp.ClientSession] = None
-    
+
     async def __aenter__(self):
         """Async context manager entry."""
         await self._ensure_session()
         return self
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         """Async context manager exit."""
         if self._session:
             await self._session.close()
             self._session = None
-    
+
     async def _ensure_session(self):
         """Ensure HTTP session is available."""
         if not self._session:
             timeout = aiohttp.ClientTimeout(total=self.settings.get('timeout', 30))
             self._session = aiohttp.ClientSession(timeout=timeout)
-    
+
     async def get(self, endpoint: str, params: Optional[Dict[str, Any]] = None) -> ApiResponse:
         """Perform GET request."""
         return await self._request('GET', endpoint, params=params)
-    
+
     async def post(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> ApiResponse:
         """Perform POST request."""
         return await self._request('POST', endpoint, json=data)
-    
+
     async def put(self, endpoint: str, data: Optional[Dict[str, Any]] = None) -> ApiResponse:
         """Perform PUT request."""
         return await self._request('PUT', endpoint, json=data)
-    
+
     async def delete(self, endpoint: str) -> ApiResponse:
         """Perform DELETE request."""
         return await self._request('DELETE', endpoint)
-    
+
     async def _request(self, method: str, endpoint: str, **kwargs) -> ApiResponse:
         """Perform HTTP request with retry logic."""
         await self._ensure_session()
-        
+
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         headers = self._build_headers()
-        
+
         # Add authentication headers
         headers.update(self._get_auth_headers())
-        
+
         async def _make_request():
             async with self._session.request(method, url, headers=headers, **kwargs) as response:
                 try:
@@ -328,17 +328,17 @@ class RestClient:
                         data = await response.text()
                 except Exception:
                     data = None
-                
+
                 return ApiResponse(
                     status_code=response.status,
                     data=data,
                     headers=dict(response.headers),
                     success=200 <= response.status < 300
                 )
-        
+
         # Use retry manager for resilient requests
         return await self.retry_manager.execute_with_retry(_make_request)
-    
+
     def _build_headers(self) -> Dict[str, str]:
         """Build default headers."""
         return {
@@ -346,11 +346,11 @@ class RestClient:
             'Accept': 'application/json',
             'User-Agent': 'OpenMAS-Integration-Client/0.3.0'
         }
-    
+
     def _get_auth_headers(self) -> Dict[str, str]:
         """Get authentication headers based on configuration."""
         auth_type = self.auth_config.get('type', 'none')
-        
+
         if auth_type == 'bearer':
             token = self.auth_config.get('token')
             return {'Authorization': f'Bearer {token}'}
@@ -364,9 +364,9 @@ class RestClient:
             password = self.auth_config.get('password')
             credentials = base64.b64encode(f"{username}:{password}".encode()).decode()
             return {'Authorization': f'Basic {credentials}'}
-        
+
         return {}
-    
+
     async def test_connection(self) -> bool:
         """Test API connectivity."""
         try:

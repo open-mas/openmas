@@ -12,6 +12,7 @@ import logging
 from collections.abc import Awaitable, Callable
 from datetime import datetime
 from typing import Any
+from openmas.agent.base_agent import IProtocolAdapter
 
 from openmas.core.simf import SIMFMessage
 
@@ -32,7 +33,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-class MCPProtocolAdapter:
+class MCPProtocolAdapter(IProtocolAdapter):
     """
     MCP Protocol Adapter implementing IProtocolAdapter interface.
 
@@ -70,7 +71,7 @@ class MCPProtocolAdapter:
         # Background tasks
         self._connection_task: asyncio.Task | None = None
 
-    async def connect(self, config: MCPConfig) -> None:
+    async def connect(self, config: dict[str, Any]) -> None:
         """
         Initialize and establish the MCP connection.
 
@@ -82,13 +83,15 @@ class MCPProtocolAdapter:
             ValueError: If configuration is invalid
         """
         try:
+            # Convert dict config to MCPConfig object
+            mcp_config = MCPConfig(**config) if isinstance(config, dict) else config
             # Validate configuration
-            config.validate_transport_config()
-            self.config = config
+            mcp_config.validate_transport_config()
+            self.config = mcp_config
 
-            logger.info(f"Connecting MCP adapter for agent {self.agent_id} " f"with transport {config.transport}")
+            logger.info(f"Connecting MCP adapter for agent {self.agent_id} " f"with transport {mcp_config.transport}")
 
-            if config.server_mode:
+            if mcp_config.server_mode:
                 await self._connect_server()
             else:
                 await self._connect_client()
@@ -154,7 +157,7 @@ class MCPProtocolAdapter:
             mcp_message = self.translator.from_internal_format(simf_message)
 
             # Send via appropriate transport
-            if self.config.server_mode:
+            if self.config and self.config.server_mode:
                 await self._send_server_message(mcp_message)
             else:
                 await self._send_client_message(mcp_message)
@@ -292,34 +295,34 @@ class MCPProtocolAdapter:
 
             # Route based on method
             if method == "tools/call":
-                result = await self.client_session.call_tool(
+                call_result = await self.client_session.call_tool(
                     name=params.get("name", ""), arguments=params.get("arguments", {})
                 )
-                await self._handle_mcp_result(result, mcp_message.get("id"))
+                await self._handle_mcp_result(call_result, mcp_message.get("id"))
 
             elif method == "tools/list":
-                result = await self.client_session.list_tools()
-                await self._handle_mcp_result(result.tools, mcp_message.get("id"))
+                list_tools_result = await self.client_session.list_tools()
+                await self._handle_mcp_result(list_tools_result.tools, mcp_message.get("id"))
 
             elif method == "resources/read":
                 from pydantic import AnyUrl
 
-                result = await self.client_session.read_resource(AnyUrl(params.get("uri", "")))
-                await self._handle_mcp_result(result, mcp_message.get("id"))
+                read_resource_result = await self.client_session.read_resource(AnyUrl(params.get("uri", "")))
+                await self._handle_mcp_result(read_resource_result, mcp_message.get("id"))
 
             elif method == "resources/list":
-                result = await self.client_session.list_resources()
-                await self._handle_mcp_result(result.resources, mcp_message.get("id"))
+                list_resources_result = await self.client_session.list_resources()
+                await self._handle_mcp_result(list_resources_result.resources, mcp_message.get("id"))
 
             elif method == "prompts/get":
-                result = await self.client_session.get_prompt(
+                get_prompt_result = await self.client_session.get_prompt(
                     name=params.get("name", ""), arguments=params.get("arguments", {})
                 )
-                await self._handle_mcp_result(result, mcp_message.get("id"))
+                await self._handle_mcp_result(get_prompt_result, mcp_message.get("id"))
 
             elif method == "prompts/list":
-                result = await self.client_session.list_prompts()
-                await self._handle_mcp_result(result.prompts, mcp_message.get("id"))
+                list_prompts_result = await self.client_session.list_prompts()
+                await self._handle_mcp_result(list_prompts_result.prompts, mcp_message.get("id"))
 
             else:
                 logger.warning(f"Unsupported MCP method: {method}")
@@ -338,7 +341,8 @@ class MCPProtocolAdapter:
 
             # Convert to SIMF and call callback
             simf_message = self.translator.to_internal_format(mcp_result)
-            await self.message_callback(simf_message)
+            if self.message_callback is not None:
+                await self.message_callback(simf_message)
 
         except Exception as e:
             logger.error(f"Error handling MCP result: {e}")

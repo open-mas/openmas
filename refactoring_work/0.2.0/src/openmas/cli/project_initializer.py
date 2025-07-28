@@ -45,9 +45,7 @@ class ProjectInitializer:
                 actions[init_file] = f'"""OpenMAS {subdir} package."""\n'
 
         # Create README.md
-        actions[
-            self.project_path / "README.md"
-        ] = f"""
+        actions[self.project_path / "README.md"] = f"""
 # {self.project_display_name}
 
 Welcome to your OpenMAS project!
@@ -81,9 +79,7 @@ If you use these communicators, add the relevant line to your `requirements.txt`
         # Create dependency files based on the chosen option
         if self.poetry:
             # Create pyproject.toml for Poetry
-            actions[
-                self.project_path / "pyproject.toml"
-            ] = f"""[tool.poetry]
+            actions[self.project_path / "pyproject.toml"] = f"""[tool.poetry]
 name = "{self.project_display_name.lower().replace(' ', '-')}"
 version = "0.1.0"
 description = "An OpenMAS project"
@@ -146,9 +142,7 @@ build-backend = "poetry.core.masonry.api"
             actions[sample_agent_dir / "__init__.py"] = '"""Sample agent package."""\n'
 
             # Create agent.py file with a simple agent implementation
-            actions[
-                sample_agent_dir / "agent.py"
-            ] = '''"""
+            actions[sample_agent_dir / "agent.py"] = '''"""
 Sample agent implementation for OpenMAS.
 
 This template demonstrates Dependency Injection, graceful shutdown, and best practices for testable agents.
@@ -219,9 +213,7 @@ if __name__ == "__main__":
             actions[agent_dir / "__init__.py"] = '"""MCP Server agent package."""\n'
 
             # Create agent.py file
-            actions[
-                agent_dir / "agent.py"
-            ] = '''"""
+            actions[agent_dir / "agent.py"] = '''"""
 MCP Server Agent template for OpenMAS.
 
 - Demonstrates Dependency Injection, graceful shutdown, and health check endpoint.
@@ -286,9 +278,7 @@ if __name__ == "__main__":
 '''
 
             # Create openmas.deploy.yaml file
-            actions[
-                agent_dir / "openmas.deploy.yaml"
-            ] = """version: "1.0"
+            actions[agent_dir / "openmas.deploy.yaml"] = """version: "1.0"
 
 component:
   name: "mcp-server"

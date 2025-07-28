@@ -46,6 +46,17 @@ from .factory import (
     register_protocol_adapter,
 )
 
+# Facade Pattern - Simplified agent creation interface
+from .facade import AgentFacade
+from .builder import (
+    AgentBuilder,
+    create_agent,
+    create_basic_agent,
+    create_powerbi_agent,
+    create_sql_agent,
+    create_analytics_agent,
+)
+
 # Specialized agent implementations
 from .mcp_agent import (
     MCPAgent,

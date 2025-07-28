@@ -439,9 +439,7 @@ class MockCommunicator(BaseCommunicator):
             return response_model.parse_obj(response)
         return response
 
-    async def send_notification(
-        self, target_service: str, method: str, params: dict[str, Any] | None = None
-    ) -> None:
+    async def send_notification(self, target_service: str, method: str, params: dict[str, Any] | None = None) -> None:
         """Send a mock notification.
 
         Args:

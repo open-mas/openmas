@@ -83,9 +83,7 @@ class MockServerAgent(McpServerAgent):
         return {"task_id": task_id, "status": "completed", "result": result}
 
     @mcp_tool(name="log_event", description="Log an event")
-    async def log_event(
-        self, event_type: str, message: str, metadata: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+    async def log_event(self, event_type: str, message: str, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
         """Log an event.
 
         Args:

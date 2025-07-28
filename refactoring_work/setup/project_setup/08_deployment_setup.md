@@ -162,87 +162,87 @@ class DeploymentConfig:
 
 class DeploymentManager:
     """Central manager for all deployment operations."""
-    
+
     def __init__(self):
         self._deployments: Dict[str, Any] = {}
         self._lifecycle_manager = LifecycleManager()
         self._environment_manager = EnvironmentManager()
         self._health_monitor = DeploymentHealthMonitor()
-    
+
     async def create_deployment(self, config: DeploymentConfig) -> bool:
         """Create a new deployment."""
         try:
             # Validate configuration
             if not await self._validate_deployment_config(config):
                 return False
-            
+
             # Create deployment based on type
             deployment = await self._create_deployment_instance(config)
-            
+
             # Initialize deployment
             if await deployment.initialize():
                 self._deployments[config.name] = deployment
-                
+
                 # Start health monitoring
                 await self._health_monitor.add_deployment(config.name, deployment)
-                
+
                 return True
             else:
                 return False
-                
+
         except Exception as e:
             print(f"Failed to create deployment {config.name}: {e}")
             return False
-    
+
     async def deploy(self, deployment_name: str) -> bool:
         """Deploy an application."""
         deployment = self._deployments.get(deployment_name)
         if not deployment:
             return False
-        
+
         return await self._lifecycle_manager.deploy(deployment)
-    
+
     async def update_deployment(self, deployment_name: str, new_config: DeploymentConfig) -> bool:
         """Update an existing deployment."""
         deployment = self._deployments.get(deployment_name)
         if not deployment:
             return False
-        
+
         return await self._lifecycle_manager.update(deployment, new_config)
-    
+
     async def rollback_deployment(self, deployment_name: str, version: Optional[str] = None) -> bool:
         """Rollback a deployment to a previous version."""
         deployment = self._deployments.get(deployment_name)
         if not deployment:
             return False
-        
+
         return await self._lifecycle_manager.rollback(deployment, version)
-    
+
     async def delete_deployment(self, deployment_name: str) -> bool:
         """Delete a deployment."""
         deployment = self._deployments.get(deployment_name)
         if not deployment:
             return False
-        
+
         success = await self._lifecycle_manager.delete(deployment)
         if success:
             await self._health_monitor.remove_deployment(deployment_name)
             del self._deployments[deployment_name]
-        
+
         return success
-    
+
     async def get_deployment_status(self, deployment_name: str) -> Dict[str, Any]:
         """Get deployment status."""
         deployment = self._deployments.get(deployment_name)
         if not deployment:
             return {"status": "not_found"}
-        
+
         return await deployment.get_status()
-    
+
     async def list_deployments(self) -> List[str]:
         """List all deployments."""
         return list(self._deployments.keys())
-    
+
     async def _validate_deployment_config(self, config: DeploymentConfig) -> bool:
         """Validate deployment configuration."""
         # Validate protocols
@@ -250,15 +250,15 @@ class DeploymentManager:
         for protocol in config.protocols:
             if protocol not in supported_protocols:
                 return False
-        
+
         # Validate reasoning engines
         supported_reasoning = ['rule_based', 'bdi', 'llm', 'hybrid', 'symbolic']
         for engine in config.reasoning_engines:
             if engine not in supported_reasoning:
                 return False
-        
+
         return True
-    
+
     async def _create_deployment_instance(self, config: DeploymentConfig) -> Any:
         """Create deployment instance based on type."""
         if config.deployment_type == DeploymentType.LOCAL:
@@ -301,36 +301,36 @@ from ...management.config_templating import ConfigTemplating
 
 class DockerImageBuilder:
     """Builder for OpenMAS Docker images."""
-    
+
     def __init__(self):
         self.docker_client = docker.from_env()
         self.config_templating = ConfigTemplating()
-    
+
     async def build_image(self, config: Dict[str, Any]) -> str:
         """Build Docker image for OpenMAS deployment."""
-        
+
         # Create temporary build context
         with tempfile.TemporaryDirectory() as build_dir:
             build_path = Path(build_dir)
-            
+
             # Generate Dockerfile
             dockerfile_content = self._generate_dockerfile(config)
             (build_path / "Dockerfile").write_text(dockerfile_content)
-            
+
             # Generate application configuration
             app_config = self._generate_app_config(config)
             config_dir = build_path / "config"
             config_dir.mkdir()
             (config_dir / "openmas.yaml").write_text(app_config)
-            
+
             # Generate entrypoint script
             entrypoint_script = self._generate_entrypoint(config)
             (build_path / "entrypoint.sh").write_text(entrypoint_script)
             (build_path / "entrypoint.sh").chmod(0o755)
-            
+
             # Build image
             image_tag = f"openmas/{config['name']}:{config.get('version', 'latest')}"
-            
+
             try:
                 image, build_logs = self.docker_client.images.build(
                     path=str(build_path),
@@ -338,16 +338,16 @@ class DockerImageBuilder:
                     rm=True,
                     forcerm=True
                 )
-                
+
                 return image_tag
-                
+
             except docker.errors.BuildError as e:
                 print(f"Docker build failed: {e}")
                 raise
-    
+
     def _generate_dockerfile(self, config: Dict[str, Any]) -> str:
         """Generate Dockerfile content."""
-        
+
         dockerfile_template = Template("""
 # OpenMAS Multi-Protocol, Reasoning-Agnostic Agent Container
 FROM python:3.11-slim
@@ -397,16 +397,16 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \\
 # Set entrypoint
 ENTRYPOINT ["/app/entrypoint.sh"]
 """)
-        
+
         return dockerfile_template.render(
             version=config.get('openmas_version', '0.3.0'),
             protocols=config.get('protocols', ['a2a']),
             reasoning_engines=config.get('reasoning_engines', ['rule_based'])
         )
-    
+
     def _generate_app_config(self, config: Dict[str, Any]) -> str:
         """Generate application configuration."""
-        
+
         app_config = {
             'agent': {
                 'name': config['name'],
@@ -429,14 +429,14 @@ ENTRYPOINT ["/app/entrypoint.sh"]
             },
             'security': config.get('security_config', {})
         }
-        
+
         import yaml
         return yaml.dump(app_config, default_flow_style=False)
-    
+
     def _generate_protocol_config(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Generate protocol-specific configuration."""
         protocol_config = {}
-        
+
         for protocol in config.get('protocols', ['a2a']):
             if protocol == 'a2a':
                 protocol_config['a2a'] = {
@@ -458,12 +458,12 @@ ENTRYPOINT ["/app/entrypoint.sh"]
                     'host': '0.0.0.0',
                     'cors_enabled': True
                 }
-        
+
         return protocol_config
-    
+
     def _generate_entrypoint(self, config: Dict[str, Any]) -> str:
         """Generate entrypoint script."""
-        
+
         return """#!/bin/bash
 set -e
 
@@ -480,13 +480,13 @@ exec python -m openmas.cli_tools.commands.agent.deploy \\
 
 class DockerDeployment:
     """Docker deployment implementation."""
-    
+
     def __init__(self, config):
         self.config = config
         self.image_builder = DockerImageBuilder()
         self.docker_client = docker.from_env()
         self.container = None
-    
+
     async def initialize(self) -> bool:
         """Initialize Docker deployment."""
         try:
@@ -496,7 +496,7 @@ class DockerDeployment:
         except Exception as e:
             print(f"Failed to initialize Docker deployment: {e}")
             return False
-    
+
     async def deploy(self) -> bool:
         """Deploy container."""
         try:
@@ -509,17 +509,17 @@ class DockerDeployment:
                 environment=self._get_environment_vars(),
                 restart_policy={"Name": "unless-stopped"}
             )
-            
+
             return True
-            
+
         except Exception as e:
             print(f"Failed to deploy container: {e}")
             return False
-    
+
     def _get_port_mapping(self) -> Dict[str, int]:
         """Get port mapping for protocols."""
         port_mapping = {}
-        
+
         for protocol in self.config.protocols:
             if protocol == 'http':
                 port_mapping['8080/tcp'] = 8080
@@ -527,21 +527,21 @@ class DockerDeployment:
                 port_mapping['50051/tcp'] = 50051
             elif protocol == 'mqtt':
                 port_mapping['1883/tcp'] = 1883
-        
+
         return port_mapping
-    
+
     def _get_environment_vars(self) -> Dict[str, str]:
         """Get environment variables for container."""
         return {
             'OPENMAS_ENV': self.config.environment,
             'LOG_LEVEL': 'INFO'
         }
-    
+
     async def get_status(self) -> Dict[str, Any]:
         """Get deployment status."""
         if not self.container:
             return {"status": "not_deployed"}
-        
+
         self.container.reload()
         return {
             "status": self.container.status,

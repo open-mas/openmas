@@ -1,4 +1,13 @@
 """
+MCP (Model Context Protocol) Agent Implementation.
+
+This module provides an agent that can interact with MCP servers,
+executing tools and capabilities through the MCP protocol while
+maintaining compatibility with the SIMF messaging framework.
+"""
+# mypy: disable-error-code=import-not-found
+
+"""
 OpenMAS MCP Agent Implementation
 
 This module provides the MCPAgent class that specializes the base Agent
@@ -14,28 +23,31 @@ Based on specifications in:
 import asyncio
 import os
 import sys
-from typing import Any
+from typing import Any, Optional, Union
 
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
-from mcp.types import Tool
+from mcp.types import Tool, TextContent, ImageContent, EmbeddedResource
 
 from openmas.agent.base_agent import Agent, AgentConfig
 from openmas.agent.exceptions import AgentConfigurationError, AgentError
+from openmas.agent.factories import AgentComponentFactory
 from openmas.core.simf import (
     InvocationStatus,
     SIMFMessage,
     create_invocation_result_message,
+)
+from openmas.core.simf.models import (
+    InvocationContentPayload,
 )
 
 # Add path for MCP translator import
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "..", "..", "examples", "simf_mcp_integration"))
 
 try:
-    from mcp_to_simf_translator import MCPToSIMFTranslator
+    from mcp_to_simf_translator import MCPToSIMFTranslator  # noqa: E402
 except ImportError:
-    # Fallback for when translator is not available
-    MCPToSIMFTranslator = None
+    MCPToSIMFTranslator = None  # type: ignore[assignment]
 
 
 class MCPAgent(Agent):
@@ -57,8 +69,8 @@ class MCPAgent(Agent):
         mcp_server_command: list[str],
         session_id: str | None = None,
         capabilities: list[str] | None = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize MCP Agent.
 
@@ -73,9 +85,22 @@ class MCPAgent(Agent):
         """
         # Create agent configuration
         config = AgentConfig(agent_id=agent_id, name=name, capabilities=capabilities or [])
+        
+        # Create Body-Brain separation components using factory
+        factory = AgentComponentFactory()
+        communicator, reasoning_engine = factory.create_basic_components(
+            agent_id=agent_id,
+            capabilities=set(capabilities or []),
+            protocol_adapters=kwargs.get('protocol_adapters', {})
+        )
 
-        # Initialize base agent
-        super().__init__(config=config, **kwargs)
+        # Initialize base agent with Body-Brain separation
+        super().__init__(
+            config=config,
+            communicator=communicator,
+            reasoning_engine=reasoning_engine,
+            state_manager=kwargs.get('state_manager')
+        )
 
         # MCP-specific configuration
         self.mcp_server_command = mcp_server_command
@@ -165,7 +190,9 @@ class MCPAgent(Agent):
                     # Store connection info for later use
                     self._server_params = server_params
                     # Set flag to indicate successful connection (for tests)
-                    self.mcp_session = "connected"  # Simple indicator for tests
+                    # Note: For testing, we store the session for compatibility
+                    self.mcp_session = session  # Store session for tests
+                    self._connection_tested = True  # Simple indicator for tests
 
             except Exception as e:
                 self.logger.error(f"MCP connection test failed: {e}")
@@ -205,11 +232,14 @@ class MCPAgent(Agent):
                 for tool in tools_response.tools:
                     capability_name = tool.name  # Use actual tool name, not prefixed
 
-                    # Tool registered successfully - no need to store
-                    # capability dict
-
-                    # Register the capability (base Agent only expects the name)
-                    await self.register_capability(capability_name)
+                    # In Body-Brain separation, capabilities are managed by reasoning engine
+                    # Add capability to reasoning engine's capability set
+                    if hasattr(self.reasoning_engine, 'capabilities'):
+                        self.reasoning_engine.capabilities.add(capability_name)
+                    
+                    # Also update the agent config for consistency
+                    if capability_name not in self.config.capabilities:
+                        self.config.capabilities.append(capability_name)
 
                     # Store the capability details with the capability name
                     self.available_tools[capability_name] = tool
@@ -252,10 +282,30 @@ class MCPAgent(Agent):
                     extracted_result = result.structuredContent
                 elif hasattr(result, "content") and result.content:
                     # Fallback to text content if structured content not available
-                    extracted_result = result.content[0].text if result.content else str(result)
+                    # Use proper type narrowing for MCP content union types
+                    first_content = result.content[0] if result.content else None
+                    if first_content and isinstance(first_content, TextContent):
+                        extracted_result = first_content.text
+                    elif first_content and isinstance(first_content, ImageContent):
+                        extracted_result = f"[Image: {getattr(first_content, 'type', 'unknown')}]"
+                    elif first_content:
+                        extracted_result = str(first_content)
+                    else:
+                        extracted_result = str(result)
                 else:
                     # Fallback to string representation
                     extracted_result = str(result)
+
+                # Try to parse JSON strings into dictionaries for SIMF compatibility
+                if isinstance(extracted_result, str):
+                    try:
+                        import json
+                        parsed_result = json.loads(extracted_result)
+                        if isinstance(parsed_result, dict):
+                            extracted_result = parsed_result
+                    except (json.JSONDecodeError, ValueError):
+                        # Keep as string if not valid JSON
+                        pass
 
                 self.logger.debug(f"Executed MCP tool '{tool_name}' with result: " f"{extracted_result}")
                 return extracted_result
@@ -275,47 +325,55 @@ class MCPAgent(Agent):
             SIMF response message with execution results
         """
         try:
-            capability_name = simf_message.payload.invocation_name
-            if not capability_name:
-                raise AgentError("No capability specified in message")
+            # Type-safe payload handling with proper union type narrowing
+            if not simf_message.payload:
+                raise AgentError("No payload in message")
+            
+            # Check if payload is an invocation payload
+            if isinstance(simf_message.payload, InvocationContentPayload):
+                capability_name = simf_message.payload.invocation_name
+                if not capability_name:
+                    raise AgentError("No capability specified in message")
 
-            self.logger.info(f"Executing capability: {capability_name}")
+                self.logger.info(f"Executing capability: {capability_name}")
 
-            # For MCPAgent, try to execute as MCP tool first
-            # (MCPAgent primarily handles MCP tool capabilities)
-            try:
-                # Execute as MCP tool
-                result = await self.execute_mcp_tool(
-                    tool_name=capability_name,
-                    parameters=simf_message.payload.arguments or {},
-                )
+                # For MCPAgent, try to execute as MCP tool first
+                # (MCPAgent primarily handles MCP tool capabilities)
+                try:
+                    # Execute as MCP tool
+                    result = await self.execute_mcp_tool(
+                        tool_name=capability_name,
+                        parameters=simf_message.payload.arguments or {},
+                    )
 
-                # Create successful response
-                response = create_invocation_result_message(
-                    invocation_name=capability_name,
-                    status=InvocationStatus.SUCCESS,
-                    target_agent_id=simf_message.source_agent_id or "unknown",
-                    result=result,
-                    source_agent_id=self.agent_id,
-                    session_id=self.session_id,
-                )
+                    # Create successful response
+                    response = create_invocation_result_message(
+                        invocation_name=capability_name,
+                        status=InvocationStatus.SUCCESS,
+                        target_agent_id=simf_message.source_agent_id or "unknown",
+                        result=result,
+                        source_agent_id=self.agent_id,
+                        session_id=self.session_id,
+                    )
 
-                self.logger.info(f"Capability executed successfully: {capability_name}")
-                return response
+                    self.logger.info(f"Capability executed successfully: {capability_name}")
+                    return response
 
-            except Exception as e:
-                # Create error response for MCP tool failures
-                error_response = create_invocation_result_message(
-                    invocation_name=capability_name,
-                    status=InvocationStatus.FAILURE,
-                    target_agent_id=simf_message.source_agent_id or "unknown",
-                    result={"error": str(e)},
-                    source_agent_id=self.agent_id,
-                    session_id=self.session_id,
-                )
+                except Exception as e:
+                    # Create error response for MCP tool failures
+                    error_response = create_invocation_result_message(
+                        invocation_name=capability_name,
+                        status=InvocationStatus.FAILURE,
+                        target_agent_id=simf_message.source_agent_id or "unknown",
+                        result={"error": str(e)},
+                        source_agent_id=self.agent_id,
+                        session_id=self.session_id,
+                    )
 
-                self.logger.error(f"MCP capability execution failed: {capability_name} - {e}")
-                return error_response
+                    self.logger.error(f"MCP capability execution failed: {capability_name} - {e}")
+                    return error_response
+            else:
+                raise AgentError(f"Unsupported payload type for capability execution: {type(simf_message.payload)}")
 
         except Exception as e:
             # Create error response for unexpected errors

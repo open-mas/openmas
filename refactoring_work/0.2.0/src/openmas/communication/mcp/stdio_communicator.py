@@ -246,7 +246,8 @@ class McpStdioCommunicator(BaseCommunicator):
                                 # Fall back to direct dictionary if ClientNotification is not available
                                 # This will raise a type error but might work at runtime with some MCP versions
                                 await asyncio.wait_for(
-                                    session.send_notification(notification_data), timeout=10.0  # type: ignore
+                                    session.send_notification(notification_data),
+                                    timeout=10.0,  # type: ignore
                                 )
                         else:
                             # Create a ClientNotification object

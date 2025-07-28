@@ -155,4 +155,3 @@
 - **Always confirm file paths and module names** exist before referencing them in code or tests.
 - **Never delete or overwrite existing protocol implementations** unless explicitly instructed to.
 - **Respect the separation between "body" and "brain"** components in all code changes.
-

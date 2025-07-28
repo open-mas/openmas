@@ -272,9 +272,7 @@ class McpSseCommunicator(BaseCommunicator):
                         logger.error(f"Unsupported method in MCP 1.7.1: {method}")
                         return {}
 
-    async def send_notification(
-        self, target_service: str, method: str, params: dict[str, Any] | None = None
-    ) -> None:
+    async def send_notification(self, target_service: str, method: str, params: dict[str, Any] | None = None) -> None:
         """Send a one-way notification to a target service.
 
         Unlike send_request, this method does not wait for a response.

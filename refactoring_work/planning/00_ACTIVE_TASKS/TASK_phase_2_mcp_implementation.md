@@ -235,7 +235,7 @@ Deliver a working MCP-based multi-agent prototype that demonstrates:
   - Troubleshooting guide and architecture explanation
   - Clear demonstration of reasoning agnosticism
 
-- ✅ **Demo Consolidation**: 
+- ✅ **Demo Consolidation**:
   - Removed duplicate `examples/phase2_demo.py`
   - Renamed directory from `phase_2_demo` to `basic_two_agent_demo` for clarity
   - Fixed import issue: `Agent` class (not `BaseAgent`) from `openmas.agent.base_agent`

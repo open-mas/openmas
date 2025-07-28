@@ -16,7 +16,7 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any
+from typing import Any, Awaitable
 from uuid import uuid4
 
 from openmas.core.simf import (
@@ -28,6 +28,12 @@ from openmas.core.simf import (
     create_invocation_result_message,
     create_text_message,
 )
+
+# Import Body-Brain separation interfaces
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .interfaces.communicator import ICommunicator
+    from .interfaces.reasoning import IReasoningEngine
 
 # ============================================================================
 # Abstract Interfaces (Based on Phase 1 Specifications)
@@ -128,7 +134,7 @@ class IProtocolAdapter(ABC):
         pass
 
     @abstractmethod
-    async def register_message_callback(self, callback: Callable[[SIMFMessage], None]) -> None:
+    async def register_message_callback(self, callback: Callable[[SIMFMessage], Awaitable[None]]) -> None:
         """Register callback for incoming messages."""
         pass
 
@@ -173,49 +179,58 @@ class AgentConfig:
 
 class Agent(IMessageHandler):
     """
-    Core OpenMAS Agent implementation.
-
-    Provides SIMF-native messaging, protocol adapter integration, and implements
-    the Phase 1 agent framework interfaces for a complete agent foundation.
+    Refactored Agent with proper Body-Brain separation.
+    
+    The Agent orchestrates between the Communicator (body) and ReasoningEngine (brain)
+    but does not implement communication or reasoning logic directly. This enables
+    reasoning agnosticism and protocol independence.
     """
 
     def __init__(
         self,
         config: AgentConfig,
+        communicator: "ICommunicator",
+        reasoning_engine: "IReasoningEngine",
         state_manager: IAgentStateManager | None = None,
-        protocol_adapters: dict[str, IProtocolAdapter] | None = None,
     ):
         """
-        Initialize the agent.
-
+        Initialize agent with separated components.
+        
         Args:
             config: Agent configuration
+            communicator: Communication infrastructure (body)
+            reasoning_engine: Reasoning logic (brain)
             state_manager: State management implementation
-            protocol_adapters: Available protocol adapters
         """
         self.config = config
         self.agent_id = config.agent_id
         self.name = config.name
-
+        
+        # Body-Brain separation components
+        self.communicator = communicator
+        self.reasoning_engine = reasoning_engine
+        
         # Core components
         self.state_manager = state_manager
-        self.protocol_adapters = protocol_adapters or {}
-        self.capabilities: set[str] = set(config.capabilities)
-
+        
         # Message handling
         self.message_queue: asyncio.Queue[SIMFMessage] | None = None
         self.message_callbacks: list[Callable[[SIMFMessage], None]] = []
         self._running = False
         self._tasks: list[asyncio.Task] = []
-
+        
         # Session management
         self.current_session_id: str | None = None
         self.sessions: dict[str, dict[str, Any]] = {}
-
+        
         # Logging
         self.logger = logging.getLogger(f"openmas.agent.{self.agent_id}")
-
-        self.logger.info(f"Agent {self.agent_id} ({self.name}) initialized")
+        self.logger.info(f"Agent {self.agent_id} ({self.name}) initialized with {reasoning_engine.get_reasoning_type()} reasoning")
+    
+    @property
+    def is_running(self) -> bool:
+        """Check if the agent is currently running."""
+        return self._running
 
     def __del__(self):
         """Ensure cleanup if stop() wasn't called."""
@@ -239,25 +254,22 @@ class Agent(IMessageHandler):
 
         self.logger.info(f"Starting agent {self.agent_id}")
 
-        # Start protocol adapters
-        for adapter_name, adapter in self.protocol_adapters.items():
-            try:
-                config = self.config.protocol_configs.get(adapter_name, {})
-                await adapter.connect(config)
-                await adapter.register_message_callback(self._handle_protocol_message)
-                self.logger.info(f"Protocol adapter {adapter_name} started")
-            except Exception as e:
-                self.logger.error(f"Failed to start protocol adapter {adapter_name}: {e}")
-                raise
-
         # Initialize message queue in current event loop context
         self.message_queue = asyncio.Queue()
 
-        # Start message processing (only if we have protocol adapters or callbacks)
+        # CRITICAL FIX: Register message handler with protocol adapters
+        # This ensures incoming messages from protocol adapters are routed to the agent
+        try:
+            await self.communicator.register_message_callback(self._handle_protocol_message)
+            self.logger.debug("Registered message callback with protocol adapters")
+        except Exception as e:
+            self.logger.error(f"Failed to register message callback: {e}")
+            raise RuntimeError(f"Agent startup failed: Could not register message callback - {e}")
+
+        # Start message processing
         self._running = True
-        if self.protocol_adapters or self.message_callbacks:
-            message_processor = asyncio.create_task(self._process_messages())
-            self._tasks.append(message_processor)
+        message_processor = asyncio.create_task(self._process_messages())
+        self._tasks.append(message_processor)
 
         self.logger.info(f"Agent {self.agent_id} started successfully")
 
@@ -285,13 +297,8 @@ class Agent(IMessageHandler):
         # Clear task list
         self._tasks.clear()
 
-        # Disconnect protocol adapters
-        for adapter_name, adapter in self.protocol_adapters.items():
-            try:
-                await adapter.disconnect()
-                self.logger.info(f"Protocol adapter {adapter_name} stopped")
-            except Exception as e:
-                self.logger.error(f"Error stopping protocol adapter {adapter_name}: {e}")
+        # Note: Protocol adapters are now managed by the communicator (Body-Brain separation)
+        # The communicator handles all protocol-specific cleanup
 
         # Clear message queue
         if self.message_queue is not None:
@@ -310,22 +317,15 @@ class Agent(IMessageHandler):
 
     async def send_message(self, message: SIMFMessage) -> None:
         """
-        Send a SIMF message to another agent or external system.
+        Send a SIMF message using the communicator (Body-Brain separation).
 
         Args:
             message: The SIMF message to send
         """
         self.logger.debug(f"Sending message {message.message_id} to {message.target_agent_id}")
-
-        # If target is external (has protocol specified), use protocol adapter
-        if message.source_protocol_type and message.source_protocol_type in self.protocol_adapters:
-            adapter = self.protocol_adapters[message.source_protocol_type]
-            await adapter.send_message(message)
-        else:
-            # Internal message - add to local queue for processing
-            if self.message_queue is None:
-                raise RuntimeError("Agent not started - message queue not initialized")
-            await self.message_queue.put(message)
+        
+        # Use communicator for all message sending (Body-Brain separation)
+        await self.communicator.send_message(message)
 
     async def receive_message(self) -> SIMFMessage:
         """
@@ -359,6 +359,37 @@ class Agent(IMessageHandler):
         except Exception as e:
             self.logger.error(f"Tool execution failed: {e}")
             raise
+
+    async def _execute_capability(self, capability_name: str, parameters: dict[str, Any]) -> Any:
+        """
+        Execute a capability through the reasoning engine (Body-Brain separation).
+        
+        Args:
+            capability_name: Name of the capability to execute
+            parameters: Parameters for the capability
+            
+        Returns:
+            Result of capability execution
+        """
+        # Check if capability is available
+        capabilities = await self.get_capabilities()
+        if capability_name not in capabilities:
+            raise ValueError(f"Capability '{capability_name}' not registered")
+        
+        # Delegate to reasoning engine for capability execution
+        context = {
+            "message_type": "CAPABILITY_INVOCATION",
+            "invocation_name": capability_name,
+            "arguments": parameters,
+            "sender": "internal",
+            "session": "capability_execution",
+            "metadata": {}
+        }
+        action = await self.reasoning_engine.decide_action(context)
+        # For capability invocation, return the result directly from reasoning engine
+        if action.get("type") == "invocation_result":
+            return action.get("content", {}).get("result", {})
+        return action.get("content", {})
 
     # ========================================================================
     # Session Management
@@ -399,22 +430,28 @@ class Agent(IMessageHandler):
             self.logger.info(f"Ended session {session_id}")
 
     # ========================================================================
-    # Capability Management
+    # Reasoning Engine Management (Body-Brain Separation)
     # ========================================================================
-
-    async def register_capability(self, capability_name: str) -> None:
-        """Register a new capability."""
-        self.capabilities.add(capability_name)
-        self.logger.info(f"Registered capability: {capability_name}")
-
-    async def unregister_capability(self, capability_name: str) -> None:
-        """Unregister a capability."""
-        self.capabilities.discard(capability_name)
-        self.logger.info(f"Unregistered capability: {capability_name}")
-
-    def get_capabilities(self) -> list[str]:
-        """Get list of available capabilities."""
-        return list(self.capabilities)
+    
+    def set_reasoning_engine(self, reasoning_engine: "IReasoningEngine") -> None:
+        """Enable runtime reasoning engine swapping."""
+        old_type = self.reasoning_engine.get_reasoning_type()
+        self.reasoning_engine = reasoning_engine
+        new_type = reasoning_engine.get_reasoning_type()
+        self.logger.info(f"Reasoning engine changed from {old_type} to {new_type}")
+    
+    def get_reasoning_type(self) -> str:
+        """Get the current reasoning engine type."""
+        return self.reasoning_engine.get_reasoning_type()
+    
+    async def get_capabilities(self) -> set[str]:
+        """Get capabilities from the reasoning engine."""
+        return await self.reasoning_engine.get_capabilities()
+    
+    async def update_reasoning_knowledge(self, knowledge: dict[str, Any]) -> None:
+        """Update the reasoning engine's knowledge base."""
+        await self.reasoning_engine.update_knowledge(knowledge)
+        self.logger.debug("Reasoning engine knowledge updated")
 
     # ========================================================================
     # IMessageHandler Implementation
@@ -505,9 +542,15 @@ class Agent(IMessageHandler):
             self.logger.debug("Message processing loop ended")
 
     async def _handle_message(self, message: SIMFMessage) -> None:
-        """Handle a SIMF message."""
+        """
+        Process message using Body-Brain separation pattern.
+        
+        1. Communicator (body) parses message into context
+        2. Reasoning engine (brain) decides on action
+        3. Communicator (body) formats and sends response
+        """
         self.logger.debug(f"Processing message {message.message_id} of type {message.message_type}")
-
+        
         # Call registered callbacks
         for callback in self.message_callbacks:
             try:
@@ -517,13 +560,36 @@ class Agent(IMessageHandler):
                     callback(message)
             except Exception as e:
                 self.logger.error(f"Error in message callback: {e}")
-
-        # Handle based on message type
-        if message.message_type == MessageType.CAPABILITY_INVOCATION:
-            await self._handle_capability_invocation(message)
-        elif message.message_type == MessageType.USER_QUERY:
-            await self._handle_user_query(message)
-        # Add more message type handlers as needed
+        
+        try:
+            # Body-Brain separation: Communicator parses message
+            context = await self.communicator.parse_message(message)
+            
+            # Body-Brain separation: Reasoning engine decides action
+            action = await self.reasoning_engine.decide_action(context)
+            
+            # Body-Brain separation: Communicator formats and sends response
+            response = await self.communicator.format_response(action)
+            await self.communicator.send_message(response)
+            
+        except Exception as e:
+            self.logger.error(f"Error processing message {message.message_id}: {e}")
+            # Send error response
+            error_action = {
+                "type": "error",
+                "content": {
+                    "error_code": "MESSAGE_PROCESSING_ERROR",
+                    "error_message": str(e)
+                },
+                "sender": self.agent_id,
+                "session": message.session_id,
+                "target": message.source_agent_id or "unknown"
+            }
+            try:
+                error_response = await self.communicator.format_response(error_action)
+                await self.communicator.send_message(error_response)
+            except Exception as format_error:
+                self.logger.error(f"Failed to send error response: {format_error}")
 
     async def _handle_protocol_message(self, simf_message: SIMFMessage) -> None:
         """Handle message from protocol adapter."""
@@ -531,68 +597,9 @@ class Agent(IMessageHandler):
             raise RuntimeError("Agent not started - message queue not initialized")
         await self.message_queue.put(simf_message)
 
-    async def _handle_capability_invocation(self, message: SIMFMessage) -> None:
-        """Handle capability invocation message."""
-        if hasattr(message.payload, "invocation_name") and hasattr(message.payload, "arguments"):
-            tool_name = message.payload.invocation_name
-            parameters = message.payload.arguments
 
-            try:
-                result = await self._execute_capability(tool_name, parameters)
 
-                # Send success response
-                response = create_invocation_result_message(
-                    invocation_name=tool_name,
-                    status=InvocationStatus.SUCCESS,
-                    target_agent_id=message.source_agent_id or "unknown",
-                    result={"output": result},
-                    source_agent_id=self.agent_id,
-                    session_id=message.session_id,
-                )
-                await self.send_message(response)
 
-            except Exception as e:
-                # Send error response
-                error_response = create_error_message(
-                    error_code="CAPABILITY_ERROR",
-                    error_message=str(e),
-                    target_agent_id=message.source_agent_id or "unknown",
-                    source_agent_id=self.agent_id,
-                    session_id=message.session_id,
-                )
-                await self.send_message(error_response)
-
-    async def _handle_user_query(self, message: SIMFMessage) -> None:
-        """Handle user query message."""
-        # Default implementation - can be overridden by subclasses
-        self.logger.info(f"Received user query: {message.payload}")
-
-        # Echo response for now
-        response = create_text_message(
-            content=f"Agent {self.name} received your message",
-            target_agent_id=message.source_agent_id or "unknown",
-            source_agent_id=self.agent_id,
-            session_id=message.session_id,
-        )
-        await self.send_message(response)
-
-    async def _execute_capability(self, capability_name: str, parameters: dict[str, Any]) -> Any:
-        """
-        Execute a capability.
-
-        This is a placeholder implementation that should be overridden by subclasses
-        or enhanced with a proper capability registry.
-        """
-        if capability_name not in self.capabilities:
-            raise ValueError(f"Capability '{capability_name}' not registered")
-
-        # Default implementation - return parameters for testing
-        return {
-            "capability": capability_name,
-            "parameters": parameters,
-            "executed_by": self.agent_id,
-            "timestamp": datetime.utcnow().isoformat(),
-        }
 
     def add_message_callback(self, callback: Callable[[SIMFMessage], None]) -> None:
         """Add a message callback."""

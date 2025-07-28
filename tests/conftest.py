@@ -34,6 +34,9 @@ except ImportError:
 
 # OpenMAS imports
 from openmas.agent.mcp_agent import MCPAgent
+from openmas.agent.base_agent import Agent, AgentConfig
+from openmas.agent.communicator import DefaultCommunicator
+from openmas.agent.reasoning.simple_reasoning import SimpleReasoningEngine
 from openmas.core.simf import (
     MessageType,
     SIMFMessage,
@@ -41,6 +44,11 @@ from openmas.core.simf import (
     create_invocation_result_message,
     create_text_message,
 )
+import sys
+import os
+sys.path.insert(0, os.path.dirname(__file__))
+
+from utils.test_supervisor import TestSupervisor, supervised_agent_test, supervised_multi_agent_test
 
 
 @pytest.fixture(scope="session")
@@ -243,6 +251,141 @@ def real_simf_messages() -> dict[str, object]:
     }
 
 
+@pytest.fixture
+async def test_supervisor() -> "AsyncGenerator[TestSupervisor, None]":
+    """
+    TestSupervisor fixture for async test coordination.
+    
+    Provides sophisticated async lifecycle management, event-based coordination,
+    timeout management, and resource cleanup for reliable agent testing.
+    """
+    import inspect
+    
+    # Get the test name from the calling test function
+    frame = inspect.currentframe()
+    test_name = "unknown_test"
+    try:
+        # Walk up the stack to find the test function
+        while frame:
+            if frame.f_code.co_name.startswith("test_"):
+                test_name = frame.f_code.co_name
+                break
+            frame = frame.f_back
+    finally:
+        del frame
+    
+    async with TestSupervisor(test_name, default_timeout=30.0) as supervisor:
+        yield supervisor
+
+
+@pytest.fixture
+async def basic_agent_factory() -> "Callable[[], Agent]":
+    """
+    Factory for creating basic agents with Body-Brain separation.
+    
+    Returns a factory function that creates properly configured agents
+    with communicator and reasoning engine components.
+    """
+    def create_agent() -> Agent:
+        # Generate unique agent ID
+        agent_id = f"test_agent_{int(time.time() * 1000000) % 1000000}"
+        
+        # Create communicator (body) with agent_id
+        communicator = DefaultCommunicator(agent_id=agent_id)
+        
+        # Create reasoning engine (brain)
+        reasoning_engine = SimpleReasoningEngine()
+        
+        # Create agent with Body-Brain separation
+        agent_config = AgentConfig(
+            agent_id=agent_id,
+            name="Test Agent",
+            capabilities=["test_capability"],
+            metadata={"description": "Agent for testing"}
+        )
+        
+        return Agent(
+            config=agent_config,
+            communicator=communicator,
+            reasoning_engine=reasoning_engine
+        )
+    
+    return create_agent
+
+
+@pytest.fixture
+async def supervised_agent(test_supervisor: TestSupervisor, basic_agent_factory) -> "AsyncGenerator[Agent, None]":
+    """
+    Supervised agent fixture with automatic lifecycle management.
+    
+    Creates an agent using TestSupervisor for proper async resource cleanup.
+    """
+    agent = basic_agent_factory()
+    
+    async with test_supervisor.agent_lifecycle(agent) as managed_agent:
+        yield managed_agent
+
+
+@pytest.fixture
+async def multi_agent_factory(basic_agent_factory) -> "Callable[[int], Dict[str, Callable[[], Agent]]]":
+    """
+    Factory for creating multiple agent factories for multi-agent tests.
+    
+    Args:
+        count: Number of agent factories to create
+    
+    Returns:
+        Dictionary mapping agent IDs to agent factory functions
+    """
+    def create_multi_agent_factories(count: int) -> "Dict[str, Callable[[], Agent]]":
+        factories = {}
+        for i in range(count):
+            agent_id = f"agent_{i}"
+            factories[agent_id] = basic_agent_factory
+        return factories
+    
+    return create_multi_agent_factories
+
+
+# Enhanced timeout management with TestSupervisor integration
+@pytest.fixture
+def enhanced_timeout_manager(mcp_timeout_manager):
+    """
+    Enhanced timeout manager with TestSupervisor coordination.
+    
+    Extends the existing MCP timeout manager with TestSupervisor event coordination.
+    """
+    class EnhancedTimeoutManager:
+        def __init__(self, base_manager):
+            self.base_manager = base_manager
+            self.default_timeout = base_manager.default_timeout
+        
+        async def with_timeout(self, coro, timeout=None):
+            """Execute coroutine with timeout and TestSupervisor coordination."""
+            return await self.base_manager.with_timeout(coro, timeout)
+        
+        def sync_timeout(self, timeout=None):
+            """Get timeout value for sync operations."""
+            return self.base_manager.sync_timeout(timeout)
+        
+        async def supervised_timeout(self, supervisor: TestSupervisor, coro, timeout=None, event_name=None):
+            """Execute coroutine with timeout and emit TestSupervisor events."""
+            if event_name:
+                await supervisor._emit_event(f"{event_name}_started")
+            
+            try:
+                result = await self.with_timeout(coro, timeout)
+                if event_name:
+                    await supervisor._emit_event(f"{event_name}_completed", {"result": str(result)})
+                return result
+            except Exception as e:
+                if event_name:
+                    await supervisor._emit_event(f"{event_name}_failed", {"error": str(e)})
+                raise
+    
+    return EnhancedTimeoutManager(mcp_timeout_manager)
+
+
 # Pytest configuration for anti-hallucination testing
 def pytest_configure(config) -> None:
     """Configure pytest with anti-hallucination markers"""
@@ -264,3 +407,39 @@ def pytest_runtest_setup(item) -> None:
     # For real tests, add warnings about external dependencies
     if item.get_closest_marker("real") and os.getenv("CI") and os.getenv("SKIP_REAL_TESTS"):
         pytest.skip("Skipping real tests in CI (set SKIP_REAL_TESTS=false to enable)")
+
+
+@pytest.fixture(scope="session", autouse=True)
+def configure_asyncio_for_testing():
+    """Configure asyncio settings for reliable testing."""
+    # Set asyncio debug mode for better error reporting in tests
+    if not os.getenv("PYTEST_DISABLE_ASYNCIO_DEBUG"):
+        asyncio.get_event_loop().set_debug(True)
+    
+    # Configure asyncio policy for consistent behavior
+    if hasattr(asyncio, 'WindowsSelectorEventLoopPolicy'):
+        # On Windows, use selector event loop for better compatibility
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
+# Pytest hooks for TestSupervisor integration
+def pytest_runtest_teardown(item, nextitem):
+    """Teardown hook to ensure proper async cleanup."""
+    # Force garbage collection to clean up any remaining async resources
+    import gc
+    gc.collect()
+    
+    # Check for any remaining tasks and warn if found
+    try:
+        loop = asyncio.get_running_loop()
+        pending_tasks = [task for task in asyncio.all_tasks(loop) if not task.done()]
+        if pending_tasks:
+            import warnings
+            warnings.warn(
+                f"Test {item.name} left {len(pending_tasks)} pending async tasks. "
+                f"This may indicate improper resource cleanup.",
+                RuntimeWarning
+            )
+    except RuntimeError:
+        # No running loop, which is fine
+        pass

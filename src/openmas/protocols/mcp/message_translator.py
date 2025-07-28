@@ -10,9 +10,12 @@ from typing import Any
 from uuid import uuid4
 
 from openmas.core.simf import (
+    InvocationContentPayload,
+    InvocationResultContentPayload,
     InvocationStatus,
     MessageType,
     SIMFMessage,
+    StructuredDataContentPayload,
     create_error_message,
     create_invocation_message,
     create_invocation_result_message,
@@ -264,6 +267,10 @@ class MCPMessageTranslator:
         """Convert SIMF tool invocation to MCP tool call."""
         payload = simf_message.payload
 
+        # Type narrowing: Only InvocationContentPayload has invocation_name and arguments
+        if not isinstance(payload, InvocationContentPayload):
+            raise MCPTranslationError(f"Expected InvocationContentPayload, got {type(payload).__name__}")
+
         return {
             "jsonrpc": "2.0",
             "id": simf_message.message_id,
@@ -277,6 +284,10 @@ class MCPMessageTranslator:
     def _simf_to_tool_result(self, simf_message: SIMFMessage) -> dict[str, Any]:
         """Convert SIMF tool result to MCP result."""
         payload = simf_message.payload
+
+        # Type narrowing: Only InvocationResultContentPayload has status, result, and error
+        if not isinstance(payload, InvocationResultContentPayload):
+            raise MCPTranslationError(f"Expected InvocationResultContentPayload, got {type(payload).__name__}")
 
         if payload.status == InvocationStatus.SUCCESS:
             return {
@@ -298,6 +309,11 @@ class MCPMessageTranslator:
     def _simf_to_resource_or_prompt_request(self, simf_message: SIMFMessage) -> dict[str, Any]:
         """Convert SIMF capability invocation to MCP resource or prompt call."""
         payload = simf_message.payload
+        
+        # Type narrowing: Only InvocationContentPayload has invocation_name and arguments
+        if not isinstance(payload, InvocationContentPayload):
+            raise MCPTranslationError(f"Expected InvocationContentPayload, got {type(payload).__name__}")
+        
         arguments = payload.arguments or {}
 
         if payload.invocation_name == "read_resource":
@@ -344,23 +360,45 @@ class MCPMessageTranslator:
         """Convert SIMF capability result to MCP result."""
         payload = simf_message.payload
 
+        # Type narrowing: Extract result data based on payload type
+        result_data: dict[str, Any] | None = None
+        if isinstance(payload, InvocationResultContentPayload):
+            result_data = payload.result
+        elif isinstance(payload, StructuredDataContentPayload):
+            result_data = payload.data
+        elif hasattr(payload, "result"):
+            result_data = getattr(payload, "result")
+        elif hasattr(payload, "data"):
+            result_data = getattr(payload, "data")
+        else:
+            # Convert to dict format for consistency
+            result_data = {"content": str(payload)}
+
         return {
             "jsonrpc": "2.0",
             "id": simf_message.message_id,
-            "result": payload.result if hasattr(payload, "result") else payload.data,
+            "result": result_data,
         }
 
     def _simf_to_error(self, simf_message: SIMFMessage) -> dict[str, Any]:
         """Convert SIMF error to MCP error."""
         payload = simf_message.payload
 
+        # Type narrowing for union payload types
+        if isinstance(payload, InvocationResultContentPayload):
+            error_message = payload.error.message if payload.error else "Unknown error"
+            error_details = payload.error.details if payload.error else None
+        else:
+            error_message = "Unknown error"
+            error_details = None
+
         return {
             "jsonrpc": "2.0",
             "id": simf_message.message_id,
             "error": {
                 "code": -1,
-                "message": payload.error.message if payload.error else "Unknown error",
-                "data": payload.error.details if payload.error else None,
+                "message": error_message,
+                "data": error_details,
             },
         }
 

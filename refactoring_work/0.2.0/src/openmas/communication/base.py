@@ -359,9 +359,7 @@ class BaseCommunicator(abc.ABC):
         pass
 
     @abc.abstractmethod
-    async def send_notification(
-        self, target_service: str, method: str, params: dict[str, Any] | None = None
-    ) -> None:
+    async def send_notification(self, target_service: str, method: str, params: dict[str, Any] | None = None) -> None:
         """Send a notification to a target service.
 
         Args:

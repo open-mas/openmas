@@ -129,50 +129,50 @@ class AssetMetadata:
 
 class AssetRegistry:
     """Central registry for all assets in the system."""
-    
+
     def __init__(self):
         self._assets: Dict[str, AssetMetadata] = {}
         self._name_to_id: Dict[str, str] = {}
         self._type_index: Dict[AssetType, List[str]] = {}
-    
+
     def register_asset(self, metadata: AssetMetadata) -> bool:
         """Register a new asset in the registry."""
         self._assets[metadata.asset_id] = metadata
         self._name_to_id[metadata.name] = metadata.asset_id
-        
+
         # Update type index
         if metadata.asset_type not in self._type_index:
             self._type_index[metadata.asset_type] = []
         self._type_index[metadata.asset_type].append(metadata.asset_id)
-        
+
         return True
-    
+
     def get_asset(self, asset_id: str) -> Optional[AssetMetadata]:
         """Get asset metadata by ID."""
         return self._assets.get(asset_id)
-    
+
     def get_asset_by_name(self, name: str) -> Optional[AssetMetadata]:
         """Get asset metadata by name."""
         asset_id = self._name_to_id.get(name)
         return self._assets.get(asset_id) if asset_id else None
-    
+
     def list_assets_by_type(self, asset_type: AssetType) -> List[AssetMetadata]:
         """List all assets of a specific type."""
         asset_ids = self._type_index.get(asset_type, [])
         return [self._assets[asset_id] for asset_id in asset_ids]
-    
+
     def search_assets(self, query: str, asset_type: Optional[AssetType] = None) -> List[AssetMetadata]:
         """Search assets by name, description, or tags."""
         results = []
         for asset in self._assets.values():
             if asset_type and asset.asset_type != asset_type:
                 continue
-            
-            if (query.lower() in asset.name.lower() or 
+
+            if (query.lower() in asset.name.lower() or
                 query.lower() in asset.description.lower() or
                 any(query.lower() in tag.lower() for tag in asset.tags)):
                 results.append(asset)
-        
+
         return results
 
 # Global registry instance
@@ -203,26 +203,26 @@ from ...registry.asset_registry import AssetMetadata, AssetType
 
 class HuggingFaceModelLoader(BaseAssetLoader):
     """Loader for HuggingFace models."""
-    
+
     def __init__(self, cache_dir: Optional[str] = None):
         super().__init__()
         self.cache_dir = cache_dir or os.path.expanduser("~/.openmas/models/huggingface")
         Path(self.cache_dir).mkdir(parents=True, exist_ok=True)
-    
+
     def can_load(self, asset_path: str) -> bool:
         """Check if this loader can handle the asset."""
         return HUGGINGFACE_AVAILABLE and (
             asset_path.startswith("huggingface://") or
             "huggingface.co" in asset_path
         )
-    
+
     async def load_asset(self, asset_metadata: AssetMetadata) -> Any:
         """Load a HuggingFace model."""
         if not HUGGINGFACE_AVAILABLE:
             raise ImportError("transformers library not available")
-        
+
         model_name = self._extract_model_name(asset_metadata.file_path)
-        
+
         try:
             # Load model and tokenizer
             model = AutoModel.from_pretrained(
@@ -230,22 +230,22 @@ class HuggingFaceModelLoader(BaseAssetLoader):
                 cache_dir=self.cache_dir,
                 trust_remote_code=False  # Security consideration
             )
-            
+
             tokenizer = AutoTokenizer.from_pretrained(
                 model_name,
                 cache_dir=self.cache_dir,
                 trust_remote_code=False
             )
-            
+
             return {
                 "model": model,
                 "tokenizer": tokenizer,
                 "model_name": model_name
             }
-            
+
         except Exception as e:
             raise RuntimeError(f"Failed to load HuggingFace model {model_name}: {e}")
-    
+
     def _extract_model_name(self, asset_path: str) -> str:
         """Extract model name from asset path."""
         if asset_path.startswith("huggingface://"):
@@ -255,7 +255,7 @@ class HuggingFaceModelLoader(BaseAssetLoader):
             parts = asset_path.split("/")
             if len(parts) >= 2:
                 return "/".join(parts[-2:])
-        
+
         return asset_path
 ```
 

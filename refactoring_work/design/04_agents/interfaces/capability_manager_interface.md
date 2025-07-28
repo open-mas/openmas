@@ -12,4 +12,3 @@ Please use the following interfaces for capability management:
 These interfaces are defined in the following document:
 
 -   **[Agent Capability Management Interfaces](./capability_management_interfaces.md)**
-

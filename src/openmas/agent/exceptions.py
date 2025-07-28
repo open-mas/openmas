@@ -8,11 +8,13 @@ Based on specifications in:
 - refactoring_work/planning/TASK_basic_agent_framework_implementation.md
 """
 
+from typing import Any, Optional
+
 
 class AgentError(Exception):
     """Base exception for all agent-related errors."""
 
-    def __init__(self, message: str, agent_id: str = None, details: dict = None):
+    def __init__(self, message: str, agent_id: Optional[str] = None, details: Optional[dict[Any, Any]] = None):
         """
         Initialize the exception.
 
@@ -57,9 +59,9 @@ class AgentMessageError(AgentError):
     def __init__(
         self,
         message: str,
-        agent_id: str = None,
-        message_id: str = None,
-        details: dict = None,
+        agent_id: Optional[str] = None,
+        message_id: Optional[str] = None,
+        details: Optional[dict[Any, Any]] = None,
     ):
         """
         Initialize the exception.
@@ -87,9 +89,9 @@ class AgentCapabilityError(AgentError):
     def __init__(
         self,
         message: str,
-        agent_id: str = None,
-        capability_name: str = None,
-        details: dict = None,
+        agent_id: Optional[str] = None,
+        capability_name: Optional[str] = None,
+        details: Optional[dict[Any, Any]] = None,
     ):
         """
         Initialize the exception.
@@ -117,9 +119,9 @@ class AgentSessionError(AgentError):
     def __init__(
         self,
         message: str,
-        agent_id: str = None,
-        session_id: str = None,
-        details: dict = None,
+        agent_id: Optional[str] = None,
+        session_id: Optional[str] = None,
+        details: Optional[dict[Any, Any]] = None,
     ):
         """
         Initialize the exception.
@@ -147,9 +149,9 @@ class AgentStateError(AgentError):
     def __init__(
         self,
         message: str,
-        agent_id: str = None,
-        state_key: str = None,
-        details: dict = None,
+        agent_id: Optional[str] = None,
+        state_key: Optional[str] = None,
+        details: Optional[dict[Any, Any]] = None,
     ):
         """
         Initialize the exception.
@@ -177,9 +179,9 @@ class AgentProtocolError(AgentError):
     def __init__(
         self,
         message: str,
-        agent_id: str = None,
-        protocol_name: str = None,
-        details: dict = None,
+        agent_id: Optional[str] = None,
+        protocol_name: Optional[str] = None,
+        details: Optional[dict[Any, Any]] = None,
     ):
         """
         Initialize the exception.

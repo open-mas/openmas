@@ -126,7 +126,7 @@ def capability_handler(core_capability_id: str, reasoning_approach: str = "defau
             # The registration logic would be handled by the agent's setup process,
             # which inspects the class for this decorator.
             return await func(agent, *args, **kwargs)
-        
+
         # Attach metadata to the function for the agent's setup process to find.
         wrapper._is_capability_handler = True
         wrapper._core_capability_id = core_capability_id

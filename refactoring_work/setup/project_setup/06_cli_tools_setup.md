@@ -203,10 +203,10 @@ from ...utilities.console.interactive import confirm, select_option
 
 @click.command()
 @click.argument('project_name')
-@click.option('--protocols', '-p', multiple=True, 
+@click.option('--protocols', '-p', multiple=True,
               type=click.Choice(['a2a', 'mcp', 'http', 'mqtt', 'grpc']),
               help='Protocols to include in the project')
-@click.option('--reasoning', '-r', 
+@click.option('--reasoning', '-r',
               type=click.Choice(['rule_based', 'bdi', 'llm', 'hybrid', 'symbolic']),
               help='Primary reasoning approach')
 @click.option('--template', '-t',
@@ -215,45 +215,45 @@ from ...utilities.console.interactive import confirm, select_option
               help='Project template to use')
 @click.option('--interactive', '-i', is_flag=True,
               help='Interactive project setup')
-def init_project(project_name: str, protocols: tuple, reasoning: Optional[str], 
+def init_project(project_name: str, protocols: tuple, reasoning: Optional[str],
                 template: str, interactive: bool):
     """Initialize a new OpenMAS project."""
-    
+
     project_path = Path.cwd() / project_name
-    
+
     if project_path.exists():
         error(f"Directory '{project_name}' already exists")
         return
-    
+
     # Interactive setup if requested
     if interactive:
         protocols = _interactive_protocol_selection()
         reasoning = _interactive_reasoning_selection()
         template = _interactive_template_selection()
-    
+
     # Validate selections
     if not protocols:
         protocols = ('a2a',)  # Default protocol
-    
+
     if not reasoning:
         reasoning = 'rule_based'  # Default reasoning
-    
+
     try:
         # Create project directory
         project_path.mkdir(parents=True)
         info(f"Creating project '{project_name}'...")
-        
+
         # Generate project structure
         _create_project_structure(project_path, template)
-        
+
         # Generate configuration
         config_generator = ConfigGenerator()
         config_generator.generate_project_config(
-            project_path, 
+            project_path,
             protocols=list(protocols),
             reasoning=reasoning
         )
-        
+
         # Generate agent scaffolding
         agent_generator = AgentGenerator()
         agent_generator.generate_basic_agent(
@@ -261,16 +261,16 @@ def init_project(project_name: str, protocols: tuple, reasoning: Optional[str],
             protocols=list(protocols),
             reasoning=reasoning
         )
-        
+
         # Create development files
         _create_development_files(project_path)
-        
+
         success(f"Project '{project_name}' created successfully!")
         info("Next steps:")
         info(f"  cd {project_name}")
         info("  openmas config validate")
         info("  openmas dev run-tests")
-        
+
     except Exception as e:
         error(f"Failed to create project: {e}")
         # Cleanup on failure
@@ -281,17 +281,17 @@ def init_project(project_name: str, protocols: tuple, reasoning: Optional[str],
 def _interactive_protocol_selection() -> List[str]:
     """Interactive protocol selection."""
     protocols = []
-    
+
     info("Select protocols for your project:")
     available_protocols = ['a2a', 'mcp', 'http', 'mqtt', 'grpc']
-    
+
     for protocol in available_protocols:
         if confirm(f"Include {protocol.upper()} protocol?"):
             protocols.append(protocol)
-    
+
     if not protocols:
         protocols = ['a2a']  # Ensure at least one protocol
-    
+
     return protocols
 
 def _interactive_reasoning_selection() -> str:
@@ -303,7 +303,7 @@ def _interactive_reasoning_selection() -> str:
         ('symbolic', 'Symbolic reasoning (formal logic)'),
         ('hybrid', 'Hybrid reasoning (combination of approaches)')
     ]
-    
+
     return select_option("Select primary reasoning approach:", reasoning_options)
 
 def _interactive_template_selection() -> str:
@@ -314,7 +314,7 @@ def _interactive_template_selection() -> str:
         ('reasoning_focused', 'Reasoning-focused template'),
         ('integration', 'Integration project template')
     ]
-    
+
     return select_option("Select project template:", template_options)
 
 def _create_project_structure(project_path: Path, template: str):
@@ -327,13 +327,13 @@ def _create_project_structure(project_path: Path, template: str):
         'docs',
         'scripts'
     ]
-    
+
     for directory in directories:
         (project_path / directory).mkdir(parents=True, exist_ok=True)
 
 def _create_development_files(project_path: Path):
     """Create development configuration files."""
-    
+
     # Create pyproject.toml
     pyproject_content = '''[build-system]
 requires = ["poetry-core"]
@@ -370,9 +370,9 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
 '''.format(project_name=project_path.name)
-    
+
     (project_path / 'pyproject.toml').write_text(pyproject_content)
-    
+
     # Create README.md
     readme_content = f'''# {project_path.name}
 
@@ -400,7 +400,7 @@ openmas dev run-tests
 
 This project uses OpenMAS 0.3.0 with support for multiple protocols and reasoning approaches.
 '''
-    
+
     (project_path / 'README.md').write_text(readme_content)
 ```
 

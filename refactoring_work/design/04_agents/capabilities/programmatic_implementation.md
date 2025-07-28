@@ -38,7 +38,7 @@ class WeatherAgent(Agent):
     async def get_weather_logic(self, location: str) -> dict:
         """
         The actual implementation of the 'get_weather' capability.
-        
+
         Args:
             location: The location provided by the caller.
 

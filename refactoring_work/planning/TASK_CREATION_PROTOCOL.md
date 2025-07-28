@@ -21,6 +21,10 @@ Before creating ANY task, the AI **MUST NOT**:
 4. **❌ NEVER create tasks that bypass established interfaces**
 5. **❌ NEVER hallucinate requirements not present in design docs**
 6. **❌ NEVER create tasks without explicit design alignment statements**
+7. **❌ NEVER prioritize "backward compatibility" over simplicity and maintainability**
+8. **❌ NEVER assume existing users or production deployments exist**
+
+**OpenMAS 0.3.0 Clean Slate Principle**: This is a **clean slate rewrite** with no existing users, no production deployments, and **NO backward compatibility requirements**. Prioritize **simplicity, maintainability, and additive growth** over unnecessary complexity.
 
 **Violation of these prohibitions is grounds for immediate task rejection.**
 
@@ -80,6 +84,30 @@ Before creating ANY task, the AI **MUST NOT**:
 - [ ] **Pre-commit Hooks**: All changes will pass pre-commit hook validation
 - [ ] **Tox Integration**: Implementation will be tested using appropriate tox environments
 
+**TYPING REQUIREMENTS** - AI must explicitly confirm:
+
+- [ ] **Type Annotations**: All functions have proper return type annotations (`-> None`, `-> str`, etc.)
+- [ ] **Union Type Handling**: Complex unions use `isinstance()` for type narrowing (never direct attribute access)
+- [ ] **Generic Types**: Proper parameterization (`dict[str, Any]`, `list[str]`, not bare `dict` or `list`)
+- [ ] **Protocol Integration**: External library types properly integrated with type hints
+- [ ] **Async Typing**: Async methods have proper return type annotations (`-> Awaitable[T]`, `-> None`)
+- [ ] **Optional Types**: Explicit `Optional[T]` or `T | None` instead of implicit nullable types
+- [ ] **Payload Unions**: SIMF payload unions handled with proper type guards (see typing guidelines)
+- [ ] **Error Prevention**: No `union-attr`, `no-untyped-def`, or `assignment` mypy errors
+
+**ZERO REGRESSION POLICY** - AI must NEVER break existing functionality:
+
+```bash
+# MANDATORY: Run BEFORE making any changes to establish baseline
+echo "=== ESTABLISHING BASELINE - TESTS MUST PASS BEFORE CHANGES ==="
+python -m pytest tests/ -x --tb=short
+if [ $? -ne 0 ]; then
+    echo "❌ BASELINE FAILED: Tests are already broken. Fix before proceeding."
+    exit 1
+fi
+echo "✅ BASELINE ESTABLISHED: All tests passing before changes"
+```
+
 **QUALITY ENFORCEMENT COMMANDS** - AI must run these before task completion:
 
 ```bash
@@ -90,23 +118,52 @@ poetry run ruff check src/openmas tests
 # Format code and sort imports
 poetry run ruff format src/openmas tests
 
-# Type checking
-poetry run mypy src/openmas
+# Type checking with comprehensive validation
+poetry run mypy src/openmas --show-error-codes
+
+# TYPING VALIDATION: Verify no critical typing errors
+echo "Checking for union-attr errors..."
+! poetry run mypy src/openmas | grep "union-attr"
+
+echo "Checking for missing annotations..."
+! poetry run mypy src/openmas | grep "no-untyped-def"
+
+echo "Checking for assignment errors..."
+! poetry run mypy src/openmas | grep "assignment"
+
+echo "Checking for call-arg errors..."
+! poetry run mypy src/openmas | grep "call-arg"
 
 # Run pre-commit hooks
 pre-commit run --all-files
 
-# Run appropriate tox environments
+# Run appropriate tox environments (includes type checking)
 tox -e lint,type,unit
+
+# MANDATORY: ZERO REGRESSION VALIDATION - Tests must still pass after changes
+echo "=== ZERO REGRESSION VALIDATION - TESTS MUST PASS AFTER CHANGES ==="
+python -m pytest tests/ -x --tb=short
+if [ $? -ne 0 ]; then
+    echo "❌ REGRESSION DETECTED: Tests broken by changes. REVERT IMMEDIATELY."
+    echo "❌ TASK FAILED: Cannot complete task with broken tests."
+    exit 1
+fi
+echo "✅ ZERO REGRESSION CONFIRMED: All tests still passing after changes"
 ```
 
 **QUALITY GATE REQUIREMENTS**:
 
-1. **Zero Linting Violations**: No ruff or mypy errors allowed
-2. **Pre-commit Success**: All pre-commit hooks must pass
-3. **Tox Environment Success**: Relevant tox environments must pass
-4. **Documentation Standards**: All new code must include proper docstrings (Google style)
-5. **Test Coverage**: New code must include appropriate unit tests
+1. **ZERO REGRESSION POLICY**: All tests MUST pass before AND after changes (MANDATORY)
+2. **Zero Linting Violations**: No ruff or mypy errors allowed
+3. **Pre-commit Success**: All pre-commit hooks must pass
+4. **Tox Environment Success**: Relevant tox environments must pass
+5. **Documentation Standards**: All new code must include proper docstrings (Google style)
+6. **Test Coverage**: New code must include appropriate unit tests
+7. **Type Safety Compliance**: Zero critical typing errors (union-attr, no-untyped-def, assignment, call-arg)
+8. **Type Annotation Coverage**: All public methods and functions have proper type annotations
+9. **Union Type Safety**: All union types use proper type narrowing with isinstance() checks
+10. **Generic Type Usage**: All collections use proper generic parameterization
+11. **Protocol Integration**: External library types properly integrated with OpenMAS type system
 
 **ANTI-HALLUCINATION QUALITY MEASURES**:
 
@@ -147,6 +204,45 @@ tox -e lint,type,unit
 **Error Handling**: [reference to established error handling patterns]
 **Testing Requirements**: [reference to established testing patterns]
 
+### Typing Patterns (MANDATORY)
+**Union Type Handling**: All union types must use `isinstance()` for type narrowing
+```python
+# ✅ CORRECT: Type narrowing with isinstance()
+if isinstance(payload, InvocationContentPayload):
+    capability_name = payload.invocation_name  # Safe access
+
+# ❌ WRONG: Direct attribute access on union
+capability_name = payload.invocation_name  # mypy error: union-attr
+```
+
+**Generic Types**: Use proper parameterization for all collections
+```python
+# ✅ CORRECT: Proper generic types
+data: dict[str, Any] = {}
+tools: list[Tool] = []
+result: Optional[str] = None
+
+# ❌ WRONG: Bare types
+data: dict = {}  # mypy error: missing type parameters
+tools: list = []  # mypy error: missing type parameters
+```
+
+**Function Annotations**: All functions must have complete type annotations
+```python
+# ✅ CORRECT: Complete annotations
+async def execute_capability(self, message: SIMFMessage) -> SIMFMessage:
+    ...
+
+def validate_config(self, config: dict[str, Any]) -> bool:
+    ...
+
+# ❌ WRONG: Missing annotations
+async def execute_capability(self, message):  # mypy error: no-untyped-def
+    ...
+```
+
+**SIMF Payload Unions**: Reference `docs/development/typing_guidelines.md` for payload handling patterns
+
 ## Cross-Reference Updates Required
 [List of design documents that must be updated when this task is complete]
 - Document 1: [specific section that needs updating]
@@ -160,15 +256,26 @@ tox -e lint,type,unit
 - [ ] Cross-references are updated correctly
 
 ## Quality Enforcement Verification (MANDATORY)
-- [ ] Code formatted with `black --line-length=120`
-- [ ] Imports sorted with `isort --profile=black --line-length=120`
-- [ ] All `flake8` checks pass (max-line-length=88)
-- [ ] All `mypy` type checks pass
+- [ ] Code formatted with `ruff format` (line-length=120, ignore=E203,W503)
+- [ ] Imports sorted with `ruff check --fix` (profile=black)
+- [ ] All `ruff check` violations resolved
+- [ ] All `mypy` type checks pass with `--show-error-codes`
 - [ ] All `pre-commit` hooks pass
 - [ ] Relevant `tox` environments pass (lint, type, unit)
 - [ ] Zero linting violations introduced
 - [ ] Proper Google-style docstrings added
 - [ ] Unit tests added for new functionality
+
+### Typing Verification (MANDATORY)
+- [ ] **Type Annotations**: All functions have proper return type annotations
+- [ ] **Union Type Safety**: No `union-attr` mypy errors (all unions use isinstance() checks)
+- [ ] **Missing Annotations**: No `no-untyped-def` mypy errors
+- [ ] **Assignment Safety**: No `assignment` mypy errors (proper type compatibility)
+- [ ] **Call Arguments**: No `call-arg` mypy errors (proper function signatures)
+- [ ] **Generic Types**: All collections properly parameterized (`dict[str, Any]`, not `dict`)
+- [ ] **Optional Types**: Explicit `Optional[T]` or `T | None` usage
+- [ ] **Protocol Integration**: External library types properly integrated
+- [ ] **SIMF Compatibility**: Payload unions handled with proper type guards
 
 ## Anti-Hallucination Safeguards
 **Design Documents Read**: [list with confirmation of understanding]
@@ -176,6 +283,8 @@ tox -e lint,type,unit
 **Missing Context**: [if any, explicitly state and request clarification]
 **Quality Tools Executed**: [list actual commands run and their results]
 **Linting Status**: [confirm zero violations or list specific fixes made]
+**Typing Validation**: [confirm all typing requirements met - reference typing guidelines]
+**MyPy Error Status**: [confirm zero critical typing errors: union-attr, no-untyped-def, assignment, call-arg]
 
 **Task Status**: [NOT_STARTED | IN_PROGRESS | COMPLETE]
 ```

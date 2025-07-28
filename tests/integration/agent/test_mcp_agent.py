@@ -73,10 +73,11 @@ class TestMCPAgentRealIntegration:
         assert agent.mcp_session is None
         assert len(agent.available_tools) == 0
 
-        # Verify it inherits from base Agent
-        assert hasattr(agent, "capabilities")
-        assert hasattr(agent, "sessions")
+        # Verify it inherits from base Agent with Body-Brain separation
+        assert hasattr(agent, "communicator")
+        assert hasattr(agent, "reasoning_engine")
         assert hasattr(agent, "state_manager")
+        assert agent.config.capabilities == []
 
     @pytest.mark.asyncio
     async def test_mcp_server_connection(self, mcp_agent):
@@ -105,7 +106,7 @@ class TestMCPAgentRealIntegration:
         assert len(tools) > 0
 
         # Verify tools are registered as agent capabilities
-        capabilities = mcp_agent.get_capabilities()
+        capabilities = await mcp_agent.get_capabilities()
         tool_capabilities = [cap for cap in capabilities if mcp_agent.is_mcp_tool(cap)]
 
         assert len(tool_capabilities) == len(tools)
@@ -114,7 +115,7 @@ class TestMCPAgentRealIntegration:
         assert "analyze_text" in capabilities  # Use actual tool name without prefix
 
         # Check registered capabilities (should include discovered tools)
-        capabilities = mcp_agent.get_capabilities()
+        capabilities = await mcp_agent.get_capabilities()
         assert len(capabilities) > 0
         assert "analyze_text" in capabilities  # Use actual tool name without prefix
 
@@ -132,11 +133,20 @@ class TestMCPAgentRealIntegration:
             },
         )
 
-        # Verify result structure
+        # Verify result structure - MCP tool returns result directly, not wrapped in "result" key
         assert isinstance(result, dict)
-        assert "result" in result
-
-        # Verify result content (depends on our test server implementation)
+        
+        # Verify expected fields from our test server's sentiment analysis tool
+        assert "analysis_type" in result
+        assert "sentiment" in result
+        assert "score" in result
+        assert "confidence" in result
+        assert "text" in result
+        
+        # Verify result content matches our input
+        assert result["text"] == "This is a great example!"
+        assert result["analysis_type"] == "sentiment"
+        
         print(f"✅ Tool execution result: {result}")
 
     @pytest.mark.asyncio
@@ -159,7 +169,19 @@ class TestMCPAgentRealIntegration:
         # Verify SIMF result message
         assert result_message.message_type == MessageType.TOOL_RESULT
         assert result_message.payload.status == InvocationStatus.SUCCESS
-        assert "result" in result_message.payload.result
+        
+        # MCP tool returns result directly, not wrapped in "result" key
+        tool_result = result_message.payload.result
+        assert isinstance(tool_result, dict)
+        assert "analysis_type" in tool_result
+        assert "sentiment" in tool_result
+        assert "score" in tool_result
+        assert "confidence" in tool_result
+        assert "text" in tool_result
+        
+        # Verify result content matches our input
+        assert tool_result["text"] == "This demonstrates SIMF-MCP integration!"
+        assert tool_result["analysis_type"] == "sentiment"
 
         print(f"✅ SIMF-MCP integration successful: {result_message.payload.result}")
 
@@ -239,7 +261,12 @@ class TestMCPAgentRealIntegration:
             tool_name="analyze_text",
             parameters={"text": "Lifecycle test", "analysis_type": "length"},
         )
-        assert "result" in result
+        # MCP tool returns result directly, not wrapped in "result" key
+        assert isinstance(result, dict)
+        assert "analysis_type" in result
+        assert "text" in result
+        assert result["text"] == "Lifecycle test"
+        assert result["analysis_type"] == "length"
 
         # Stop agent
         await agent.stop()
@@ -252,7 +279,7 @@ class TestMCPAgentRealIntegration:
 class TestMCPAgentConfiguration:
     """Test MCPAgent configuration and factory methods."""
 
-    def test_create_mcp_agent_from_config(self):
+    async def test_create_mcp_agent_from_config(self):
         """Test creating MCPAgent from configuration."""
         config = {
             "agent_id": "config_test_001",
@@ -276,8 +303,8 @@ class TestMCPAgentConfiguration:
         assert agent.mcp_server_command == ["python", "test_server.py"]
         assert agent.session_id == "config_session"
 
-        # Verify capabilities were added
-        capabilities = agent.get_capabilities()
+        # Verify capabilities were added (async call in Body-Brain architecture)
+        capabilities = await agent.get_capabilities()
         assert "test_capability" in capabilities
 
         print("✅ MCPAgent configuration creation successful")
@@ -410,10 +437,14 @@ async def test_mcp_agent_simf_semantic_preservation():
 
         # Verify semantic preservation
         assert result_message.payload.status == InvocationStatus.SUCCESS
-        assert "result" in result_message.payload.result
-
+        # MCP tool returns result directly, not wrapped in "result" key
+        tool_result = result_message.payload.result
+        assert isinstance(tool_result, dict)
+        assert "analysis_type" in tool_result
+        assert "text" in tool_result
+        
         # The result should contain analysis of our original text
-        result_content = result_message.payload.result["result"]
+        result_content = tool_result
 
         # Verify the analysis contains our original text (semantic preservation)
         if isinstance(result_content, dict):

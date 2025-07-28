@@ -156,7 +156,10 @@ def test_create_communicator_http(mock_get_class):
     kwargs = {"extra_arg": "value"}  # This should be passed via **kwargs
 
     communicator = create_communicator(
-        communicator_type="http", agent_name=agent_name, service_urls=service_urls, **kwargs  # Pass extra_arg here
+        communicator_type="http",
+        agent_name=agent_name,
+        service_urls=service_urls,
+        **kwargs,  # Pass extra_arg here
     )
 
     mock_get_class.assert_called_once_with("http")
@@ -232,7 +235,9 @@ def test_create_communicator_other(mock_get_class):
     mock_get_class.assert_called_once_with("mqtt")
     # Verify the returned mock class was called with the standard args (agent_name, service_urls, **kwargs)
     MockMqttCommunicator.assert_called_once_with(
-        agent_name=agent_name, service_urls=service_urls, client_id="test_client"  # Assert the kwarg directly
+        agent_name=agent_name,
+        service_urls=service_urls,
+        client_id="test_client",  # Assert the kwarg directly
     )
     assert isinstance(communicator, MagicMock)
 

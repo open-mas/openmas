@@ -1,7 +1,6 @@
 """Custom exceptions for the asset management module."""
 
 
-
 class AssetError(Exception):
     """Base class for all asset-related exceptions."""
 

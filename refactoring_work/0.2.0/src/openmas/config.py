@@ -90,9 +90,7 @@ class AgentConfig(BaseModel):
     shared_paths: list[str] = Field(default_factory=list, description="List of paths to search for shared code")
 
     # Prompt configuration
-    prompts: list[PromptConfig] | None = Field(
-        default=None, description="List of prompt configurations for the agent"
-    )
+    prompts: list[PromptConfig] | None = Field(default=None, description="List of prompt configurations for the agent")
     prompts_dir: Path | None = Field(
         default=Path("prompts"),
         description="Directory where prompt template files are stored (relative to project root)",
@@ -115,9 +113,7 @@ class ProjectConfig(BaseModel):
 
     name: str = Field(..., description="The name of the project")
     version: str = Field(..., description="The version of the project")
-    agents: Mapping[str, str | dict | AgentConfig] = Field(
-        ..., description="Mapping of agent names to configurations"
-    )
+    agents: Mapping[str, str | dict | AgentConfig] = Field(..., description="Mapping of agent names to configurations")
     shared_paths: list[str] = Field(default_factory=list, description="List of paths to shared code")
     extension_paths: list[str] = Field(default_factory=list, description="List of paths to extensions")
     default_config: dict[str, Any] = Field(default_factory=dict, description="Default configuration for all agents")

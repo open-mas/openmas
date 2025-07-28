@@ -13,7 +13,14 @@ from typing import Any
 
 from pydantic import ValidationError as PydanticValidationError
 
-from .models import MessageType, PayloadType, SIMFMessage
+from .models import (
+    InvocationResultContentPayload,
+    MessageType,
+    MultiPartContentPayload,
+    PayloadType,
+    SIMFMessage,
+    StreamContextContentPayload,
+)
 
 
 class ValidationErrorType(str, Enum):
@@ -160,6 +167,8 @@ class SIMFValidator:
         result = self.validate(message_data)
         if not result.is_valid:
             raise ValidationError(result)
+        if result.message is None:
+            raise ValidationError(result)  # Should not happen if validation passed
         return result.message
 
     def _validate_semantics(self, message: SIMFMessage) -> list[ValidationIssue]:
@@ -200,60 +209,69 @@ class SIMFValidator:
         # Check invocation result consistency
         if payload_type == PayloadType.INVOCATION_RESULT_CONTENT:
             payload = message.payload
-            if payload.status == "success" and payload.result is None:
-                issues.append(
-                    ValidationIssue(
-                        error_type=ValidationErrorType.SEMANTIC_ERROR,
-                        field_path="payload.result",
-                        message="Successful invocation should have result data",
-                        severity="warning",
+            
+            # Type narrowing: Only InvocationResultContentPayload has status, result, and error
+            if isinstance(payload, InvocationResultContentPayload):
+                if payload.status == "success" and payload.result is None:
+                    issues.append(
+                        ValidationIssue(
+                            error_type=ValidationErrorType.SEMANTIC_ERROR,
+                            field_path="payload.result",
+                            message="Successful invocation should have result data",
+                            severity="warning",
+                        )
                     )
-                )
-            elif payload.status == "failure" and payload.error is None:
-                issues.append(
-                    ValidationIssue(
-                        error_type=ValidationErrorType.SEMANTIC_ERROR,
-                        field_path="payload.error",
-                        message="Failed invocation should have error information",
-                        severity="error",
+                elif payload.status == "failure" and payload.error is None:
+                    issues.append(
+                        ValidationIssue(
+                            error_type=ValidationErrorType.SEMANTIC_ERROR,
+                            field_path="payload.error",
+                            message="Failed invocation should have error information",
+                            severity="error",
+                        )
                     )
-                )
 
         # Check multi-part content
         if payload_type == PayloadType.MULTI_PART_CONTENT:
             payload = message.payload
-            if not payload.parts:
-                issues.append(
-                    ValidationIssue(
-                        error_type=ValidationErrorType.SEMANTIC_ERROR,
-                        field_path="payload.parts",
-                        message="Multi-part content must have at least one part",
-                        severity="error",
+            
+            # Type narrowing: Only MultiPartContentPayload has parts
+            if isinstance(payload, MultiPartContentPayload):
+                if not payload.parts:
+                    issues.append(
+                        ValidationIssue(
+                            error_type=ValidationErrorType.SEMANTIC_ERROR,
+                            field_path="payload.parts",
+                            message="Multi-part content must have at least one part",
+                            severity="error",
+                        )
                     )
-                )
 
         # Check stream context
         if payload_type == PayloadType.STREAM_CONTEXT_CONTENT:
             payload = message.payload
-            if payload.sequence_number < 0:
-                issues.append(
-                    ValidationIssue(
-                        error_type=ValidationErrorType.SEMANTIC_ERROR,
-                        field_path="payload.sequence_number",
-                        message="Stream sequence number must be non-negative",
-                        severity="error",
+            
+            # Type narrowing: Only StreamContextContentPayload has sequence_number, is_heartbeat, and content
+            if isinstance(payload, StreamContextContentPayload):
+                if payload.sequence_number < 0:
+                    issues.append(
+                        ValidationIssue(
+                            error_type=ValidationErrorType.SEMANTIC_ERROR,
+                            field_path="payload.sequence_number",
+                            message="Stream sequence number must be non-negative",
+                            severity="error",
+                        )
                     )
-                )
 
-            if payload.is_heartbeat and payload.content is not None:
-                issues.append(
-                    ValidationIssue(
-                        error_type=ValidationErrorType.SEMANTIC_ERROR,
-                        field_path="payload.content",
-                        message="Heartbeat messages should not have content",
-                        severity="warning",
+                if payload.is_heartbeat and payload.content is not None:
+                    issues.append(
+                        ValidationIssue(
+                            error_type=ValidationErrorType.SEMANTIC_ERROR,
+                            field_path="payload.content",
+                            message="Heartbeat messages should not have content",
+                            severity="warning",
+                        )
                     )
-                )
 
         return issues
 

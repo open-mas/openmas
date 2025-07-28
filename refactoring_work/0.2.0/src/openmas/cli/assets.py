@@ -168,7 +168,7 @@ def download_asset(
 
 @assets_app.command("verify")
 def verify_assets(
-    asset_name: str | None = typer.Argument(None, help="Asset name to verify, or all if omitted")
+    asset_name: str | None = typer.Argument(None, help="Asset name to verify, or all if omitted"),
 ) -> None:
     """Verify the integrity of cached assets.
 

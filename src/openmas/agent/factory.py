@@ -18,6 +18,7 @@ import yaml
 
 from .base_agent import Agent, AgentConfig, IAgentStateManager, IProtocolAdapter
 from .exceptions import AgentConfigurationError, AgentCreationError
+from .factories import AgentComponentFactory
 
 # ============================================================================
 # Configuration Loading and Validation
@@ -198,12 +199,21 @@ class AgentFactory:
                 if protocol_name in self._protocol_adapters and protocol_name not in final_protocol_adapters:
                     final_protocol_adapters[protocol_name] = self._protocol_adapters[protocol_name]
 
-            # Create agent instance
+            # Create Body-Brain separation components using factory
+            component_factory = AgentComponentFactory()
+            communicator, reasoning_engine = component_factory.create_basic_components(
+                agent_id=agent_config.agent_id,
+                capabilities=set(agent_config.capabilities),
+                protocol_adapters=final_protocol_adapters
+            )
+
+            # Create agent instance with Body-Brain separation
             agent_class = self._agent_types[agent_type]
             agent = agent_class(
                 config=agent_config,
+                communicator=communicator,
+                reasoning_engine=reasoning_engine,
                 state_manager=final_state_manager,
-                protocol_adapters=final_protocol_adapters,
             )
 
             self.logger.info(f"Created agent {agent_config.agent_id} of type {agent_type}")

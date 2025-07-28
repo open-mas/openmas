@@ -530,9 +530,7 @@ class BaseWorkerAgent(BaseAgent):
         if task_request.task_id in self._active_tasks:
             del self._active_tasks[task_request.task_id]
 
-    async def _send_task_result(
-        self, task_id: str, status: str, result: Any = None, error: str | None = None
-    ) -> None:
+    async def _send_task_result(self, task_id: str, status: str, result: Any = None, error: str | None = None) -> None:
         """Send a task result back to the orchestrator.
 
         Args:

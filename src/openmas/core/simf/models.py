@@ -166,15 +166,7 @@ class MultiPartContentPayload(BasePayload):
     """Payload for messages with multiple content parts."""
 
     payload_type: Literal[PayloadType.MULTI_PART_CONTENT] = PayloadType.MULTI_PART_CONTENT
-    parts: list[
-        Union[
-            TextContentPayload,
-            StructuredDataContentPayload,
-            AssetReferenceContentPayload,
-            # Note: Recursive multi-part is allowed
-            "MultiPartContentPayload",
-        ]
-    ] = Field(..., description="Array of payload objects")
+    parts: list["PayloadUnion"] = Field(..., description="Array of payload objects")
 
 
 class InvocationContentPayload(BasePayload):
@@ -309,7 +301,7 @@ class SIMFMessage(BaseModel):
 
     @field_validator("message_id")
     @classmethod
-    def validate_message_id(cls, v):
+    def validate_message_id(cls, v: str) -> str:
         """Ensure message ID is not empty."""
         if not v or not v.strip():
             raise ValueError("message_id cannot be empty")
@@ -317,7 +309,7 @@ class SIMFMessage(BaseModel):
 
     @field_validator("target_agent_id")
     @classmethod
-    def validate_target_agent_id(cls, v):
+    def validate_target_agent_id(cls, v: str) -> str:
         """Ensure target agent ID is not empty."""
         if not v or not v.strip():
             raise ValueError("target_agent_id cannot be empty")
@@ -345,6 +337,7 @@ def create_text_message(
         message_flow_direction=MessageFlowDirection.INBOUND,
         message_type=message_type,
         payload=TextContentPayload(text=text),
+        source_protocol_type=None,
         metadata=SIMFMetadata(**metadata) if metadata else SIMFMetadata(),
     )
 
@@ -365,6 +358,7 @@ def create_structured_data_message(
         message_flow_direction=MessageFlowDirection.INBOUND,
         message_type=message_type,
         payload=StructuredDataContentPayload(data=data),
+        source_protocol_type=None,
         metadata=SIMFMetadata(**metadata) if metadata else SIMFMetadata(),
     )
 
@@ -393,6 +387,7 @@ def create_asset_reference_message(
             mime_type=mime_type,
             resource_metadata=resource_metadata,
         ),
+        source_protocol_type=None,
         metadata=SIMFMetadata(**metadata) if metadata else SIMFMetadata(),
     )
 
@@ -413,6 +408,7 @@ def create_multipart_message(
         message_flow_direction=MessageFlowDirection.INBOUND,
         message_type=message_type,
         payload=MultiPartContentPayload(parts=parts),
+        source_protocol_type=None,
         metadata=SIMFMetadata(**metadata) if metadata else SIMFMetadata(),
     )
 
@@ -434,6 +430,7 @@ def create_invocation_message(
         message_flow_direction=MessageFlowDirection.INBOUND,
         message_type=message_type,
         payload=InvocationContentPayload(invocation_name=invocation_name, arguments=arguments),
+        source_protocol_type=None,
         metadata=SIMFMetadata(**metadata) if metadata else SIMFMetadata(),
     )
 
@@ -459,6 +456,7 @@ def create_invocation_result_message(
         payload=InvocationResultContentPayload(
             invocation_name=invocation_name, status=status, result=result, error=error
         ),
+        source_protocol_type=None,
         metadata=SIMFMetadata(**metadata) if metadata else SIMFMetadata(),
     )
 
@@ -482,8 +480,10 @@ def create_error_message(
         payload=InvocationResultContentPayload(
             invocation_name="error",
             status=InvocationStatus.FAILURE,
+            result=None,
             error=ErrorInfo(code=error_code, message=error_message, details=error_details),
         ),
+        source_protocol_type=None,
         metadata=SIMFMetadata(**metadata) if metadata else SIMFMetadata(),
     )
 
@@ -513,5 +513,6 @@ def create_event_message(
             severity=severity,
             is_transient=is_transient,
         ),
+        source_protocol_type=None,
         metadata=SIMFMetadata(**metadata) if metadata else SIMFMetadata(),
     )

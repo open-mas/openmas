@@ -91,7 +91,10 @@ async def test_mcp_sse_server_port_from_string():
     with patch("openmas.communication.mcp.sse_communicator.FastMCP", mock_fastmcp):
         # Create communicator with server mode and string port
         comm = McpSseCommunicator(
-            agent_name="test_agent", service_urls={}, server_mode=True, http_port="7777"  # String port
+            agent_name="test_agent",
+            service_urls={},
+            server_mode=True,
+            http_port="7777",  # String port
         )
 
         # Mock the run_sse_async method to prevent actual server startup

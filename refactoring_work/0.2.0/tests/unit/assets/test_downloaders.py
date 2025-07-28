@@ -458,9 +458,7 @@ class TestHttpDownloader:
         # We expect at least one interval log if content_size > progress_interval_bytes
         expected_progress_interval_bytes = int(progress_mb_interval * 1024 * 1024)
         if content_size_bytes > expected_progress_interval_bytes:
-            assert (
-                found_progress_log
-            ), f"Fallback interval-based progress logs should appear in non-TTY. Interval bytes: {expected_progress_interval_bytes}, Content bytes: {content_size_bytes}"
+            assert found_progress_log, f"Fallback interval-based progress logs should appear in non-TTY. Interval bytes: {expected_progress_interval_bytes}, Content bytes: {content_size_bytes}"
         else:
             assert (
                 not found_progress_log

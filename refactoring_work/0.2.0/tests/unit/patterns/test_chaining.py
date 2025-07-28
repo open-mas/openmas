@@ -30,7 +30,10 @@ def service_chain(mock_communicator):
 async def test_execute_step_skipped_by_condition(service_chain, mock_communicator):
     """Test that a step is skipped if its condition function returns False."""
     step = ChainStep(
-        target_service="service1", method="method1", name="step1", condition=lambda ctx: False  # Condition always false
+        target_service="service1",
+        method="method1",
+        name="step1",
+        condition=lambda ctx: False,  # Condition always false
     )
     context: dict[str, object] = {}
 

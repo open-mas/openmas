@@ -157,9 +157,7 @@ class HttpCommunicator(BaseCommunicator):
                 f"HTTP error from '{target_service}': {str(e)}", target=target_service, details={"method": method}
             )
 
-    async def send_notification(
-        self, target_service: str, method: str, params: dict[str, Any] | None = None
-    ) -> None:
+    async def send_notification(self, target_service: str, method: str, params: dict[str, Any] | None = None) -> None:
         """Send a notification to a target service.
 
         Args:

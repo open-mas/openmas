@@ -319,9 +319,7 @@ class MqttCommunicator(BaseCommunicator):
                 details={"method": method, "error_type": type(e).__name__},
             )
 
-    async def send_notification(
-        self, target_service: str, method: str, params: dict[str, Any] | None = None
-    ) -> None:
+    async def send_notification(self, target_service: str, method: str, params: dict[str, Any] | None = None) -> None:
         """Send a notification to a target service.
 
         Args:

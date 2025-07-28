@@ -592,7 +592,8 @@ def test_load_yaml_config():
     with (
         patch("pathlib.Path.exists", return_value=True),
         patch("builtins.open", mock_open(read_data="invalid: yaml: content:")),
-        patch("yaml.safe_load", side_effect=yaml.YAMLError("Invalid YAML")),pytest.raises(ConfigurationError)
+        patch("yaml.safe_load", side_effect=yaml.YAMLError("Invalid YAML")),
+        pytest.raises(ConfigurationError),
     ):
         _load_yaml_config(Path("/config/invalid.yml"))
 

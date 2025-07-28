@@ -106,31 +106,31 @@ T = TypeVar('T', bound=BaseModel)
 class IKnowledgeBase(ABC, Generic[T]):
     """
     Canonical interface for knowledge base access.
-    
+
     This interface provides type-safe, async access to knowledge bases
     while maintaining separation from reasoning logic.
     """
-    
+
     @abstractmethod
     async def query(self, query: str, context: Optional[Dict[str, Any]] = None) -> List[T]:
         """Execute a query against the knowledge base."""
         pass
-    
+
     @abstractmethod
     async def store(self, knowledge: T) -> bool:
         """Store knowledge in the knowledge base."""
         pass
-    
+
     @abstractmethod
     async def update(self, knowledge_id: str, knowledge: T) -> bool:
         """Update existing knowledge in the knowledge base."""
         pass
-    
+
     @abstractmethod
     async def delete(self, knowledge_id: str) -> bool:
         """Delete knowledge from the knowledge base."""
         pass
-    
+
     @abstractmethod
     async def get_schema(self) -> Dict[str, Any]:
         """Get the schema for this knowledge base."""
@@ -151,24 +151,24 @@ from .knowledge_base import IKnowledgeBase
 
 class KnowledgeBaseRegistry:
     """Central registry for knowledge bases."""
-    
+
     def __init__(self):
         self._knowledge_bases: Dict[str, IKnowledgeBase] = {}
         self._knowledge_base_types: Dict[str, Type[IKnowledgeBase]] = {}
-    
+
     def register_knowledge_base(self, name: str, knowledge_base: IKnowledgeBase) -> None:
         """Register a knowledge base instance."""
         self._knowledge_bases[name] = knowledge_base
         self._knowledge_base_types[name] = type(knowledge_base)
-    
+
     def get_knowledge_base(self, name: str) -> Optional[IKnowledgeBase]:
         """Get a registered knowledge base by name."""
         return self._knowledge_bases.get(name)
-    
+
     def list_knowledge_bases(self) -> List[str]:
         """List all registered knowledge base names."""
         return list(self._knowledge_bases.keys())
-    
+
     def get_knowledge_base_type(self, name: str) -> Optional[Type[IKnowledgeBase]]:
         """Get the type of a registered knowledge base."""
         return self._knowledge_base_types.get(name)

@@ -34,7 +34,7 @@ class AssetFilter(BaseModel):
 class IAssetRepository(ABC):
     """
     Interface for low-level asset storage operations.
-    
+
     This interface handles the raw persistence of asset data and metadata,
     abstracting the underlying storage backend from the high-level asset
     management logic.

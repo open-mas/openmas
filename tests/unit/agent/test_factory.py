@@ -231,7 +231,7 @@ class TestAgentFactory:
 
         assert factory._default_state_manager == state_manager
 
-    def test_create_agent_from_config(self):
+    async def test_create_agent_from_config(self):
         """Test creating agent from configuration."""
         factory = AgentFactory()
         config = {
@@ -245,7 +245,8 @@ class TestAgentFactory:
         assert isinstance(agent, Agent)
         assert agent.agent_id == "test_agent"
         assert agent.name == "Test Agent"
-        assert "test_capability" in agent.capabilities
+        capabilities = await agent.get_capabilities()
+        assert "test_capability" in capabilities
 
     def test_create_custom_agent_from_config(self):
         """Test creating custom agent type from configuration."""
@@ -279,8 +280,8 @@ class TestAgentFactory:
         )
 
         assert agent.state_manager == state_manager
-        assert "mock" in agent.protocol_adapters
-        assert agent.protocol_adapters["mock"] == protocol_adapter
+        assert "mock" in agent.communicator.protocol_adapters
+        assert agent.communicator.protocol_adapters["mock"] == protocol_adapter
 
     def test_create_agent_with_registered_dependencies(self):
         """Test creating agent with pre-registered dependencies."""
@@ -300,8 +301,8 @@ class TestAgentFactory:
         agent = factory.create_agent_from_config(config)
 
         assert agent.state_manager == state_manager
-        assert "mock" in agent.protocol_adapters
-        assert agent.protocol_adapters["mock"] == protocol_adapter
+        assert "mock" in agent.communicator.protocol_adapters
+        assert agent.communicator.protocol_adapters["mock"] == protocol_adapter
 
     def test_create_agent_unknown_type(self):
         """Test creating agent with unknown type raises error."""
@@ -340,10 +341,9 @@ class TestAgentFactory:
         finally:
             Path(temp_path).unlink()
 
-    def test_create_simple_agent(self):
-        """Test creating simple agent with minimal configuration."""
+    async def test_create_simple_agent(self):
+        """Test creating simple agent."""
         factory = AgentFactory()
-
         agent = factory.create_simple_agent(
             agent_id="simple_agent",
             name="Simple Agent",
@@ -353,7 +353,8 @@ class TestAgentFactory:
         assert isinstance(agent, Agent)
         assert agent.agent_id == "simple_agent"
         assert agent.name == "Simple Agent"
-        assert "simple_capability" in agent.capabilities
+        capabilities = await agent.get_capabilities()
+        assert "simple_capability" in capabilities
 
 
 class TestDefaultFactory:
@@ -386,7 +387,9 @@ class TestDefaultFactory:
         assert isinstance(agent, Agent)
         assert agent.agent_id == "simple_convenience"
         assert agent.name == "Simple Convenience Agent"
-        assert "convenience_capability" in agent.capabilities
+        # Note: capabilities access should be async in Body-Brain architecture
+        # For this synchronous test, we'll check the config instead
+        assert "convenience_capability" in agent.reasoning_engine.capabilities
 
     def test_convenience_registration_functions(self):
         """Test convenience functions for registration."""

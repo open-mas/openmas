@@ -75,8 +75,8 @@ class IAssetManager(ABC):
 
     @abstractmethod
     async def register_asset(
-        self, 
-        content: bytes, 
+        self,
+        content: bytes,
         metadata: AssetMetadata
     ) -> str:
         """Registers a new asset with the system.
@@ -104,9 +104,9 @@ class IAssetManager(ABC):
 
     @abstractmethod
     async def find_assets(
-        self, 
-        name: Optional[str] = None, 
-        asset_type: Optional[str] = None, 
+        self,
+        name: Optional[str] = None,
+        asset_type: Optional[str] = None,
         tags: Optional[List[str]] = None
     ) -> List[AssetMetadata]:
         """Finds assets based on metadata criteria.
@@ -163,7 +163,7 @@ async def agent_work(asset_manager: IAssetManager):
         asset_type="prompt_template",
         tags=["llm", "assistant"]
     )
-    
+
     uri = await asset_manager.register_asset(
         content=prompt_template.encode('utf-8'),
         metadata=prompt_metadata

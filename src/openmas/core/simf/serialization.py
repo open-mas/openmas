@@ -109,6 +109,8 @@ class SIMFSerializer:
                 SerializationFormat.BINARY,
                 SerializationFormat.BINARY_COMPRESSED,
             ]:
+                if isinstance(data, str):
+                    raise SerializationError("Binary format requires bytes data, got string")
                 return self._deserialize_binary(data)
             else:
                 raise SerializationError(f"Unsupported deserialization format: {format}")
@@ -274,7 +276,10 @@ def deserialize_simf_message(data: str | bytes) -> SIMFMessage:
 def message_to_json(message: SIMFMessage, pretty: bool = False) -> str:
     """Convert a SIMF message to JSON string."""
     format = SerializationFormat.JSON_PRETTY if pretty else SerializationFormat.JSON
-    return _default_serializer.serialize(message, format)
+    result = _default_serializer.serialize(message, format)
+    if isinstance(result, bytes):
+        return result.decode('utf-8')
+    return result
 
 
 def message_from_json(json_str: str) -> SIMFMessage:
@@ -285,7 +290,10 @@ def message_from_json(json_str: str) -> SIMFMessage:
 def message_to_binary(message: SIMFMessage, compressed: bool = True) -> bytes:
     """Convert a SIMF message to binary format."""
     format = SerializationFormat.BINARY_COMPRESSED if compressed else SerializationFormat.BINARY
-    return _default_serializer.serialize(message, format)
+    result = _default_serializer.serialize(message, format)
+    if isinstance(result, str):
+        return result.encode('utf-8')
+    return result
 
 
 def message_from_binary(binary_data: bytes) -> SIMFMessage:
